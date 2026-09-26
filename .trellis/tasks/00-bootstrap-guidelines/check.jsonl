@@ -1,0 +1,27 @@
+{"file": ".trellis/tasks/00-bootstrap-guidelines/research/initial-contracts.md", "reason": "仓库现状、初始契约证据与待验证项"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/filesystem-guidelines.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/http-api.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/index.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/process-guidelines.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/security-config.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/terminal-lifecycle.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/transfer-search-git.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/backend/websocket-protocol.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/clients.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/editor-terminal-lifecycle.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/theme-assets.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "全范围 bootstrap 契约及中文质量审查"}
+{"file": ".trellis/spec/guides/index.md", "reason": "全范围 bootstrap 契约及中文质量审查"}

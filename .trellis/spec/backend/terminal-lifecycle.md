@@ -1,0 +1,42 @@
+# 持久终端与技术验证
+
+## 1. 范围 / 触发
+硬性要求：浏览器关闭、UI tab 隐藏/卸载、网络或 WS 断开、重新登录、Nginx restart、Go Web Server restart 都不能终止 tmux 中任务。普通主机 reboot 不恢复进程内存；README/UI 必须明确。此契约尚未实现或验证。
+
+## 2. 签名
+初始 service 边界：`Create(ctx, input) (Terminal, error)`、`List(ctx) ([]Terminal, error)`、`Attach(ctx, id, size) (Bridge, error)`、`Close(ctx, id, confirmed bool) error`。
+每 Terminal 一个后端生成的 `persistty_<随机ID>` 独立 tmux session；display name 不作为 tmux target。只操作指定私有 socket 和 Persistty 管理的精确 target，不允许用户传 session/socket/命令选项。
+`Close Terminal` 对应 `POST /api/v1/terminals/{id}/close`，body `{"confirm":true}`；普通 detach 仅关闭 WS/PTY/attach client。
+
+## 3. 契约
+真实结构：Browser -> WS -> Go -> PTY -> tmux attach-session -> zsh -> job。新任务在 tmux 中创建；attach context 取消只回收 attach client 和 bridge fd/goroutines，禁止 kill-session、kill-server、对 pane 发 exit/SIGTERM、全局杀进程组。主动用户在 shell 输入 exit/任务退出是另一类真实终止原因，重新列举时如实显示。
+SQLite 只保存 [metadata](database-guidelines.md)。每次列表/attach 查询 tmux；缺失为 terminated/stale，依赖故障为 unavailable；不能自动复活同 ID 会话。tmux-only 的 managed session 用标识 reconciliation，保留并允许恢复 metadata，不清理用户任务。
+
+### systemd 隔离设计与实测门禁
+拟采用同一个非 root UID 的 `persistty-tmux.service` 预启动专属 tmux server，`persistty.service` 仅连接该 socket。tmux server 和 pane job 必须处于独立 unit cgroup；Web unit 仍正常 KillMode=control-group，停止只回收 attach clients。单纯 setsid/nohup/daemonize 不能作为 cgroup 隔离证明。
+Spike 确定具体启动命令、前台保持/空 server 保持、socket 目录生命周期、tmux 配置（禁 exit-unattached/意外 exit-empty），并锁定 Debian tmux/systemd 版本。Web 启动检查现有 socket/server；server 不存在时拒绝 Terminal 操作，不允许 tmux CLI 从 Web cgroup 隐式启动 server。
+禁止 Web 与 tmux unit 的 PartOf/BindsTo/restart 传播，不能用 Web ExecStop kill-server。独立 tmux unit 的管理员 stop/restart 会终止任务，部署升级只重启 Web；文档须区别。不能默认自动 restart 一个失败的 tmux unit并声称旧进程恢复。
+
+### 历史、尺寸、背压
+配置 history_lines=50000、restore_lines=10000；不是无限输出。Spike 验证 capture-pane 与 attach 初始屏幕避免重复/丢失及转义安全的切换策略，之后更新 [WS](websocket-protocol.md) 的交付契约。PTY rows/cols 按连接尺寸同步并限制到 1..1000；多客户端策略初期每 Terminal 一个可写 attach，额外连接返回占用错误，不能 attach -d 无提示抢走另一客户端。
+输出队列有界；慢客户端断开可重连，不阻塞/终止 pane job；重连恢复是 tmux 有界历史，不保证每一字节网络精确重放。
+
+## 4. 验证与错误矩阵
+| 触发 | 结果 |
+| --- | --- |
+| WS/page/attach client 消失 | job PID、start time 不变 |
+| Web SIGTERM/SIGKILL 或 systemctl restart persistty | job 持续计数，重登录可 attach |
+| metadata 有、tmux 无 | terminated，attach 返回 409 terminal_terminated |
+| socket/command 故障 | 503 unavailable，禁止创建假状态 |
+| 未 confirm 的 close | 400 confirmation_required，不 kill |
+| 明确确认 A close | 仅 kill A 精确 session，B/C 持续 |
+
+## 5. 优 / 基础 / 错误用例
+优：A 日期计数、B HTTP 服务、C 心跳，反复断开后 PID/start time/心跳增量一致。基础：create/attach/detach。错误：PTY shell 本身持有长期 job、WS cleanup 执行 kill-session、单看 tab 存在就认定持久化通过。
+
+## 6. 必需测试
+正式 Terminal UI 前必须完成可重复 Spike：真实 Go + coder/websocket + creack/pty attach，断 WS、关浏览器、终止 Go、重启 Go、重 attach；记录 PID/start time、计数、HTTP 服务可达。真实 Debian systemd 测试检查 /proc/PID/cgroup，执行 systemctl restart persistty 并验证同一个 job；本地非 systemd 环境只能注明未运行，mock/容器无 systemd 不能替代。
+Critical Playwright A/B/C 验证关闭页面、重连、Web restart、重新登录、metadata tabs/history 恢复，最后仅 close A。测试隔离 socket/temp cwd，仅清理自己创建的 session；失败保留脱敏证据。此门禁未通过不开始大规模 Terminal UI，不宣布 v0.1 完成。
+
+## 7. 错误与正确
+错误：`defer KillSession(id)` 放 Attach 内。正确：Attach 只释放 bridge；KillSession 只有已认证并 confirm 的 Close 路径可调用。

@@ -1,0 +1,48 @@
+# 文件路径、版本与原子保存
+
+## 1. 范围 / 触发
+所有 File/preview/upload/download/search/Git cwd/Terminal initial cwd 输入都不可信。API 只接受 workspace_id + workspace 相对 POSIX path；内部映射到已批准根目录，不能接受客户端绝对路径。shell 自身权限边界见 [认证](security-config.md)。
+
+## 2. 签名
+初始接口形状：`Open(ctx, workspaceID, path) (FileSnapshot, error)`、`Save(ctx, workspaceID, path, content, expectedVersion) (FileVersion, error)`。
+`FileVersion={mtime:string,size:number,etag:string}`；mtime 为 UTC RFC3339Nano，size 为实际字节，etag 为 `sha256:<hex>` 强内容 hash。用于并发校验的 expected_version 必须三字段齐全；不依赖时间戳精度。创建文件用明确 create API 和不存在前置条件，不能把缺失版本当任意覆盖。
+
+## 3. 契约
+### 路径访问
+配置 roots 用 Abs/Clean/EvalSymlinks 固定真实目录，逐个打开 root handle。请求拒绝 NUL、绝对路径、任何 `..` 段、非法 URL 编码；仅 decode 一次，路径不能经过多层 decode；`.` 仅用于目录根。含空格、Unicode、前导 '-' 的合法文件名保留。多 allowed roots 的 workspace 只能访问自己归属的 root。
+词法检查采用 filepath.Rel 验证边界，不用 strings.HasPrefix。这些检查只用于输入和诊断，最后 I/O 必须通过 Debian 根句柄限定的 API（锁定 Go 版本后的 os.Root，或封装 openat2/dirfd）。禁止 EvalSymlinks 后普通 os.Open/WriteFile 作为安全方案。
+安全父目录句柄覆盖创建、rename、remove、copy 和临时文件操作；禁止 fallback 到绝对路径 I/O。普通链接只允许读取最终目标仍在所属 root 内；写入先解析安全目标，不把“保存链接”误变成替换链接本身。目录树/ZIP 不 follow symlink；删除链接删除链接条目，不递归目标。拒绝 socket/FIFO/device 文件，避免阻塞和泄露。git/rg 进程不能仅靠 Dir 防路径竞态，事后复验不能撤销工具已发生的根外读取。工具的内容读取必须采用 [命令规范](process-guidelines.md) 中受限执行或安全输入策略；交付前还要安全根下复验和形成 snapshot，不能直接返回未验证 CLI preview。
+
+### 冲突和保存
+Open 从同一打开句柄读取、hash、stat，若读取中发生变化就有界重试或报 conflict；不要把不同时间读取的 metadata/hash 拼成快照。
+Save 在应用内按目标文件序列化；安全打开当前目标比较版本，不匹配 409 且零写入。创建同目录随机 O_EXCL 临时文件，写完整数据、恢复原始普通权限位（保留 executable、不要继承 setuid/setgid）、fsync/close。提交前再次校验目标 identity/版本，再用同一安全父目录原子 rename，fsync 父目录并返回新版本。任何失败清理自己的 temp；不能先 truncate 目标。上传提交/replace 复用此安全操作边界。
+Overwrite 是用户查看当前版本后明确确认、携带当前 expected_version 的新保存；不是 force=true 永久绕过校验。再次外部修改仍 409。符号链接/父目录变动/目标被删除也需重新判断并拒绝不安全操作。
+原子 rename 防半文件，不是任意外部 writer 的原子 compare-and-swap。Terminal/AI 不遵守应用锁；最终校验和 rename 之间仍可能竞态。必须在文件任务设计中说明不可消除的窗口，不宣传绝对并发保证；测试已发生外部修改必定 409，覆盖持续竞争时的限制并保留证据。若 task 无法满足硬性验收，应调整协议或设计并提请 review，不能静默降级。
+
+### Explorer 变更操作的任务门禁
+
+新建文件/目录、重命名、移动、复制、创建副本和删除均复用安全根/父目录句柄。源与目标分别验证，禁止仅验证源路径；目录操作不得进入自身子目录，链接操作按前述规则，不递归根外目标。目标已存在时默认拒绝且原目标不变，覆盖必须是独立明确操作并携带当前版本；不能把复制/移动隐式变为覆盖。剪切属于客户端待移动意图，直到后端成功移动前不能删源。
+
+Explorer 任务在实施前于 [HTTP 契约](http-api.md) 固化各端点签名、源/目标字段、文件与目录前置条件、删除确认、多文件部分失败及跨文件系统移动语义。目录变更不能套用正文 hash 声称整个目录具有原子版本；无可靠目录一致性保证时必须说明边界。大目录复制/删除有取消、深度、数量和执行时间限制，失败不伪称全成功。
+
+测试源/目标分别越界、目标已存在零覆盖、目录移入自身、剪切失败保留源、symlink 删除不删目标、跨文件系统失败和批量部分失败结果；前端对应操作清单见 [组件规范](../frontend/component-guidelines.md)。
+
+## 4. 验证与错误矩阵
+| 输入/状态 | 结果 |
+| --- | --- |
+| ../、绝对路径、根外/魔术链接 | 403 或 invalid_request，不做越界 I/O |
+| 安全根内链接读取 | 返回真实目标快照 |
+| 文件不存在 | 404；不创建 |
+| expected_version 缺失 | 428 |
+| hash/mtime/size/identity 改变 | 409，磁盘当前内容保留 |
+| binary 或超编辑限制 | 415 unsupported_media_type / 413 |
+| temp 写入/同步/rename 失败 | 非成功响应，原文件完整 |
+
+## 5. 优 / 基础 / 错误用例
+优：Monaco 读旧版本，Terminal echo new，保存旧内容返回 409 且 new 留存。基础：保存 0755 脚本后权限仍 0755。错误：只比较 mtime、只做字符串前缀验证、失败重试改成无条件 overwrite。
+
+## 6. 必需测试
+路径 traversal/双编码/相似前缀、根内/根外/断链/循环 symlink、新目标父目录 symlink、在操作间切换链接/移动父目录、非法 special files；文件删除/相同大小同 mtime 内容变化/读中写入/应用并发保存/故障注入/可执行位；atomic rename 后返回 hash 一致。真实隔离 filesystem 集成不能用 mock 代替。
+
+## 7. 错误与正确
+错误：`EvalSymlinks -> HasPrefix -> os.WriteFile`。正确：词法校验 + root/安全父目录 handle + 版本复验 + 同目录原子提交。
