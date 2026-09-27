@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--background);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--background);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--secondary);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--primary);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #27282c;
+  --primary: #007a65;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f5;
+  --accent: #e9efed;
+  --muted-foreground: #64666e;
+  --destructive: #ba273a;
+  --border: #e0e2e5;
+}
+.dark {
+  --background: #1d1e21;
+  --foreground: #e4e5e8;
+  --primary: #70d0b5;
+  --primary-foreground: #112e25;
+  --secondary: #292a2f;
+  --accent: #323a38;
+  --muted-foreground: #b1b3bb;
+  --destructive: #ff8795;
+  --border: #3a3c43;
+}
+@layer base {
+  * { border-color: var(--border); letter-spacing: 0; }
+  body { margin: 0; background: var(--background); color: var(--foreground); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; }
+  h1 { font-size: 22px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+  button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
+}
+.app-shell { min-height: 100dvh; display: flex; flex-direction: column; }
+.app-header { min-height: 60px; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 600; flex-shrink: 0; }
+.brand svg { width: 24px; height: 24px; color: var(--primary); }
+.main-nav { display: flex; gap: 4px; padding: 8px 24px; border-bottom: 1px solid var(--border); background: var(--secondary); }
+.main-nav a { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 4px; color: var(--muted-foreground); }
+.main-nav a.active { color: var(--foreground); background: var(--background); box-shadow: 0 0 0 1px var(--border); }
+.main-nav svg { width: 16px; height: 16px; }
+.page-main { flex: 1; width: 100%; max-width: 1120px; margin: 0 auto; padding: 28px 24px; min-width: 0; }
+.page-heading { display: flex; align-items: center; gap: 12px; justify-content: space-between; min-height: 36px; margin-bottom: 20px; }
+.app-footer { display: flex; align-items: center; height: 28px; padding: 0 24px; font-size: 12px; color: var(--muted-foreground); border-top: 1px solid var(--border); }
+.login-main { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 88px 24px 40px; }
+.login-form { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 24px; }
+.resource-list { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+.resource-list li { min-width: 0; border-bottom: 1px solid var(--border); }
+.resource-row { width: 100%; min-height: 72px; height: auto; justify-content: flex-start; border-radius: 0; gap: 12px; padding: 12px 8px; white-space: normal; }
+.resource-text { display: flex; flex: 1; flex-direction: column; text-align: left; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.resource-path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted-foreground); }
+.folder-list { display: flex; flex-direction: column; gap: 16px; margin: 0 0 24px; }
+.folder-list li { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .app-header { padding: 12px; gap: 8px; flex-wrap: wrap; }
+  .brand { font-size: 19px; }
+  .main-nav { padding: 8px 12px; }
+  .page-main { padding: 20px 16px; }
+  .login-main { padding-top: 56px; }
+  .resource-row { flex-wrap: wrap; }
+  .app-footer { padding: 0 16px; }
+}

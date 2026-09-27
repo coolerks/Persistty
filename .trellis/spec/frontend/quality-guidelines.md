@@ -9,4 +9,4 @@ UI 复用门禁：按 [组件规范](component-guidelines.md) 检查项目已有
 Critical E2E 由 [后端测试](../backend/quality-guidelines.md) 定义运行时断言：Terminal A/B/C 闭页、重连、Web restart、重登录、history/tabs、只 close A；file 外部修改 409；rg ignore + replace conflict；upload/download/空目录/Unicode/大文件/hash/resume/ZIP/symlink；watcher Terminal mkdir/touch/mv/rm；Git CLI 对照。Playwright harness 控制隔离服务而非 mock WS，systemd 必须在 Debian 实测。测试超时/缺依赖/skip 不算通过。
 
 无障碍：键盘 palette/menu/dialog/tabs、焦点返回、resize 最小尺寸、loading/error、dark/light 对比；UI 文案简体中文。auth 安全后端执行，前端测试隐藏按钮不构成安全 review。
-当前文档阶段无 package.json，四门禁和 Playwright 均不适用；不创建空测试满足指标。每功能实现同任务加必要测试，最后 full E2E 只是整体验收。
+W01已有package.json与npm锁文件，lint/typecheck/test/build四门禁必须实际执行。当前只覆盖登录/路由/主题/布局命令模型，真实PTY与完整E2E由后续包交付，不创建空测试满足指标。浏览器viewport模拟不是iOS/Android真机验收；每功能同任务加必要测试，最后full E2E只是整体验收。

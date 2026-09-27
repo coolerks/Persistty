@@ -1,6 +1,6 @@
 # React 目录结构
 
-初始约定（尚未创建）如下；不提前创建空 feature。
+W01已建立app、auth、workspaces、terminal元数据页、settings、components/ui和lib/api；其余为后续目录约定，不提前创建空feature。
 
 ```text
 web/src/app/                 入口、providers、IDE layout

@@ -1,5 +1,8 @@
 # 持久终端与技术验证
 
+## 当前批准规则（覆盖下文bootstrap候选）
+U06..U73要求多观察端、单输入controller，额外观察连接不返回terminal_attached。控制权显式接管与递增generation，observer不能PTY resize。终止不使用旧confirm立即kill：controller发起唯一服务器deadline，全查看端弹窗，任一鉴权查看端可取消；发起者失效/控制转移/Web重启取消pending。项目删除仅解绑元数据，shell可cd项目外，真实终端继续且统一入口可重连。上方terminal标签X/单会话trash为此终止请求，下方整面板X只收起。移动宿主不detach/runtime dispose，history默认5000行。具体WS snapshot/单输出源方案仍等待W02/W03真实实验，不以此更新宣称已经实现。
+
 ## 1. 范围 / 触发
 硬性要求：浏览器关闭、UI tab 隐藏/卸载、网络或 WS 断开、重新登录、Nginx restart、Go Web Server restart 都不能终止 tmux 中任务。普通主机 reboot 不恢复进程内存；README/UI 必须明确。此契约尚未实现或验证。
 

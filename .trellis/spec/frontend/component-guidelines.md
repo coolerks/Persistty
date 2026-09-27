@@ -34,6 +34,8 @@ export function CustomSaveButton({ pending, onSave }: SaveButtonProps) {
 
 ## 业务交互与验收
 
+U67..U73覆盖下文旧IDE示例：不新增command palette/AI/扩展入口；上下两主区域内部仅左右分组，手机单内容；下方面板X只收起，单会话trash和上方terminal标签X均请求统一终止倒计时，仅controller发起、任一观察端可取消。文件标签X关闭视图保护草稿。移动终端不销毁runtime；边缘拖出展开、按钮/键盘替代入口必备。旧单端确认Dialog不能替代全端倒计时，旧upload Keep Both不是当前用户确认的冲突策略。
+
 IDE layout：Activity Bar、Explorer/Search/Git sidebar、editor tabs、Monaco、Terminal tabs；react-resizable-panels 有最小尺寸、键盘可调、持久 layout 版本。错误/loading/empty/unavailable 区分，不能 network failure 显示“没有文件”。command palette Ctrl/Cmd+Shift+P 至少新终端、打开文件/工作区、查找/替换、切换Terminal/sidebar/theme、Open Terminal Here；所有入口复用同一 command dispatcher，不复制副作用。
 
 Terminal “隐藏/分离”只调整 UI。`Close Terminal` 始终 Dialog：`关闭这个终端会终止其中正在运行的程序。`，默认焦点在取消，确认才触发 backend close，pending 禁重复操作；失败保留 tab 和错误，不 optimistic 移除并声称成功。

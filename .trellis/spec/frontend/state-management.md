@@ -1,5 +1,8 @@
 # 状态归属
 
+## 已批准范围更新（2026-09-27）
+下文bootstrap的SQLite共享布局/theme/workspaces规则已被U63..U73替代：SQLite只持有项目/folder版本及终端共享元数据，浏览器本地按project_id/schema/view_instance/设备模式保存标签、布局、展开项与主题，草稿在IndexedDB。手机单内容记录不能覆盖桌面多组布局，恢复不自动写文件/夺控制/创建终端。旧workspace_id+path键改为project/folder/真实资源身份并区分view修订；密码和CSRF不得持久化。下文旧示例不能作为未覆盖这些新规则的实施依据。
+
 | 来源 | 权威事实 | 前端处理 |
 | --- | --- | --- |
 | tmux | Terminal 是否 alive | backend observation，重连重查 |

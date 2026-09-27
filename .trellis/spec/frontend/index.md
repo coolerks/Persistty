@@ -1,6 +1,6 @@
 # 前端开发规范
 
-当前没有 React/Vite 源码。以下目录/类型/片段为 Persistty 初始约定，不是现有实现。React、TypeScript、Vite、Tailwind、shadcn/ui、lucide-react、Zustand、Monaco、xterm、react-resizable-panels 在 foundation 锁定兼容版本及实际 package manager，不猜测已安装版本。
+W01已有React/Vite登录、项目与终端元数据路由、严格API解码、三主题及布局命令类型。兼容版本和npm锁文件见web/package.json/package-lock.json；Monaco、xterm、react-resizable-panels等功能引擎留待对应工作包，尚未安装不能声称已有。下述未交付功能片段仍为契约，不是已验证实现。
 
 ## 规范索引
 | 文档 | 内容 |

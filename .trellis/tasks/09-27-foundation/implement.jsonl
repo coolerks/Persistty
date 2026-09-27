@@ -1,0 +1,9 @@
+{"file":".trellis/tasks/09-27-foundation/prd.md","reason":"已批准W01边界及验收"}
+{"file":".trellis/tasks/09-27-foundation/design.md","reason":"前后端共享API和所有权"}
+{"file":".trellis/tasks/09-27-foundation/implement.md","reason":"依赖和验证门禁"}
+{"file":".trellis/tasks/09-26-requirements-research/prd.md","reason":"完整已批准范围，不扩大W01"}
+{"file":".trellis/tasks/09-26-requirements-research/design.md","reason":"安全与状态归属"}
+{"file":".trellis/spec/backend/index.md","reason":"按清单加载具体规范"}
+{"file":".trellis/spec/frontend/index.md","reason":"按清单加载具体规范"}
+{"file":".trellis/spec/guides/index.md","reason":"跨层复用及中文约定"}
+{"file": ".trellis/spec/backend/foundation-contract.md", "reason": "W01跨层权威协议与共同fixture"}

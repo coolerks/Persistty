@@ -1,5 +1,8 @@
 # Monaco、xterm 与草稿生命周期
 
+## 当前批准规则（覆盖旧候选）
+默认去抖1秒自动保存且绑定buffer generation/文件版本，Ctrl+S只复用同保存入口；冲突暂停、不自动overwrite。桌面Monaco禁诊断/LSP，手机基础textarea无diff。恢复草稿先服务器复验/diff再明确允许写回，手机基线变化只保留/导出。model/runtime与布局宿主解耦，跨组/移上下不清undo、不dispose原终端连接；controller才发正尺寸，observer只本地fit。文件身份按project/folder/真实资源及view修订隔离。当前文本8MiB/图片16MiB另限像素，PDF/Office/hex均下载不预览。下文旧手动保存/PDF/hex/共享workspace键示例已被覆盖，W05实现前必须按新规则固化真实fixture和测试。
+
 ## Monaco
 model 以 workspace ID + 正规化相对 path 的 URI 为 key；每文件一个 model，editor view 与 model 生命周期分开。tabs 复用 model 保留 undo/view state；关 tab 或切工作区按 dirty 提示与 draft 策略处理。dispose editor/diff editor、listeners、decorations、models、worker；避免每次 render 重建或给受控 props setValue 清空 undo。
 打开 snapshot 得 content/version，buffer 修改只设 dirty。Ctrl/Cmd+S 捕获应用 command，以 base expected_version 调 PUT；成功更新 snapshot，pending 期间继续输入不得被旧保存响应标成 clean（按保存时 buffer generation 比较）。409 保存本地内容并显示 Diff/Reload/Overwrite；diff 使用只读 server model + draft model，不能覆盖旧 buffer。

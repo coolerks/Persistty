@@ -1,6 +1,7 @@
 # HTTP 与共享概念（跨层权威）
 
 ## 1. 范围 / 触发
+当前W01实施的完整签名与请求/响应见[基础协议](foundation-contract.md)，下文文件/终端写入是历史候选，未经对应交付实现不得注册假接口。多文件夹文件定位为project_id/folder_id/relative path/config version，非旧workspace_id；三种关闭命令按U71/U73区分，不能照旧文字把上方terminal标签X隐藏。
 所有 HTTP API 使用 /api/v1；新端点必须在 owning task 固化完整 request/response/error fixture，并由前后端契约测试共用。以下是初始公共契约，未创建实现。前端不自行定义不同版本。
 
 ## 2. 签名

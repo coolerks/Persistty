@@ -1,0 +1,7 @@
+{"file":".trellis/tasks/09-27-foundation/prd.md","reason":"F01..F06验收"}
+{"file":".trellis/tasks/09-27-foundation/design.md","reason":"共享协议"}
+{"file":".trellis/tasks/09-27-foundation/implement.md","reason":"验证命令与边界"}
+{"file":".trellis/spec/backend/index.md","reason":"后端质量规范"}
+{"file":".trellis/spec/frontend/index.md","reason":"前端质量规范"}
+{"file":".trellis/spec/guides/index.md","reason":"跨层检查"}
+{"file": ".trellis/spec/backend/foundation-contract.md", "reason": "认证和真实资源读接口验收"}

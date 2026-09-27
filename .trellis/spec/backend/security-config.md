@@ -1,41 +1,31 @@
 # 配置、认证与安全边界
 
 ## 1. 范围 / 触发
-单密码用户拥有服务 UID 的 shell 权限，不实现 username/register/OAuth/RBAC。allowed_roots 限制 File API，不能限制 tmux shell 的 cd、命令、git hooks 或本机用户权限；不得把 Web IDE 宣传为沙箱。
+单密码用户拥有服务 UID 的 shell 权限，不实现 username/register/OAuth/RBAC。用户注册的项目/folder身份限制File API，不能限制tmux shell的cd、命令、git hooks或本机用户权限；不得把Web IDE宣传为沙箱。用户已批准多文件夹项目，废止固定allowed_roots/default_root配置。
 
 ## 2. 签名
 CLI：`persistty serve --config /etc/persistty/config.yaml`；`persistty password` 从 TTY 隐藏输入、确认后仅输出 Argon2id PHC hash，不接受密码命令行参数。配置错误在 listen 前失败。
 HTTP 登录 `POST /api/v1/auth/login` body `{"password":"..."}`；登出 `POST /api/v1/auth/logout`；状态 `GET /api/v1/auth/session`。成功只返回 session 状态和 CSRF token；session secret 只在 Cookie。
 
 ## 3. 契约
-初始配置键与默认值（尺寸单位明确定义为 MiB/GiB，解析支持示例中的 MB/GB 并按二进制倍数处理）：
+W01配置字段如下。未实现的终端/文件/上传功能不解析假配置；其已批准后续默认值为history5000行、文本8MiB、预览16MiB、单文件上传256MiB、批次1GiB、暂存2GiB、终止倒计时10秒（1..120秒）。
 
 ```yaml
 server:
   listen: 127.0.0.1:8080
-  public_origin: https://ide.example.com
-  development: false
+  public_origin: http://10.66.66.1
+  mode: vpn_http
+  trusted_proxies: [127.0.0.1]
 auth:
   password_hash: '$argon2id$...'
-  session_ttl: 24h
-workspace:
-  allowed_roots: [/home/user/projects]
-  default_root: /home/user/projects
-terminal:
-  history_lines: 50000
-  restore_lines: 10000
-files:
-  max_edit_size: 10MB
-  max_preview_size: 50MB
-upload:
-  max_file_size: 20GB
-  chunk_threshold: 32MB
-  chunk_size: 8MB
+  session_ttl: 168h
+storage:
+  path: /var/lib/persistty/metadata.db
 ```
 
-这里 example.com/PHC 示例是字段形状，不是可直接运行的配置。部署任务提供有效安装示例。拒绝未知键、空 roots、无效 hash/origin、负大小、阈值矛盾，default_root 必须真实存在且位于 allowed roots。密码/根目录无不安全 fallback。生产仅支持 HTTPS public origin；本地 HTTP 仅显式 development，不能自动降低 Cookie 安全。
+PHC须由password CLI实际生成，10.66.66.1必须替换成真实VPN地址。旧workspace字段及旧默认数值已废止。W01拒绝未知/重复键、多个YAML文档、配置超过64KiB、无效hash/origin、非规范绝对DB路径、非owner或group/other可读配置；TTL为1分钟到30天，默认7天。不隐式建HOME项目。三种模式的Go监听均限loopback；tls要求HTTPS public_origin，development还要求loopback HTTP origin，vpn_http是批准的WireGuard内HTTP生产特例，由Nginx绑定VPN地址，不自动降低模式。VPN隔离是部署实测前提，不以字段证明公网隔离通过。服务拒绝root运行，trusted_proxies仅明确loopback IP。
 Argon2id 基线 m=65536 KiB、t=3、p=1、随机 16-byte salt、32-byte key；密码 CLI benchmark 目标 Debian 后可提高，验证 hash 参数有上下界以防 DoS。比较用恒定时间，支持版本校验，密码输入有合理字节上限并在 task 中固化。
-Cookie `__Host-persistty_session`：Secure、HttpOnly、SameSite=Strict、Path=/，无 Domain。32-byte CSPRNG session secret，每次登录轮换；DB 仅保存 token hash、expiry、CSRF 绑定信息。绝对 TTL 到期/登出撤销；session fixation、登录并发、过期可测试。登出只撤销认证/attach，不 kill Terminal。
+tls Cookie为`__Host-persistty_session`（Secure）；显式vpn_http/development为`persistty_session`（不可伪造Secure属性）。均HttpOnly、SameSite=Strict、Path=/、无Domain；32-byte CSPRNG secret，每次登录生成独立会话，其他设备不失效。DB只保存token hash、expiry与CSRF绑定信息。绝对TTL到期/登出仅撤销对应认证/attach，不kill Terminal；应用密码变更撤销全部登录会话而不杀任务。
 生产同源、禁宽松 CORS。所有写请求（含登录）检查可信 public_origin；已登录写请求另带 `X-CSRF-Token` 绑定 session。WS 验 session 与严格 Origin scheme/host/port；缺失/null Origin 拒绝，开发 origin 显式白名单。WS URL 不放 token；session 过期/登出需撤销存量连接。只信任明确配置的 loopback Nginx proxy，不能根据任意 X-Forwarded-* 判断真实来源或 HTTPS。
 登录速率限制按来源 + 全局、包括失败/成功路径，避免仅按伪造 XFF；Argon2 并发有界。启动配置/DB权限至少 owner-only，日志遵循 [脱敏](logging-guidelines.md)。
 
@@ -47,10 +37,10 @@ Cookie `__Host-persistty_session`：Secure、HttpOnly、SameSite=Strict、Path=/
 | 无 session 的 API/WS/download/preview | 401，不接触资源 |
 | 错误 Origin / CSRF | 403，无副作用 |
 | TLS origin 但 Cookie 被降级 | 启动/部署检查失败 |
-| config 无 hash/越界 default root | 启动失败 |
+| config 无 hash/非法模式/配置权限不安全 | 启动失败 |
 
 ## 5. 优 / 基础 / 错误用例
-优：重登录新 secret，旧 secret 失效，Terminal 仍运行。基础：密码校验/到期。错误：只隐藏前端 UI、允许任意 Origin、将 password 写入 SQLite 明文。
+优：登录生成独立secret，其他设备会话仍有效；退出只撤销当前会话，Terminal仍运行。基础：密码校验/到期。错误：只隐藏前端UI、允许任意Origin、将password写入SQLite明文。
 
 ## 6. 必需测试
 配置解析/单位/非法值、Argon PHC malformed/边界/校验、Cookie flags、固定 session 攻击、登出与过期、完整受保护路由矩阵、CSRF/Origin/XFF 伪造、并发限流、日志秘密扫描。HTTP session 状态匿名行为归 [HTTP](http-api.md)。

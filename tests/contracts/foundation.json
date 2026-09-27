@@ -1,0 +1,11 @@
+{
+  "session": {"data":{"authenticated":true,"expires_at":"2026-10-04T12:00:00Z","csrf_token":"test-csrf-not-a-real-secret"},"request_id":"test-request"},
+  "projects": {"data":{"items":[{"id":"project-test","name":"示例项目","version":1,"main_folder_id":"folder-test","folders":[{"id":"folder-test","path":"/home/example/project"}]}]},"request_id":"test-request"},
+  "project": {"data":{"id":"project-test","name":"示例项目","version":1,"main_folder_id":"folder-test","folders":[{"id":"folder-test","path":"/home/example/project"}]},"request_id":"test-request"},
+  "empty_projects": {"data":{"items":[]},"request_id":"test-request"},
+  "terminals": {"data":{"items":[{"id":"terminal-test","display_name":"开发终端","project_id":null,"working_directory":"/home/example/project","state":"unavailable"}]},"request_id":"test-request"},
+  "empty_terminals": {"data":{"items":[]},"request_id":"test-request"},
+  "unauthenticated": {"error":{"code":"unauthenticated","message":"请先登录。"},"request_id":"test-request"},
+  "not_found": {"error":{"code":"not_found","message":"资源不存在。"},"request_id":"test-request"},
+  "invalid_request": {"error":{"code":"invalid_request","message":"请求格式无效。"},"request_id":"test-request"}
+}

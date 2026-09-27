@@ -2,6 +2,7 @@
 
 hook 命名 useX，拥有副作用及其完整清理，依赖数组完整；禁止用 eslint-disable 隐藏 stale closure。组件 render 不发请求、不创建 Monaco/xterm，不向 Zustand 同步写派生值造成循环。
 请求使用 AbortController，workspace/path/generation 变化取消旧请求；旧 response 不得覆盖新 workspace。读可重试，写入根据幂等/版本结果处理，不能一般化自动重试所有 POST。server cache 与 UI store 边界见 [状态](state-management.md)。
+认证异步响应还必须绑定发起时的本地会话身份；不能只依赖 AbortController。TTL 到期后重新登录时，旧 logout 的迟到完成或旧请求的 401 不得清除新会话。login 先取消当前视图的旧 logout 并等待其 fetch 结算，再发送新登录，避免旧响应删除新 Cookie。取消不保证服务端不执行，也不构成跨标签 Cookie 强一致。认证 owner 集中更新身份并校验世代，测试包括旧 fetch 忽略 abort 且仍 pending 时不能先发 login。
 
 ```tsx
 useEffect(() => {

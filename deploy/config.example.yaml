@@ -1,0 +1,10 @@
+server:
+  listen: 127.0.0.1:8080
+  public_origin: http://10.66.66.1
+  mode: vpn_http
+  trusted_proxies: [127.0.0.1]
+auth:
+  password_hash: REPLACE_WITH_PERSISTTY_PASSWORD_OUTPUT
+  session_ttl: 168h
+storage:
+  path: /var/lib/persistty/metadata.db

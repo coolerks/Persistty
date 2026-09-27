@@ -1,7 +1,7 @@
 # Go 目录与职责
 
 ## 初始目录约定
-本仓库目前没有下列源码。foundation 任务按需建立，不提前创建空 package。
+foundation已按实际需求建立cmd/persistty及config/auth/storage/httpapi；其余目录由对应工作包按需建立，不提前创建空package。
 
 ```text
 cmd/persistty/       命令入口（serve、password）

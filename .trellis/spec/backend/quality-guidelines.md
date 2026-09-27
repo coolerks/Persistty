@@ -1,7 +1,7 @@
 # 后端质量门禁
 
 ## 当前阶段
-bootstrap 只有文档：检查契约覆盖、简体中文、无占位、有效链接、索引、正反例及断言点。不伪造 go test 输出；产品测试等源码和对应任务存在再执行。
+W01已有源码，Go test/race/vet和真实SQLite/router测试必须执行。尚未实现的PTY、文件和helper按对应交付测试，不能把缺目标Debian实验写成已通过。web作为独立Go模块边界，根`go test ./...`只检查第一方Go包，不执行node_modules内的Go样例或测试。
 
 ## 每任务门禁
 Go 源码 gofmt，`go test ./...`、`go vet ./...`；并发/bridge/watcher/session 用 `go test -race ./...`。unit 测试表驱动、临时目录、fake 时钟和故障注入，不写“调用过 mock 所以安全”的镜像测试。

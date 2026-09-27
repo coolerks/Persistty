@@ -1,5 +1,8 @@
 # WebSocket 协议
 
+## 当前实施边界
+W01不开放假attach/events端点。[终端最新规则](terminal-lifecycle.md)覆盖下文单端占用与confirm立即关闭候选：多端观察、单controller+generation、observer禁止resize、统一可取消deadline。每个terminal只有一个服务PTY输出源，不能按观察者重复attach改变尺寸；snapshot/live时序待W02实验后固化fixture。下文workspace_id后续改project_id/folder_id及配置version，原候选不是已实现API。
+
 ## 1. 范围 / 触发
 使用 github.com/coder/websocket。WS 是短期 transport，不拥有 Terminal job。认证/Origin/撤销规则引用 [安全契约](security-config.md)。不使用全局关闭 Origin 校验的选项。
 

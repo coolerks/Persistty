@@ -1,6 +1,6 @@
 # 主题、字体、图标与分发
 
-主题 setting 为 system/light/dark；effective theme 根据 matchMedia 计算。SQLite 持久化 setting，Zustand 当前 UI、首帧 hint 规则见 [状态](state-management.md)。system 模式监听并清理 media listener；显式 light/dark 不被系统事件覆盖。
+主题setting为system/light/dark，首次system；effective根据matchMedia计算。偏好在当前浏览器本地持久化，不存SQLite，不覆盖其他设备。首帧在渲染前应用有效主题；system监听并清理media listener，显式light/dark不被系统事件覆盖。
 语义 CSS variables 同时覆盖 shadcn/ui、Monaco theme/DiffEditor、xterm.options.theme、context menu/dialog、Explorer/scrollbar；切主题不重建 editor/terminal 或丢 buffer/history。字体/色彩/选区在三模式实测。
 
 内置 JetBrains Mono Nerd Font NL：资产任务锁定 Nerd Fonts release、Mono/NL variant、真实 font-family metadata、格式和 glyph 覆盖。自托管 font-face，等待 document.fonts.load/ready 后 Monaco remeasure/xterm fit；fallback 为 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace。不能只设置 font-family 名字却没分发字体。测试 Oh My Zsh/Powerline/Nerd glyph、中英文、宽度对齐。转换 WOFF2/子集不能意外移除 glyph；未授权不能重新许可。
