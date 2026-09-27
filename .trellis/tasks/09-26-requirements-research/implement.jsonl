@@ -1,0 +1,10 @@
+{"file":".trellis/tasks/09-26-requirements-research/prd.md","reason":"最新用户范围和验收；历史初始规范冲突须按此更新owner契约，不是实施批准"}
+{"file":".trellis/tasks/09-26-requirements-research/design.md","reason":"架构、故障策略、数据流与待审查默认参数"}
+{"file":".trellis/tasks/09-26-requirements-research/implement.md","reason":"依赖、所有权、实施关卡与最终新批准要求"}
+{"file":".trellis/spec/backend/index.md","reason":"后端owner规范入口，实施前按包加载"}
+{"file":".trellis/spec/frontend/index.md","reason":"前端owner规范入口，实施前按层加载"}
+{"file":".trellis/spec/guides/index.md","reason":"中文文档、证据与跨层/复用检查规则"}
+{"file":".trellis/tasks/09-26-requirements-research/research/terminal-lifecycle.md","reason":"tmux/systemd/恢复与真实验收、本地行号证据"}
+{"file":".trellis/tasks/09-26-requirements-research/research/files-search-git.md","reason":"安全根/版本竞争/搜索与Git技术证据"}
+{"file":".trellis/tasks/09-26-requirements-research/research/browser-transfer-assets.md","reason":"移动/传输/草稿/预览/资产兼容证据"}
+{"file":".trellis/tasks/09-26-requirements-research/research/auth-deployment-product.md","reason":"认证/部署/权限与运维证据，旧范围以PRD为准"}
