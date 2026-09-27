@@ -16,9 +16,16 @@ U06..U73要求多观察端、单输入controller，额外观察连接不返回te
 SQLite 只保存 [metadata](database-guidelines.md)。每次列表/attach 查询 tmux；缺失为 terminated/stale，依赖故障为 unavailable；不能自动复活同 ID 会话。tmux-only 的 managed session 用标识 reconciliation，保留并允许恢复 metadata，不清理用户任务。
 
 ### systemd 隔离设计与实测门禁
-拟采用同一个非 root UID 的 `persistty-tmux.service` 预启动专属 tmux server，`persistty.service` 仅连接该 socket。tmux server 和 pane job 必须处于独立 unit cgroup；Web unit 仍正常 KillMode=control-group，停止只回收 attach clients。单纯 setsid/nohup/daemonize 不能作为 cgroup 隔离证明。
+拟采用同一个非 root UID 的 `persistty-tmux.service` 预启动专属 tmux server，`persistty.service` 仅连接该 socket。tmux server 和 pane job 都必须独立于 Web unit cgroup，但不能假定 pane 与 server 在同一 cgroup；Web unit 仍正常 KillMode=control-group，停止只回收 attach clients。单纯 setsid/nohup/daemonize 不能作为 cgroup 隔离证明。
 Spike 确定具体启动命令、前台保持/空 server 保持、socket 目录生命周期、tmux 配置（禁 exit-unattached/意外 exit-empty），并锁定 Debian tmux/systemd 版本。Web 启动检查现有 socket/server；server 不存在时拒绝 Terminal 操作，不允许 tmux CLI 从 Web cgroup 隐式启动 server。
 禁止 Web 与 tmux unit 的 PartOf/BindsTo/restart 传播，不能用 Web ExecStop kill-server。独立 tmux unit 的管理员 stop/restart 会终止任务，部署升级只重启 Web；文档须区别。不能默认自动 restart 一个失败的 tmux unit并声称旧进程恢复。
+
+### W02 已观测能力与保留门禁
+Debian 13.4/systemd 257.9/tmux 3.5a-3 的隔离 Python PTY 探针已观测：`tmux -D -S <私有socket>` 在用户 transient service 中预启动空 server；只连接使用 `-N`，缺失 socket 返回失败且不生成 server。模拟 Web 的正常停止/重启/SIGKILL 与跨 SSH 采样中，pane PID/start time 不变且心跳继续；只读 `read-only,ignore-size` 客户端没有改变控制端尺寸。可重复命令与证据归 [终端实验](../../../tests/integration/debian/terminal/README.md)。
+
+此版本 pane 实际在独立 `tmux-spawn-UUID.scope`，server 在自身 service，二者都不在 Web cgroup。其来源是 [tmux 3.5a 上游 systemd 实现](https://raw.githubusercontent.com/tmux/tmux/3.5a/compat/systemd.c)，不是 Debian 专有补丁推断。验证和清理须记录自身 server/pane PID/start time/cgroup 及派生 scope，只操作已确认属于本次实验的精确名字，禁止全局通配停止 tmux-spawn scope。管理员停止实验 server 后本次心跳 pane 消失、scope inactive；不能据此保证任意用户任务的终止语义。
+
+当前通过的是底层隔离实验，不是正式 Go/WS bridge、完整 TUI/history 同步或多设备控制验收。正式实现仍须验证这些路径；普通 sudo 非免密，本实验只临时解包 tmux 及必要 libevent 包，未改变系统安装状态。
 
 ### 历史、尺寸、背压
 配置 history_lines=50000、restore_lines=10000；不是无限输出。Spike 验证 capture-pane 与 attach 初始屏幕避免重复/丢失及转义安全的切换策略，之后更新 [WS](websocket-protocol.md) 的交付契约。PTY rows/cols 按连接尺寸同步并限制到 1..1000；多客户端策略初期每 Terminal 一个可写 attach，额外连接返回占用错误，不能 attach -d 无提示抢走另一客户端。

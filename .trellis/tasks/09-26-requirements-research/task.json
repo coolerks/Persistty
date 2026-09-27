@@ -19,7 +19,8 @@
   "pr_url": null,
   "subtasks": [],
   "children": [
-    "09-27-foundation"
+    "09-27-foundation",
+    "09-27-debian-spike"
   ],
   "parent": null,
   "relatedFiles": [],

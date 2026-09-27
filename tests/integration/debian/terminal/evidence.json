@@ -1,0 +1,225 @@
+{
+  "redaction": {
+    "kind": "redacted_observation",
+    "description": "脱敏实测记录，不是原始输出；同一远端 UID 在所有 cgroup 中使用一致占位符，保留 PID、start_ticks、心跳及隔离关系。",
+    "fields": [
+      "remote_user",
+      "remote_home",
+      "remote_uid"
+    ],
+    "connection_values_stored": false
+  },
+  "start": {
+    "root": "/tmp/persistty-terminal-1lRwXVuk",
+    "socket": "/tmp/persistty-terminal-1lRwXVuk/tmux.sock",
+    "server_unit": "persistty-spike-d7e4b828b7e6-tmux.service",
+    "web_unit": "persistty-spike-d7e4b828b7e6-web.service",
+    "observer_unit": "persistty-spike-d7e4b828b7e6-observer.service",
+    "dependency": "libevent-core-2.1-7t64=2.1.13-stable-1~deb13u1",
+    "library_path": "/tmp/persistty-terminal-1lRwXVuk/package/usr/lib/x86_64-linux-gnu",
+    "tmux": "/tmp/persistty-terminal-1lRwXVuk/package/usr/bin/tmux",
+    "version": "tmux 3.5a",
+    "systemd": "systemd 257 (257.9-1~deb13u1)",
+    "missing_server_rejected": true,
+    "empty_server_alive": true,
+    "socket_mode": "0o600",
+    "pane_scope": "tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope",
+    "baseline": {
+      "label": "before_attach",
+      "server": {
+        "pid": 855260,
+        "start_ticks": 914317234,
+        "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-tmux.service"
+      },
+      "pane": {
+        "pid": 855266,
+        "start_ticks": 914317355,
+        "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope"
+      },
+      "heartbeat": 1,
+      "dimensions": "100x30",
+      "pane_id": "%0",
+      "clients": []
+    },
+    "samples": [
+      {
+        "label": "before_attach",
+        "server": {
+          "pid": 855260,
+          "start_ticks": 914317234,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-tmux.service"
+        },
+        "pane": {
+          "pid": 855266,
+          "start_ticks": 914317355,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope"
+        },
+        "heartbeat": 1,
+        "dimensions": "100x30",
+        "pane_id": "%0",
+        "clients": []
+      },
+      {
+        "label": "attached",
+        "server": {
+          "pid": 855260,
+          "start_ticks": 914317234,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-tmux.service"
+        },
+        "pane": {
+          "pid": 855266,
+          "start_ticks": 914317355,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope"
+        },
+        "heartbeat": 4,
+        "dimensions": "100x30",
+        "pane_id": "%0",
+        "clients": [
+          "855275:attached,focused,UTF-8:100x30"
+        ]
+      },
+      {
+        "label": "after_web_stop",
+        "server": {
+          "pid": 855260,
+          "start_ticks": 914317234,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-tmux.service"
+        },
+        "pane": {
+          "pid": 855266,
+          "start_ticks": 914317355,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope"
+        },
+        "heartbeat": 7,
+        "dimensions": "100x30",
+        "pane_id": "%0",
+        "clients": []
+      },
+      {
+        "label": "after_web_restart",
+        "server": {
+          "pid": 855260,
+          "start_ticks": 914317234,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-tmux.service"
+        },
+        "pane": {
+          "pid": 855266,
+          "start_ticks": 914317355,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope"
+        },
+        "heartbeat": 12,
+        "dimensions": "100x30",
+        "pane_id": "%0",
+        "clients": [
+          "855295:attached,focused,UTF-8:100x30"
+        ]
+      },
+      {
+        "label": "after_web_sigkill",
+        "server": {
+          "pid": 855260,
+          "start_ticks": 914317234,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-tmux.service"
+        },
+        "pane": {
+          "pid": 855266,
+          "start_ticks": 914317355,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope"
+        },
+        "heartbeat": 15,
+        "dimensions": "100x30",
+        "pane_id": "%0",
+        "clients": []
+      },
+      {
+        "label": "with_small_readonly_observer",
+        "server": {
+          "pid": 855260,
+          "start_ticks": 914317234,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-tmux.service"
+        },
+        "pane": {
+          "pid": 855266,
+          "start_ticks": 914317355,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope"
+        },
+        "heartbeat": 19,
+        "dimensions": "100x30",
+        "pane_id": "%0",
+        "clients": [
+          "855308:attached,focused,UTF-8:100x30",
+          "855313:attached,focused,ignore-size,read-only,UTF-8:40x10"
+        ]
+      },
+      {
+        "label": "after_all_attach_disappear",
+        "server": {
+          "pid": 855260,
+          "start_ticks": 914317234,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-tmux.service"
+        },
+        "pane": {
+          "pid": 855266,
+          "start_ticks": 914317355,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope"
+        },
+        "heartbeat": 22,
+        "dimensions": "100x30",
+        "pane_id": "%0",
+        "clients": []
+      }
+    ],
+    "attach_identity": {
+      "pid": 855275,
+      "start_ticks": 914317387,
+      "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-web.service"
+    },
+    "history_capture": [
+      "probe-heartbeat 20",
+      "probe-heartbeat 21",
+      "probe-heartbeat 22"
+    ]
+  },
+  "new_ssh_connection": {
+    "label": "new_ssh_connection",
+    "server": {
+      "pid": 855260,
+      "start_ticks": 914317234,
+      "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-spike-d7e4b828b7e6-tmux.service"
+    },
+    "pane": {
+      "pid": 855266,
+      "start_ticks": 914317355,
+      "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope"
+    },
+    "heartbeat": 95,
+    "dimensions": "100x30",
+    "pane_id": "%0",
+    "clients": []
+  },
+  "cleanup": {
+    "cleanup": [
+      {
+        "unit": "persistty-spike-d7e4b828b7e6-observer.service",
+        "active": "inactive"
+      },
+      {
+        "unit": "persistty-spike-d7e4b828b7e6-web.service",
+        "active": "inactive"
+      },
+      {
+        "unit": "persistty-spike-d7e4b828b7e6-tmux.service",
+        "active": "inactive"
+      },
+      {
+        "pane_after_server_stop": false,
+        "scope_before_explicit_cleanup": "inactive"
+      },
+      {
+        "unit": "tmux-spawn-e405ecf5-1994-49ec-875e-a74d85fc1e73.scope",
+        "active": "inactive"
+      }
+    ],
+    "root_removed": "/tmp/persistty-terminal-1lRwXVuk"
+  }
+}

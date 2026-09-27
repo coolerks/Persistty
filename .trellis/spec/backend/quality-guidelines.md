@@ -8,6 +8,9 @@ Go 源码 gofmt，`go test ./...`、`go vet ./...`；并发/bridge/watcher/sessi
 config、auth、session、path validation、symlink/TOCTOU、file conflict、atomic save、upload、rg parser、tmux parser、git parser、SQLite migration 都要在对应功能任务中有断言。真实 integration 使用独立 filesystem/Git/rg/SQLite/tmux/PTY，缺依赖明确 skip 原因；release CI 中 required suites skip 即验收失败。单元测试不能覆盖 Debian systemd 证明。
 安全 review task 必须逐项留修复或测试证据：auth bypass、WS Origin/认证撤销、CSRF、path/symlink、shell/flag injection、upload overwrite/quota、ZIP traversal、SVG XSS、binary、session fixation/brute force、敏感日志、权限/roots。
 
+### Debian 探针验收规则
+探针的每次心跳必须比上次采样增长，PID/start time/cgroup 则与固定初始身份比较；只比初始心跳大可能误判早已停止推进的任务。Python 使用 assert 做判定时入口必须拒绝 `-O`，不能只在 README 禁止。强杀或 timeout 可能跳过 defer/finally，内部 TMPDIR 必须归入已知且校验过的自有上传目录，并提供精确 unit/scope/目录清理命令。输出内存限额不等于磁盘配额；本轮临时文件命令捕获只有时间界限，不能复用为正式服务的通用执行沙箱。
+
 ## 关键 acceptance
 Terminal lifecycle Spike 先于正式 Terminal UI，真实 Debian Web restart 后 job 不变；v0.1 release 运行完整 A/B/C critical E2E。另含 file conflict、ignore/replace conflict、upload/resume/ZIP/symlink、watcher、Git CLI 对照。测试归属 task PRD，不建立另一套 TODO。
 实现变更和测试同任务交付；测试隔离、deadline、有界输出、可靠清理，只清理自己的 PID/socket/session。不能用固定 sleep 当唯一就绪判断，采用心跳/health/条件轮询。

@@ -13,6 +13,11 @@
 词法检查采用 filepath.Rel 验证边界，不用 strings.HasPrefix。这些检查只用于输入和诊断，最后 I/O 必须通过 Debian 根句柄限定的 API（锁定 Go 版本后的 os.Root，或封装 openat2/dirfd）。禁止 EvalSymlinks 后普通 os.Open/WriteFile 作为安全方案。
 安全父目录句柄覆盖创建、rename、remove、copy 和临时文件操作；禁止 fallback 到绝对路径 I/O。普通链接只允许读取最终目标仍在所属 root 内；写入先解析安全目标，不把“保存链接”误变成替换链接本身。目录树/ZIP 不 follow symlink；删除链接删除链接条目，不递归目标。拒绝 socket/FIFO/device 文件，避免阻塞和泄露。git/rg 进程不能仅靠 Dir 防路径竞态，事后复验不能撤销工具已发生的根外读取。工具的内容读取必须采用 [命令规范](process-guidelines.md) 中受限执行或安全输入策略；交付前还要安全根下复验和形成 snapshot，不能直接返回未验证 CLI preview。
 
+### Go 根句柄实测边界
+Go 1.26.8 在 Debian 13.4 的 [独立探针](../../../tests/integration/debian/files/README.md) 已验证根内相对链接、越界拒绝及有限 parent swap；仅是底层能力证据，不是 File API 验收。`os.Root` 绑定打开目录的身份：通过 `OpenRoot` 打开的内部目录被外部进程移出原树后，旧句柄仍可访问其内容。不能将句柄存活、Abs/EvalSymlinks 或一次检查当成请求时当前项目成员证明。W04 必须在注册/config version/根身份及提交裁决中明确移动后的处理，不以普通绝对路径 fallback 修补。
+
+`os.Root` 不禁止跨挂载点、设备/FIFO 或 Linux `/proc` 魔术文件；须按产品契约单独验证与拒绝。Landlock ABI 查询为 6 仅说明内核支持，不证明 rg/Git 受限执行安全；没有真实 launcher/exec 授权与 CLI 对照证据时保持门禁未通过。有限竞态测试未发现越界，不能宣传任意竞争下的完整证明。
+
 ### 冲突和保存
 Open 从同一打开句柄读取、hash、stat，若读取中发生变化就有界重试或报 conflict；不要把不同时间读取的 metadata/hash 拼成快照。
 Save 在应用内按目标文件序列化；安全打开当前目标比较版本，不匹配 409 且零写入。创建同目录随机 O_EXCL 临时文件，写完整数据、恢复原始普通权限位（保留 executable、不要继承 setuid/setgid）、fsync/close。提交前再次校验目标 identity/版本，再用同一安全父目录原子 rename，fsync 父目录并返回新版本。任何失败清理自己的 temp；不能先 truncate 目标。上传提交/replace 复用此安全操作边界。
