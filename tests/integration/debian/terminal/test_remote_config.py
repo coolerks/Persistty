@@ -153,6 +153,44 @@ class RemoteConfigTests(unittest.TestCase):
             self.assertEqual(stderr.getvalue(), "固定错误\n")
             remote.assert_not_called()
 
+    def test_bridge_failure_cleans_only_new_root(self):
+        remote = Mock()
+        remote.ssh.side_effect = ["/tmp/persistty-bridge-ABCDEFGH\n", "",
+                                  config.TransportError("Debian 传输失败"), '{"root_removed":true}']
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory, "bridge-probe")
+            binary.touch()
+            with self.assertRaises(config.TransportError):
+                runner.run_bridge(remote, binary)
+        cleanup = remote.ssh.call_args.args[0]
+        self.assertIn("/tmp/persistty-bridge-ABCDEFGH/state.json", cleanup)
+        self.assertIn("cleanup /tmp/persistty-bridge-ABCDEFGH", cleanup)
+
+    def test_bridge_bad_root_or_binary_has_no_upload(self):
+        remote = Mock()
+        with self.assertRaises(config.TransportError):
+            runner.run_bridge(remote, Path("/nonexistent/bridge-probe"))
+        remote.ssh.assert_not_called()
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory, "bridge-probe")
+            binary.touch()
+            remote.ssh.return_value = "/tmp/not-own"
+            with self.assertRaises(config.TransportError):
+                runner.run_bridge(remote, binary)
+        remote.scp.assert_not_called()
+
+    def test_bridge_cleanup_failure_records_only_exact_own_root(self):
+        remote = Mock()
+        remote.ssh.side_effect = ["/tmp/persistty-bridge-ABCDEFGH\n", "", "{}", "{}",
+                                  config.TransportError("Debian 传输失败")]
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory, "bridge-probe")
+            binary.touch()
+            with patch.object(runner.time, "sleep"), self.assertRaises(config.TransportError) as error:
+                runner.run_bridge(remote, binary)
+        self.assertEqual(str(error.exception),
+                         "Debian bridge 清理未验证；仅核查自身实验目录 /tmp/persistty-bridge-ABCDEFGH")
+
     def test_missing_field_cannot_use_process_environment(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory, ".env")

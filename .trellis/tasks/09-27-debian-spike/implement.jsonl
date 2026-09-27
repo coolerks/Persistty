@@ -1,3 +1,6 @@
 {"file": ".trellis/spec/backend/terminal-lifecycle.md", "reason": "隔离终端与 cgroup 生命周期门禁"}
 {"file": ".trellis/spec/backend/filesystem-guidelines.md", "reason": "根句柄与 symlink 安全门禁"}
 {"file": ".trellis/spec/backend/remote-validation.md", "reason": "连接仅解析私有 .env，禁止可提交证据保存真实身份地址"}
+{"file": ".trellis/spec/backend/websocket-protocol.md", "reason": "真实Go/PTY/WS桥接的二进制限额与取消实验"}
+{"file": ".trellis/tasks/09-27-debian-spike/research/history-tui-plan.md", "reason": "D07官方依据、capture/attach反例及库解析门禁"}
+{"file": ".trellis/spec/frontend/editor-terminal-lifecycle.md", "reason": "xterm字节解析、缓冲区恢复与运行时隔离边界"}

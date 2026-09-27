@@ -7,6 +7,9 @@ import re
 import shlex
 import sys
 import time
+import os
+import subprocess
+import tempfile
 
 from remote_config import ConfigError, Remote, ROOT, TransportError, read_config, redact
 
@@ -59,17 +62,104 @@ def run_files(remote, probe, test):
     return result
 
 
+def run_bridge(remote, binary):
+    if not binary.is_file() or binary.name != "bridge-probe":
+        raise TransportError("Debian bridge 本地二进制缺失或名称非法")
+    root = remote.ssh("umask 077; mktemp -d /tmp/persistty-bridge-XXXXXXXX").strip()
+    if not re.fullmatch(r"/tmp/persistty-bridge-[A-Za-z0-9]{8}", root):
+        raise TransportError("Debian 临时目录身份非法")
+    result = {}
+    try:
+        remote.scp([ROOT / "tests/integration/debian/bridge/probe.py", binary], root)
+        remote.ssh(f"chmod 700 -- {shlex.quote(root + '/bridge-probe')}")
+        result["start"] = json.loads(remote.ssh(
+            f"python3 -B {shlex.quote(root + '/probe.py')} start {shlex.quote(root)}"))
+        if result["start"].get("probe_failed"):
+            raise TransportError("Debian bridge 实验失败阶段 " + result["start"]["stage"])
+        time.sleep(1)
+        result["new_ssh_connection"] = json.loads(remote.ssh(
+            f"python3 -B {shlex.quote(root + '/probe.py')} check {shlex.quote(root)}"))
+        if result["new_ssh_connection"].get("probe_failed"):
+            raise TransportError("Debian bridge 实验失败阶段 " + result["new_ssh_connection"]["stage"])
+    finally:
+        try:
+            result["cleanup"] = json.loads(remote.ssh(
+                f"if test -f {shlex.quote(root + '/state.json')}; then "
+                f"python3 -B {shlex.quote(root + '/probe.py')} cleanup {shlex.quote(root)}; "
+                f"else rm -f -- {shlex.quote(root + '/probe.py')} {shlex.quote(root + '/bridge-probe')}; "
+                f"rmdir -- {shlex.quote(root)} && printf '{{\"unstarted_root_removed\":true}}'; fi"))
+            if result["cleanup"].get("probe_failed"):
+                raise TransportError("Debian bridge 清理判定失败")
+        except Exception:
+            # 随机自有 ROOT 不是连接身份；失败时保留精确恢复入口。
+            raise TransportError("Debian bridge 清理未验证；仅核查自身实验目录 " + root) from None
+    return result
+
+
+def run_history(remote, binary):
+    if not binary.is_file() or binary.name != "bridge-probe":
+        raise TransportError("Debian history 本地二进制缺失或名称非法")
+    cache = ROOT / ".cache"
+    cache.mkdir(exist_ok=True)
+    root = remote.ssh("umask 077; mktemp -d /tmp/persistty-history-XXXXXXXX").strip()
+    if not re.fullmatch(r"/tmp/persistty-history-[A-Za-z0-9]{8}", root):
+        raise TransportError("Debian history 临时目录身份非法")
+    result = {}
+    try:
+        remote.scp([binary], root)
+        # 复用审查过的隔离与精确清理 helper；名称不覆盖 D06 probe。
+        remote.scp([ROOT / "tests/integration/debian/bridge/probe.py"], root + "/")
+        remote.ssh(f"mv -- {shlex.quote(root + '/probe.py')} {shlex.quote(root + '/bridge_support.py')}")
+        remote.scp([ROOT / "tests/integration/debian/history/probe.py"], root)
+        remote.ssh(f"chmod 700 -- {shlex.quote(root + '/bridge-probe')}")
+        raw = json.loads(remote.ssh(f"python3 -B {shlex.quote(root + '/probe.py')} start {shlex.quote(root)}"))
+        if raw.get("probe_failed"):
+            raise TransportError("Debian history 实验失败阶段 " + raw["stage"])
+        fd, path = tempfile.mkstemp(prefix="history-",suffix=".json",dir=cache)
+        try:
+            with os.fdopen(fd,"w") as file: json.dump({"records":raw["records"],"capture":raw["capture"]},file)
+            process = subprocess.run(["node", str(ROOT / "tests/integration/debian/history/analyze.mjs"),path],
+                stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=45)
+            if process.returncode or len(process.stdout)>65536:
+                raise TransportError("Debian history 解析失败")
+            parsed = json.loads(process.stdout)
+            if not all(parsed["checks"].values()):
+                raise TransportError("Debian history 解析断言失败")
+            result = {"facts":raw["facts"],**parsed}
+        finally:
+            Path(path).unlink(missing_ok=True)
+    finally:
+        try:
+            result["cleanup"] = json.loads(remote.ssh(
+                f"if test -f {shlex.quote(root + '/state.json')}; then "
+                f"python3 -B {shlex.quote(root + '/probe.py')} cleanup {shlex.quote(root)}; "
+                f"else rm -f -- {shlex.quote(root + '/probe.py')} {shlex.quote(root + '/bridge_support.py')} "
+                f"{shlex.quote(root + '/bridge-probe')}; rmdir -- {shlex.quote(root)} && "
+                "printf '{\"unstarted_root_removed\":true}'; fi"))
+            if result["cleanup"].get("probe_failed"): raise TransportError("清理失败")
+        except Exception:
+            raise TransportError("Debian history 清理未验证；仅核查自身实验目录 " + root) from None
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=("terminal", "files"))
+    parser.add_argument("kind", choices=("terminal", "files", "bridge", "history"))
     parser.add_argument("--probe", type=Path, default=Path("/tmp/persistty-files-probe"))
     parser.add_argument("--test", type=Path, default=Path("/tmp/persistty-files-test"))
+    parser.add_argument("--binary", type=Path, default=Path("/tmp/bridge-probe"))
     args = parser.parse_args()
     try:
         connection = read_config()
         remote = Remote(connection)
-        result = (run_terminal(remote) if args.kind == "terminal"
-                  else run_files(remote, args.probe.resolve(), args.test.resolve()))
+        if args.kind == "terminal":
+            result = run_terminal(remote)
+        elif args.kind == "bridge":
+            result = run_bridge(remote, args.binary.resolve())
+        elif args.kind == "history":
+            result = run_history(remote, args.binary.resolve())
+        else:
+            result = run_files(remote, args.probe.resolve(), args.test.resolve())
         print(json.dumps({"redaction": {"kind": "redacted_observation",
                           "connection_values_stored": False},
                           **redact(result, connection)}, ensure_ascii=False, indent=2))

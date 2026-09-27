@@ -28,6 +28,8 @@ model 以 workspace ID + 正规化相对 path 的 URI 为 key；每文件一个 
 验收覆盖伪装为文本扩展名的二进制、格式/大小边界、Unicode 文件名、各图片格式、含脚本/外部资源的 SVG、只读 PDF、超限下载入口、无认证拒绝及切换后资源释放。
 
 ## xterm
+D07 的独立 @xterm/headless 解析测试只证明固定记录的库解析状态，未安装产品 xterm，也未证明浏览器 renderer/实时 WS 通过。tmux 外层 attach 的 alternate 与 pane TUI 模式不同，历史直接 capture+attach 有遗漏反例；恢复方案遵守 [机制实验边界](../backend/history-validation.md)，不能简单拼接或剥 ANSI。buffer 断言须等待 write callback，并比较 normal/alternate、cell 与 cursor，不以字符串 marker 代替全部状态。
+
 每次 mounted view 创建一个实例；addons 按功能引入 fit/search/web-links，按锁定 @xterm 版本 API dispose。创建前字体加载，ResizeObserver 在可见且尺寸非零时 fit -> rows/cols -> server resize，变化合并避免 flood；隐藏时不发 0x0。terminal onData -> 当前 authenticated WS binary；server bytes -> write，保留 split UTF-8。
 clear display 只 clear xterm，不执行 shell clear/kill，不清 tmux history。copy/paste 使用浏览器 clipboard 与权限反馈，paste 不伪造控制序列；clickable URL 仅 http/https，禁止 javascript，外链 noopener。URL/标题/输出不是可信 HTML。
 unmount dispose xterm/addons/listeners/observer/socket/timers，只 detach；create/close 分别来自明确 user command。StrictMode 不重复 create session。每次新 attach/reset 按定案历史策略恢复一次，避免把旧 screen 和 capture history 连续叠加。

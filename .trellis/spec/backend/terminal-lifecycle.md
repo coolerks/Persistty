@@ -25,9 +25,13 @@ Debian 13.4/systemd 257.9/tmux 3.5a-3 的隔离 Python PTY 探针已观测：`tm
 
 此版本 pane 实际在独立 `tmux-spawn-UUID.scope`，server 在自身 service，二者都不在 Web cgroup。其来源是 [tmux 3.5a 上游 systemd 实现](https://raw.githubusercontent.com/tmux/tmux/3.5a/compat/systemd.c)，不是 Debian 专有补丁推断。验证和清理须记录自身 server/pane PID/start time/cgroup 及派生 scope，只操作已确认属于本次实验的精确名字，禁止全局通配停止 tmux-spawn scope。管理员停止实验 server 后本次心跳 pane 消失、scope inactive；不能据此保证任意用户任务的终止语义。
 
-当前通过的是底层隔离实验，不是正式 Go/WS bridge、完整 TUI/history 同步或多设备控制验收。正式实现仍须验证这些路径；普通 sudo 非免密，本实验只临时解包 tmux 及必要 libevent 包，未改变系统安装状态。
+后续 D06 已通过真实 Go/PTY/WS 隔离探针：最终二进制经独立 Debian 重跑，Web stop/restart/SIGKILL 后原 server/pane PID、start time、cgroup 不变，13 次心跳逐样本增长，重连不重放输入；精确实验 unit/scope 与目录完成清理。认证/Origin、字节和控制限额、慢客户端队列拒绝及 attach 回收有回归测试，详见 [桥接验证](bridge-validation.md) 和 [独立检查](../../tasks/09-27-debian-spike/bridge-check-report.md)。
+
+这些结果不是正式产品 Go/WS 服务、完整 TUI/history 同步或多设备控制验收。正式实现仍须验证这些路径；普通 sudo 非免密，本实验只临时解包 tmux 及必要 libevent 包，未改变系统安装状态。
 
 ### 历史、尺寸、背压
+D07 机制实验已观测 raw attach 仅恢复当前画面，capture 后输出超过一屏再 attach 可遗漏间隙行；捕获历史留在 normal buffer 不等于当前 active buffer 可浏览。真实 curses 当前画面恢复与完整 scrollback 恢复必须分开判定。不得以直接拼接、过滤切屏序列或文本前缀去重定案生产方案，详见 [历史/TUI 验证](history-validation.md)。生产同步截点仍未验收。
+
 配置 history_lines=50000、restore_lines=10000；不是无限输出。Spike 验证 capture-pane 与 attach 初始屏幕避免重复/丢失及转义安全的切换策略，之后更新 [WS](websocket-protocol.md) 的交付契约。PTY rows/cols 按连接尺寸同步并限制到 1..1000；多客户端策略初期每 Terminal 一个可写 attach，额外连接返回占用错误，不能 attach -d 无提示抢走另一客户端。
 输出队列有界；慢客户端断开可重连，不阻塞/终止 pane job；重连恢复是 tmux 有界历史，不保证每一字节网络精确重放。
 

@@ -1,0 +1,501 @@
+{
+  "redaction": {
+    "kind": "redacted_observation",
+    "connection_values_stored": false
+  },
+  "start": {
+    "root": "/tmp/persistty-bridge-avG1D0dH",
+    "socket": "/tmp/persistty-bridge-avG1D0dH/tmux.sock",
+    "session": "persistty_probe_5bb1ef152634",
+    "server_unit": "persistty-bridge-5bb1ef152634-tmux.service",
+    "web_unit": "persistty-bridge-5bb1ef152634-web.service",
+    "client_unit": "persistty-bridge-5bb1ef152634-client.service",
+    "stage": "client_exercise",
+    "tmux": "/tmp/persistty-bridge-avG1D0dH/package/usr/bin/tmux",
+    "library_path": "/tmp/persistty-bridge-avG1D0dH/package/usr/lib/x86_64-linux-gnu",
+    "version": "tmux 3.5a",
+    "pane_scope": "tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope",
+    "baseline": {
+      "label": "before_go_attach",
+      "server": {
+        "pid": 914243,
+        "start_ticks": 915823451,
+        "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+      },
+      "pane": {
+        "pid": 914246,
+        "start_ticks": 915823463,
+        "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+      },
+      "pane_id": "%0",
+      "heartbeat": 1,
+      "input_count": 0,
+      "clients": []
+    },
+    "samples": [
+      {
+        "label": "before_go_attach",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 1,
+        "input_count": 0,
+        "clients": []
+      },
+      {
+        "label": "after_ws_exercise",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 7,
+        "input_count": 1,
+        "clients": []
+      }
+    ],
+    "web_identity": {
+      "pid": 914253,
+      "start_ticks": 915823479,
+      "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-web.service"
+    },
+    "listen_port": 42833,
+    "exercise": {
+      "baseline": {
+        "active": false,
+        "started": 0,
+        "reaped": 0,
+        "fd_count": 8,
+        "goroutines": 6,
+        "pid": 914253
+      },
+      "checks": {
+        "detach_reconnect_reaped": true,
+        "invalid_resize_1008": true,
+        "no_auth": true,
+        "oversize_1009": true,
+        "resources_bounded": true,
+        "single_attach_409": true,
+        "split_unicode_binary_roundtrip": true,
+        "valid_resize": true,
+        "wrong_origin": true
+      },
+      "stats": {
+        "active": false,
+        "started": 7,
+        "reaped": 7,
+        "fd_count": 8,
+        "goroutines": 6,
+        "pid": 914253
+      }
+    },
+    "expected_input_count": 1
+  },
+  "new_ssh_connection": {
+    "root": "/tmp/persistty-bridge-avG1D0dH",
+    "socket": "/tmp/persistty-bridge-avG1D0dH/tmux.sock",
+    "session": "persistty_probe_5bb1ef152634",
+    "server_unit": "persistty-bridge-5bb1ef152634-tmux.service",
+    "web_unit": "persistty-bridge-5bb1ef152634-web.service",
+    "client_unit": "persistty-bridge-5bb1ef152634-client.service",
+    "stage": "lifecycle_sigkill",
+    "tmux": "/tmp/persistty-bridge-avG1D0dH/package/usr/bin/tmux",
+    "library_path": "/tmp/persistty-bridge-avG1D0dH/package/usr/lib/x86_64-linux-gnu",
+    "version": "tmux 3.5a",
+    "pane_scope": "tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope",
+    "baseline": {
+      "label": "before_go_attach",
+      "server": {
+        "pid": 914243,
+        "start_ticks": 915823451,
+        "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+      },
+      "pane": {
+        "pid": 914246,
+        "start_ticks": 915823463,
+        "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+      },
+      "pane_id": "%0",
+      "heartbeat": 1,
+      "input_count": 0,
+      "clients": []
+    },
+    "samples": [
+      {
+        "label": "before_go_attach",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 1,
+        "input_count": 0,
+        "clients": []
+      },
+      {
+        "label": "after_ws_exercise",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 7,
+        "input_count": 1,
+        "clients": []
+      },
+      {
+        "label": "new_ssh_connection",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 19,
+        "input_count": 1,
+        "clients": []
+      },
+      {
+        "label": "attached_before_go_stop",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 23,
+        "input_count": 1,
+        "clients": [
+          "914320"
+        ]
+      },
+      {
+        "label": "after_go_stop",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 27,
+        "input_count": 1,
+        "clients": []
+      },
+      {
+        "label": "reconnected_after_stop",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 31,
+        "input_count": 1,
+        "clients": []
+      },
+      {
+        "label": "attached_before_go_restart",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 35,
+        "input_count": 1,
+        "clients": [
+          "914362"
+        ]
+      },
+      {
+        "label": "live_after_systemctl_restart",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 39,
+        "input_count": 1,
+        "clients": []
+      },
+      {
+        "label": "after_go_restart",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 42,
+        "input_count": 1,
+        "clients": []
+      },
+      {
+        "label": "reconnected_after_restart",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 46,
+        "input_count": 1,
+        "clients": []
+      },
+      {
+        "label": "attached_before_go_sigkill",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 50,
+        "input_count": 1,
+        "clients": [
+          "914446"
+        ]
+      },
+      {
+        "label": "after_go_sigkill",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 54,
+        "input_count": 1,
+        "clients": []
+      },
+      {
+        "label": "reconnected_after_sigkill",
+        "server": {
+          "pid": 914243,
+          "start_ticks": 915823451,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-tmux.service"
+        },
+        "pane": {
+          "pid": 914246,
+          "start_ticks": 915823463,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 58,
+        "input_count": 1,
+        "clients": []
+      }
+    ],
+    "web_identity": {
+      "pid": 914459,
+      "start_ticks": 915824277,
+      "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-web.service"
+    },
+    "listen_port": 41749,
+    "exercise": {
+      "baseline": {
+        "active": false,
+        "started": 0,
+        "reaped": 0,
+        "fd_count": 8,
+        "goroutines": 6,
+        "pid": 914253
+      },
+      "checks": {
+        "detach_reconnect_reaped": true,
+        "invalid_resize_1008": true,
+        "no_auth": true,
+        "oversize_1009": true,
+        "resources_bounded": true,
+        "single_attach_409": true,
+        "split_unicode_binary_roundtrip": true,
+        "valid_resize": true,
+        "wrong_origin": true
+      },
+      "stats": {
+        "active": false,
+        "started": 7,
+        "reaped": 7,
+        "fd_count": 8,
+        "goroutines": 6,
+        "pid": 914253
+      }
+    },
+    "expected_input_count": 1,
+    "attach_identities": [
+      {
+        "pid": 914320,
+        "start_ticks": 915823754,
+        "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-web.service"
+      },
+      {
+        "pid": 914362,
+        "start_ticks": 915823930,
+        "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-web.service"
+      },
+      {
+        "pid": 914446,
+        "start_ticks": 915824165,
+        "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-web.service"
+      }
+    ],
+    "observations": [
+      {
+        "checks": {
+          "binary_output": true
+        },
+        "stats": {
+          "active": false,
+          "started": 1,
+          "reaped": 1,
+          "fd_count": 8,
+          "goroutines": 6,
+          "pid": 914332
+        }
+      },
+      {
+        "checks": {
+          "binary_output": true
+        },
+        "stats": {
+          "active": false,
+          "started": 1,
+          "reaped": 1,
+          "fd_count": 8,
+          "goroutines": 6,
+          "pid": 914415
+        }
+      },
+      {
+        "checks": {
+          "binary_output": true
+        },
+        "stats": {
+          "active": false,
+          "started": 1,
+          "reaped": 1,
+          "fd_count": 8,
+          "goroutines": 6,
+          "pid": 914459
+        }
+      }
+    ],
+    "restart_identity": {
+      "pid": 914369,
+      "start_ticks": 915823983,
+      "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-5bb1ef152634-web.service"
+    },
+    "restart_observation": {
+      "checks": {
+        "binary_output": true
+      },
+      "stats": {
+        "active": false,
+        "started": 1,
+        "reaped": 1,
+        "fd_count": 8,
+        "goroutines": 6,
+        "pid": 914369
+      }
+    }
+  },
+  "cleanup": {
+    "units": [
+      {
+        "unit": "persistty-bridge-5bb1ef152634-client.service",
+        "active": "inactive"
+      },
+      {
+        "unit": "persistty-bridge-5bb1ef152634-web.service",
+        "active": "inactive"
+      },
+      {
+        "unit": "persistty-bridge-5bb1ef152634-tmux.service",
+        "active": "inactive"
+      },
+      {
+        "unit": "tmux-spawn-48ec64d5-c885-4c7b-b8e2-abeb1e9bd6c3.scope",
+        "active": "inactive"
+      }
+    ],
+    "root_removed": true
+  },
+  "binary_sha256": "12bc6a54100c3adfa014cb3d4824331ca83c09cdc0c69e3cbf2e7aa64def2d93"
+}

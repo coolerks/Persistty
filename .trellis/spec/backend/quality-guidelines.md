@@ -5,6 +5,7 @@ W01已有源码，Go test/race/vet和真实SQLite/router测试必须执行。尚
 
 ## 每任务门禁
 Go 源码 gofmt，`go test ./...`、`go vet ./...`；并发/bridge/watcher/session 用 `go test -race ./...`。unit 测试表驱动、临时目录、fake 时钟和故障注入，不写“调用过 mock 所以安全”的镜像测试。
+独立实验模块 tests/integration/debian/bridgego 有自己的 manifest/锁文件，根模块测试不会遍历它；须额外在该目录执行同样的 test/race/vet，并对最终 Linux binary 留 SHA256 与远端复核证据。不得只检查根模块便声称桥接测试通过。
 config、auth、session、path validation、symlink/TOCTOU、file conflict、atomic save、upload、rg parser、tmux parser、git parser、SQLite migration 都要在对应功能任务中有断言。真实 integration 使用独立 filesystem/Git/rg/SQLite/tmux/PTY，缺依赖明确 skip 原因；release CI 中 required suites skip 即验收失败。单元测试不能覆盖 Debian systemd 证明。
 安全 review task 必须逐项留修复或测试证据：auth bypass、WS Origin/认证撤销、CSRF、path/symlink、shell/flag injection、upload overwrite/quota、ZIP traversal、SVG XSS、binary、session fixation/brute force、敏感日志、权限/roots。
 

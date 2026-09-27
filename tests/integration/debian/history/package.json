@@ -1,0 +1,7 @@
+{
+  "name": "persistty-history-probe",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test", "analyze": "node analyze.mjs" },
+  "dependencies": { "@xterm/headless": "5.5.0" }
+}
