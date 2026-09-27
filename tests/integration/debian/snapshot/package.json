@@ -1,0 +1,11 @@
+{
+  "name": "persistty-snapshot-probe",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test", "analyze": "node analyze.mjs" },
+  "dependencies": {
+    "@xterm/headless": "5.5.0",
+    "@xterm/addon-serialize": "0.13.0",
+    "@xterm/xterm": "5.5.0"
+  }
+}

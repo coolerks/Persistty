@@ -96,7 +96,9 @@ def run_bridge(remote, binary):
     return result
 
 
-def run_history(remote, binary):
+def run_history(remote, binary, *, analysis_kind="history"):
+    if analysis_kind not in ("history", "snapshot"):
+        raise TransportError("Debian 解析种类非法")
     if not binary.is_file() or binary.name != "bridge-probe":
         raise TransportError("Debian history 本地二进制缺失或名称非法")
     cache = ROOT / ".cache"
@@ -118,7 +120,7 @@ def run_history(remote, binary):
         fd, path = tempfile.mkstemp(prefix="history-",suffix=".json",dir=cache)
         try:
             with os.fdopen(fd,"w") as file: json.dump({"records":raw["records"],"capture":raw["capture"]},file)
-            process = subprocess.run(["node", str(ROOT / "tests/integration/debian/history/analyze.mjs"),path],
+            process = subprocess.run(["node", str(ROOT / ("tests/integration/debian/" + analysis_kind + "/analyze.mjs")),path],
                 stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=45)
             if process.returncode or len(process.stdout)>65536:
                 raise TransportError("Debian history 解析失败")
@@ -142,9 +144,14 @@ def run_history(remote, binary):
     return result
 
 
+def run_snapshot(remote, binary):
+    # Reuse a new isolated history run, selecting one connection in a separate analyzer.
+    return run_history(remote, binary, analysis_kind="snapshot")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=("terminal", "files", "bridge", "history"))
+    parser.add_argument("kind", choices=("terminal", "files", "bridge", "history", "snapshot"))
     parser.add_argument("--probe", type=Path, default=Path("/tmp/persistty-files-probe"))
     parser.add_argument("--test", type=Path, default=Path("/tmp/persistty-files-test"))
     parser.add_argument("--binary", type=Path, default=Path("/tmp/bridge-probe"))
@@ -158,6 +165,8 @@ def main():
             result = run_bridge(remote, args.binary.resolve())
         elif args.kind == "history":
             result = run_history(remote, args.binary.resolve())
+        elif args.kind == "snapshot":
+            result = run_snapshot(remote, args.binary.resolve())
         else:
             result = run_files(remote, args.probe.resolve(), args.test.resolve())
         print(json.dumps({"redaction": {"kind": "redacted_observation",

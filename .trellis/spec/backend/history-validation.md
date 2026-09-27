@@ -31,5 +31,7 @@ capture 导出 grid，不是完整 parser/mode 状态或原子 live 截点。tmu
 
 浏览器 renderer/字体/光标、实时认证 WS、多观察端、持续负载、生产 history 容量及 snapshot epoch/sequence/截点仍为门禁。确定性固定输出和本地库解析不自动解除这些门禁。
 
+D08 后续 [快照机制实验](snapshot-validation.md) 对公开 serialize 做了单 owner/seq 对照；pending 序列、scroll-region/charset 及真实记录仍有状态差异，不能将其当作 D07 历史拼接问题的已通过替代方案。
+
 ## 7. 错误与正确示例
 错误：`capture(history) + attach(bytes)` 被称为一次完整恢复，然后以 sleep 避免竞态。正确：记录 capture 与 attach 的非原子窗口，分别判断当前画面、滚动历史及间隙丢失，保存反例；产品协议只有在明确单输出 owner 和同步截点、重新同步策略经过真实验证后才定案。

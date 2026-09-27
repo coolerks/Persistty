@@ -1,0 +1,401 @@
+{
+  "redaction": {
+    "kind": "redacted_observation",
+    "connection_values_stored": false
+  },
+  "facts": {
+    "samples": [
+      {
+        "label": "ordinary_history_created",
+        "server": {
+          "pid": 937314,
+          "start_ticks": 916362469,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-7e407975de34-tmux.service"
+        },
+        "pane": {
+          "pid": 937317,
+          "start_ticks": 916362480,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-8c24be2d-5dc2-41c7-a2fc-45b4b24c731c.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 2,
+        "input_count": 0,
+        "clients": []
+      },
+      {
+        "label": "detached_output_reconnected",
+        "server": {
+          "pid": 937314,
+          "start_ticks": 916362469,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-7e407975de34-tmux.service"
+        },
+        "pane": {
+          "pid": 937317,
+          "start_ticks": 916362480,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-8c24be2d-5dc2-41c7-a2fc-45b4b24c731c.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 50,
+        "input_count": 0,
+        "clients": []
+      },
+      {
+        "label": "curses_redrawn_80x24",
+        "server": {
+          "pid": 937314,
+          "start_ticks": 916362469,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-7e407975de34-tmux.service"
+        },
+        "pane": {
+          "pid": 937317,
+          "start_ticks": 916362480,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-8c24be2d-5dc2-41c7-a2fc-45b4b24c731c.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 95,
+        "input_count": 0,
+        "clients": []
+      },
+      {
+        "label": "curses_redrawn_120x40",
+        "server": {
+          "pid": 937314,
+          "start_ticks": 916362469,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-7e407975de34-tmux.service"
+        },
+        "pane": {
+          "pid": 937317,
+          "start_ticks": 916362480,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-8c24be2d-5dc2-41c7-a2fc-45b4b24c731c.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 116,
+        "input_count": 0,
+        "clients": []
+      },
+      {
+        "label": "same_curses_reconnected",
+        "server": {
+          "pid": 937314,
+          "start_ticks": 916362469,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-7e407975de34-tmux.service"
+        },
+        "pane": {
+          "pid": 937317,
+          "start_ticks": 916362480,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-8c24be2d-5dc2-41c7-a2fc-45b4b24c731c.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 137,
+        "input_count": 0,
+        "clients": []
+      },
+      {
+        "label": "curses_exited_same_pane",
+        "server": {
+          "pid": 937314,
+          "start_ticks": 916362469,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/persistty-bridge-7e407975de34-tmux.service"
+        },
+        "pane": {
+          "pid": 937317,
+          "start_ticks": 916362480,
+          "cgroup": "0::/user.slice/user-<remote-uid>.slice/user@<remote-uid>.service/app.slice/tmux-spawn-8c24be2d-5dc2-41c7-a2fc-45b4b24c731c.scope"
+        },
+        "pane_id": "%0",
+        "heartbeat": 161,
+        "input_count": 0,
+        "clients": []
+      }
+    ],
+    "curses_saved_grid_distinct": true,
+    "alternate_on_during_curses": "1",
+    "alternate_on_after_exit": "0",
+    "tmux_version": "tmux 3.5a",
+    "binary_sha256": "c294742fb8848421b3da04b956199327df981c36ebcdf5b9ee2c2b6319e16501"
+  },
+  "analysis": {
+    "versions": {
+      "headless": "5.5.0",
+      "serialize": "0.13.0",
+      "xterm_peer": "5.5.0"
+    },
+    "synthetic": {
+      "smoke": {
+        "expected_equivalence": true,
+        "equivalent": true,
+        "same_state": true,
+        "same_title_events": true,
+        "differing_fields": [],
+        "snapshot_through_seq": 1
+      },
+      "history_unicode_sgr_wrapped": {
+        "expected_equivalence": true,
+        "equivalent": true,
+        "same_state": true,
+        "same_title_events": true,
+        "differing_fields": [],
+        "snapshot_through_seq": 3
+      },
+      "alternate_exit_resize": {
+        "expected_equivalence": true,
+        "equivalent": true,
+        "same_state": true,
+        "same_title_events": true,
+        "differing_fields": [],
+        "snapshot_through_seq": 2
+      },
+      "resize_completed": {
+        "expected_equivalence": true,
+        "equivalent": true,
+        "same_state": true,
+        "same_title_events": true,
+        "differing_fields": [],
+        "snapshot_through_seq": 2
+      },
+      "modes_completed": {
+        "expected_equivalence": true,
+        "equivalent": true,
+        "same_state": true,
+        "same_title_events": true,
+        "differing_fields": [],
+        "snapshot_through_seq": 1
+      },
+      "utf8_one_byte_pending": {
+        "expected_equivalence": false,
+        "equivalent": false,
+        "same_state": false,
+        "same_title_events": true,
+        "differing_fields": [
+          "normal.cursor",
+          "normal.cells"
+        ],
+        "snapshot_through_seq": 1
+      },
+      "utf8_two_bytes_pending": {
+        "expected_equivalence": false,
+        "equivalent": false,
+        "same_state": false,
+        "same_title_events": true,
+        "differing_fields": [
+          "normal.cursor",
+          "normal.cells"
+        ],
+        "snapshot_through_seq": 1
+      },
+      "csi_parameters_pending": {
+        "expected_equivalence": false,
+        "equivalent": false,
+        "same_state": false,
+        "same_title_events": true,
+        "differing_fields": [
+          "normal.cursor",
+          "normal.cells"
+        ],
+        "snapshot_through_seq": 1
+      },
+      "esc_pending": {
+        "expected_equivalence": false,
+        "equivalent": false,
+        "same_state": false,
+        "same_title_events": true,
+        "differing_fields": [
+          "normal.cursor",
+          "normal.cells"
+        ],
+        "snapshot_through_seq": 1
+      },
+      "osc_bel_pending": {
+        "expected_equivalence": false,
+        "equivalent": false,
+        "same_state": true,
+        "same_title_events": false,
+        "differing_fields": [
+          "title_events"
+        ],
+        "snapshot_through_seq": 1
+      },
+      "osc_st_pending": {
+        "expected_equivalence": false,
+        "equivalent": false,
+        "same_state": true,
+        "same_title_events": false,
+        "differing_fields": [
+          "title_events"
+        ],
+        "snapshot_through_seq": 1
+      },
+      "osc_st_esc_pending": {
+        "expected_equivalence": false,
+        "equivalent": false,
+        "same_state": false,
+        "same_title_events": true,
+        "differing_fields": [
+          "normal.cursor",
+          "normal.cells"
+        ],
+        "snapshot_through_seq": 1
+      },
+      "scroll_region_completed": {
+        "expected_equivalence": null,
+        "equivalent": false,
+        "same_state": false,
+        "same_title_events": true,
+        "differing_fields": [
+          "normal.cursor",
+          "normal.cells"
+        ],
+        "snapshot_through_seq": 1
+      },
+      "charset_completed": {
+        "expected_equivalence": null,
+        "equivalent": false,
+        "same_state": false,
+        "same_title_events": true,
+        "differing_fields": [
+          "normal.cells"
+        ],
+        "snapshot_through_seq": 1
+      }
+    },
+    "real_single_connection": {
+      "record": "tui120",
+      "frames": 5,
+      "bytes": 2013,
+      "sha256": "f9b0acc415fdd9fa13c3fed7c8c2cdea9259835f12b2027f6da0e4459591c955",
+      "cols": 120,
+      "rows": 40,
+      "cuts": [
+        {
+          "kind": "frame_boundary",
+          "after_frames": 0,
+          "equivalent": true,
+          "same_state": true,
+          "same_title_events": true,
+          "differing_fields": [],
+          "continuous_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00",
+          "restored_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00"
+        },
+        {
+          "kind": "frame_boundary",
+          "after_frames": 1,
+          "equivalent": true,
+          "same_state": true,
+          "same_title_events": true,
+          "differing_fields": [],
+          "continuous_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00",
+          "restored_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00"
+        },
+        {
+          "kind": "frame_boundary",
+          "after_frames": 2,
+          "equivalent": true,
+          "same_state": true,
+          "same_title_events": true,
+          "differing_fields": [],
+          "continuous_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00",
+          "restored_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00"
+        },
+        {
+          "kind": "frame_boundary",
+          "after_frames": 4,
+          "equivalent": true,
+          "same_state": true,
+          "same_title_events": true,
+          "differing_fields": [],
+          "continuous_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00",
+          "restored_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00"
+        },
+        {
+          "kind": "frame_boundary",
+          "after_frames": 5,
+          "equivalent": false,
+          "same_state": false,
+          "same_title_events": true,
+          "differing_fields": [
+            "alternate.cells"
+          ],
+          "continuous_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00",
+          "restored_state_sha256": "17bf1ba4ce038c4b7cf307d08564e44df827722c0d151f1f063e65f60aae262e"
+        },
+        {
+          "kind": "artificial_byte_split",
+          "frame": 1,
+          "offset": 1,
+          "equivalent": true,
+          "same_state": true,
+          "same_title_events": true,
+          "differing_fields": [],
+          "continuous_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00",
+          "restored_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00"
+        },
+        {
+          "kind": "artificial_byte_split",
+          "frame": 1,
+          "offset": 2,
+          "equivalent": true,
+          "same_state": true,
+          "same_title_events": true,
+          "differing_fields": [],
+          "continuous_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00",
+          "restored_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00"
+        },
+        {
+          "kind": "artificial_byte_split",
+          "frame": 1,
+          "offset": 419,
+          "equivalent": true,
+          "same_state": true,
+          "same_title_events": true,
+          "differing_fields": [],
+          "continuous_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00",
+          "restored_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00"
+        },
+        {
+          "kind": "artificial_byte_split",
+          "frame": 1,
+          "offset": 838,
+          "equivalent": true,
+          "same_state": true,
+          "same_title_events": true,
+          "differing_fields": [],
+          "continuous_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00",
+          "restored_state_sha256": "5d835aad5b32daa043a3ee142ed8e08b3fa6141b203a7b55abfb3d469f1aad00"
+        }
+      ],
+      "equivalent_cuts": 8,
+      "divergent_cuts": 1,
+      "local_sequence_only": true,
+      "raw_saved": false
+    }
+  },
+  "checks": {
+    "public_api_smoke": true,
+    "fixed_complete_basics_equivalent": true,
+    "pending_counterexamples_observed": true,
+    "osc_requires_event_comparison": true,
+    "complete_region_and_charset_not_restored": true,
+    "real_single_connection_compared": true
+  },
+  "cleanup": {
+    "units": [
+      {
+        "unit": "persistty-bridge-7e407975de34-client.service",
+        "active": "inactive"
+      },
+      {
+        "unit": "persistty-bridge-7e407975de34-web.service",
+        "active": "inactive"
+      },
+      {
+        "unit": "persistty-bridge-7e407975de34-tmux.service",
+        "active": "inactive"
+      },
+      {
+        "unit": "tmux-spawn-8c24be2d-5dc2-41c7-a2fc-45b4b24c731c.scope",
+        "active": "inactive"
+      }
+    ],
+    "root_removed": true
+  }
+}

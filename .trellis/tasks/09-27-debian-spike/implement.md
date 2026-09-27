@@ -19,3 +19,6 @@
 1. 单一 history implement owner 负责 tests/integration/debian/history/**、bridgego 有界记录 client 的最小扩展及 run_remote.py 必要 history 入口、history-report.md。保留 D06 既有行为与证据，不改产品或主会话规范；先确认锁定 xterm 库的实际官方包/API/许可证，再做解析。取证只涉及固定合成数据及 curses 程序，不记录密码、业务文本或连接字段。
 2. 最小门禁覆盖普通历史与 raw attach 的区别、capture+attach 的外层缓冲区/持续输出窗口限制、真实 curses 进入/退出/resize/reconnect 和原 pane 身份、分块解析等价性及精确清理。未执行/能力不足必须明确报告，负面实验可证明方案限制而非自动修补为产品方案。
 3. 实施定稿后 history check 独立复核并重跑必要真实实验/根与隔离模块门禁，主会话同步知识。所有资源有界且仅自身清理；本轮仍不提交、推送、归档。
+
+## D08 同步截点继续阶段
+D06/D07 已提交 965b4c6，用户要求继续开发。snapshot implement 单独负责 tests/integration/debian/snapshot/**、run_remote.py 最小安全 snapshot 入口及必要回归、snapshot-report.md；不改已有证据、产品依赖或 bridge 协议。先核实公共 API/实际包兼容，然后做固定完整边界正面对照及 pending 截点负面回归、epoch/seq/ring 边界、新一次真实固定 WS 记录的离线恢复对照。实施完成后独立 snapshot check，自修仅本实验范围；main 更新规范及后续提交方案，不自动将新改动并入 965b4c6。

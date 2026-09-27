@@ -7,6 +7,8 @@ D06 的隔离 loopback 探针已验证真实 WS/PTY 的基础认证、字节边�
 
 D07 的 [capture/attach 机制实验](history-validation.md) 记录了历史拼接的间隙遗漏反例；record 的限时帧记录不是产品 snapshot 协议。ready、resized 回复均不代表完整初屏/TUI 重绘结束，不得作为原子恢复截点。
 
+D08 [序号/快照对照](snapshot-validation.md) 仅验证有限离线机制；序号连续不保存 parser pending 或全部终端状态。公共 serialize 仍有恢复差异，不据此冻结生产 snapshot/live 格式或宣布无损恢复。
+
 ## 1. 范围 / 触发
 使用 github.com/coder/websocket。WS 是短期 transport，不拥有 Terminal job。认证/Origin/撤销规则引用 [安全契约](security-config.md)。不使用全局关闭 Origin 校验的选项。
 
