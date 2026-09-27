@@ -1,1 +1,64 @@
-**/.DS_Store
+# 操作系统与编辑器本地文件
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+/.idea/
+/.vscode/
+
+# Go 构建产物与本地缓存（不忽略 go.mod、go.sum 或 migrations）
+/persistty
+/persistty.exe
+/bin/
+/dist/
+/build/
+/.cache/
+*.test
+*.prof
+
+# 前端依赖、Vite 构建与 TypeScript 缓存（保留依赖锁文件）
+node_modules/
+/web/dist/
+/web/.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 测试覆盖率与 Playwright 运行报告
+/coverage/
+/web/coverage/
+/coverage.out
+/playwright-report/
+/test-results/
+/blob-report/
+/web/playwright-report/
+/web/test-results/
+/web/blob-report/
+
+# 本地环境与服务配置（示例配置仍可提交）
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.sample
+!.env.*.sample
+/config.yaml
+/config.yml
+/config.local.yaml
+/config.local.yml
+
+# 本地服务数据、上传暂存与日志；测试 fixture 应放在受版本管理的 testdata 中
+/data/
+/tmp/
+/logs/
+*.log
+*.pid
+*.sock
+
+# Trellis Python 辅助脚本缓存；框架与任务文档保持受版本管理
+__pycache__/
+*.pyc
+*.pyo
