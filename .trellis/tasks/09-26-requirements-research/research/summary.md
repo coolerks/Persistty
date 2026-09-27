@@ -10,11 +10,13 @@
 
 | 文档 | 用途 |
 | --- | --- |
-| [需求来源](requirements-source.md) | 原需求U01..U12与后续澄清U13..U62、建议和初始规范的区别 |
+| [需求来源](requirements-source.md) | 原需求U01..U12与后续澄清U13..U73、建议和初始规范的区别 |
 | [终端](terminal-lifecycle.md) | 存活、systemd、环境、画面、关闭与多连接 |
 | [文件、搜索与 Git](files-search-git.md) | 安全读取、并发写入、ignore、替换与差异语义 |
 | [浏览器、传输与资源](browser-transfer-assets.md) | 兼容性、目录传输、草稿、预览、字体与图标 |
 | [认证、部署与产品边界](auth-deployment-product.md) | 登录会话、访问入口、代理、升级与同类方案 |
+| [项目/路由补充](projects-routing.md) | 后续U63..U66项目模型、路由直达、多根去重、终端独立生命周期 |
+| [UI原型与契约](ui-layout.md) | 后续U67..U73主题、仅左右分组、手机单内容、终端移动与面板/会话关闭语义 |
 
 ## 1. 产品问题与价值
 

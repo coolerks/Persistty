@@ -8,3 +8,5 @@
 {"file":".trellis/tasks/09-26-requirements-research/research/files-search-git.md","reason":"安全根/版本竞争/搜索与Git技术证据"}
 {"file":".trellis/tasks/09-26-requirements-research/research/browser-transfer-assets.md","reason":"移动/传输/草稿/预览/资产兼容证据"}
 {"file":".trellis/tasks/09-26-requirements-research/research/auth-deployment-product.md","reason":"认证/部署/权限与运维证据，旧范围以PRD为准"}
+{"file":".trellis/tasks/09-26-requirements-research/research/projects-routing.md","reason":"多文件夹项目/React Router/多仓库与终端独立生命周期补充证据"}
+{"file":".trellis/tasks/09-26-requirements-research/research/ui-layout.md","reason":"用户UI原型/主题/终端展示位置约束，未决交互不视为实施批准"}
