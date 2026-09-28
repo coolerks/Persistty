@@ -22,3 +22,6 @@
 
 ## D08 同步截点继续阶段
 D06/D07 已提交 965b4c6，用户要求继续开发。snapshot implement 单独负责 tests/integration/debian/snapshot/**、run_remote.py 最小安全 snapshot 入口及必要回归、snapshot-report.md；不改已有证据、产品依赖或 bridge 协议。先核实公共 API/实际包兼容，然后做固定完整边界正面对照及 pending 截点负面回归、epoch/seq/ring 边界、新一次真实固定 WS 记录的离线恢复对照。实施完成后独立 snapshot check，自修仅本实验范围；main 更新规范及后续提交方案，不自动将新改动并入 965b4c6。
+
+## D09/D10 单代理收尾阶段
+用户最新要求推进到 W02 完成；项目已禁用子代理，后续研究、实现、检查均由主会话直接完成。先实施 D09 隔离 Landlock CLI 探针及真实 Debian 复核，再做 D10 不提权 helper 可行性报告/非特权协议测试。两阶段均不触碰生产服务或安装 root helper；发现需要新权限时停止对应操作并明确请求授权。全部门禁、去敏、精确清理与规范同步后，只在 D01..D10 任务验收真实完成时归档 W02；生产 W03/W04/W07 的待验收内容保留在后续任务，不将实验成功冒充产品完成。未经新批准不提交或推送。

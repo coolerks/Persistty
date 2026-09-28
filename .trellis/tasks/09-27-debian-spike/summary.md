@@ -1,4 +1,4 @@
-# W02 当前结果与后续门禁
+# W02 实验结果与后续产品门禁
 
 ## 当前交付
 在用户授权 Debian 13.4/systemd 257.9 环境完成隔离底层实验、可重复探针及独立检查。sudo 需要密码，因此没有系统安装 tmux；从目标机软件源临时解包 tmux 3.5a-3 与必要 libevent，所有解包文件已清理。未修改现有 Nginx/WireGuard/防火墙/业务服务或安装 helper。
@@ -13,6 +13,8 @@
 | D06 真实桥接基础 | Go/PTY/WS 最终二进制独立 Debian 重跑通过，13 次原身份/逐增心跳采样、单次输入无重放、精确资源清理；不是正式多端或浏览器验收 |
 | D07 历史/TUI 机制 | 真实 curses 三尺寸/重连/退出与原进程存活通过；raw attach 不含完整历史、capture+attach 遗漏间隙行的反例已实测，不解除生产 snapshot/live 门禁 |
 | D08 同步截点机制 | 单 owner/seq/ring 的有限模型有回归；公开 serialize 在 pending 序列、region/charset 与真实记录仍有状态差异，不作为完整恢复方案通过 |
+| D09 受限 CLI 可行性 | 真实 Debian 私有临时树七项 Landlock/rg/Git 合成判定通过；系统依赖白名单仍可读，不是正式 W04 沙箱验收 |
+| D10 helper 可行性 | 远端仅只读确认 sudo/PAM 入口存在，本地四项非特权一次授权协议模拟通过；真实密码/特权保存未执行 |
 
 ## 证据
 - [环境采集](../09-26-requirements-research/research/debian-environment.md)
@@ -31,11 +33,14 @@
 - [D08 实施](snapshot-report.md)
 - [D08 独立复核](snapshot-check-report.md)
 - [D08 独立摘要证据](../../../tests/integration/debian/snapshot/evidence-review.json)
+- [D09 CLI 实测](cli-report.md)
+- [D10 helper 可行性](helper-report.md)
+- [W02 单代理最终检查](final-check-report.md)
 
 ## 不能解除的门禁
-本次不是完整 W02 验收。W03 正式终端界面仍依赖生产 history snapshot/live、持续负载背压及多观察端控制协议实验；真实 Go/PTY/WS 基础链路与一个受控 curses 程序已通过隔离验证，但不等于产品服务或完整 TUI 覆盖完成。W04 根访问实现可采用已测能力，但 CLI Landlock/安全执行和业务原子保存尚未通过；W07 helper 提权未获安装授权也未验收。不得将底层探针成功写成 PA01..PA26 或完整产品通过。
+W02 的隔离环境**可行性实验范围**已完成，负面结果与未通过假设也已留证。W03 正式终端界面仍依赖生产 history snapshot/live、持续负载背压及多观察端控制协议；真实 Go/PTY/WS 基础链路与一个受控 curses 程序不等于产品服务或完整 TUI 覆盖。W04 的根句柄和 CLI 临时树结果可供设计，但动态工具系统文件许可、业务原子保存及正式 API 未通过。W07 真实提权未获安装授权，也未验收。不得将底层探针成功写成 PA01..PA26 或完整产品通过。
 
-下一阶段继续 W02；D08 未能批准公开 serialize 的完整恢复假设，生产解析引擎/状态完整性、持续 owner 与同步协议需要继续审查，受限 CLI 也仍待验证；不先铺正式终端 UI。桥接命令捕获虽限制每流内存 1 MiB，磁盘捕获仅有 25 秒超时、无字节配额，不能作为通用生产命令沙箱。
+下一阶段依次在 W03/W04/W07 解决产品门禁：D08 未能批准公开 serialize 的完整恢复假设，生产解析引擎/状态完整性、持续 owner 与同步协议需要继续审查；D09 系统许可面须收窄，D10 需独立特权安装审批。桥接命令捕获虽限制每流内存 1 MiB，磁盘捕获仅有 25 秒超时、无字节配额，不能作为通用生产命令沙箱。
 
 ## 版本管理
 第一批及隐私修正在用户批准后提交 5f392ed，W01 已提交 4113358，后续用户提交 9bf86d8 保持不动。用户最新明确“提交代码，并继续开发”，D06/D07 批次已按方案提交 965b4c6，未推送或归档。后续开发独立验收，不自动并入已批准批次。其他活动任务保持原状态，W02 当前保持 in_progress，后续完整实验继续在此任务追踪。
@@ -63,3 +68,7 @@
 自修后最终独立远端原身份 6 次采样稳定，心跳 `2,50,95,116,137,161`，stdin 0；三个精确 unit/关联 scope inactive，原身份不再存活、ROOT 删除，限定自有私有实验目录只读核查为空。本轮只验证正常已知资源清理，无 runner SIGKILL 持久恢复账本，不宣称任意故障零残留或实时多观察者/browser/服务重启 history 通过。
 
 独立检查补上 owner/observer pending 队列请求与字节双限、restore 入队复制、超大输入复制前拒绝和 CLI 回归。根与隔离 Go test/race/vet、snapshot 11 项 Node、history 2 项 Node、37 项 Python 通过。复核时 D08 未提交，随后用户明确批准本批提交，见 [提交方案](snapshot-commit-plan.md)；不推送或归档，开发继续保持暂停。
+
+## D09/D10 收尾
+
+用户随后要求继续到 W02 完成。主会话按项目单代理约束完成 D09/D10；九项真实 CLI 隔离判定与五项本地非特权 helper 协议测试通过，目标机 sudo/PAM 仅作只读存在性核查。范围、证据和残留风险见上列 D09/D10 与最终检查报告。历史“W02 in_progress/仍待 CLI”的段落描述的是之前批次状态，不覆盖本次完成判定；W03/W04/W07 的产品门禁继续有效。

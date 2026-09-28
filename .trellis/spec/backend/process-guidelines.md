@@ -18,4 +18,6 @@ rg/Git adapter 的 cwd 校验只限制开始位置，不能约束实际遍历；
 2. 文件发现和打开由 root 句柄拥有；读取安全 snapshot 后通过 stdin 或服务私有 staging 提供给工具，CLI 不再直接遍历真实 workspace。Search 必须由测试证明仍遵守全部 ignore 规则，不能为安全输入取消 ignore；Git 语义依赖真实 repository，若无法通过 staging 保持 CLI 对照一致性则选策略 1。
 上述方案是允许的初始设计路径，尚未证明已可用；具体机制由任务 design 锁定并实测，不把名称当防护证据。收到的 preview 要从相同安全 snapshot 重算并绑定 version；禁止将未经验证的 rg preview 直接送 UI。库函数 read/open/rename 与命令 adapter 分别验证，不能因为 shell 本来能越 root 就放宽 File API。
 
+W02 的 [受限 CLI 探针](../../../tests/integration/debian/cli/README.md) 已在真实 Debian 临时树验证 Landlock 拒绝根外合成哨兵、symlink/目录替换且固定 rg/Git 可运行。这不是完整策略 1：动态工具所需 `/usr` 等系统读取仍构成白名单外链可见面，实际产品必须缩小许可并测试链接指向每个系统许可路径；若不能证明批准根的数据保密边界，改用安全输入或拒绝开放 API。CLI 探针的固定参数、词法根校验也不能替代文件身份与当前项目成员校验。
+
 测试带空格/Unicode/前导短横线/换行的路径、超时、取消、stderr 截断、恶意配置、子进程回收。增加在工具扫描过程中交换 symlink/父目录的根外 sentinel 测试，断言敏感内容从未被读取或出现在 stdout/stderr/API；仅事后过滤测试不足。命令执行不记全参数和输出。

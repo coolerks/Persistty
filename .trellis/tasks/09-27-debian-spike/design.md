@@ -25,5 +25,11 @@ D07 沿用 D06 安全 transport 与资源隔离，不覆盖 D06 两份既有证�
 
 固定语义完整边界的序号模型与任意运输帧截点分开验收。callback 不意味着 UTF-8/CSI/OSC pending 清空；不过滤控制序列、不合并字节掩盖负面结果。真实输入只复用授权隔离环境的一次单连接固定合成记录，raw 仍私有暂存删除、只保存摘要，D06/D07 证据不覆盖。离线模型不决定生产 Node sidecar 或最终协议，不解锁浏览器/实时多观察者/服务重启 history 门禁。依据见 [D08 研究](research/snapshot-stream-plan.md)。
 
+## D09 受限 CLI
+在隔离 Go 探针中构造 Linux Landlock ruleset：处理可用 ABI 的 read/write/execute 权限，工作目录仅允许实验根读取，不授予写入；可执行文件和动态库只给予运行所需最小权限。启动固定 rg/Git 参数与环境，不使用 shell、自由 option、Git hook/external diff/pager。`no_new_privs` 和 ruleset 必须在子进程 exec 前生效，失败拒绝执行，不能无保护 fallback。探针只扫描自有固定合成内容、根外随机哨兵；symlink/父目录交换、前导短横线、Unicode 与取消回收分别留证。真实目标上若 rg/Git 不存在，明确报告依赖，至多在本次 ROOT 临时解包必要包，不系统安装。
+
+## D10 helper 可行性
+在不提权、不安装、不改系统策略的范围，区分应用 nonce/文件身份/内容 hash 与系统 sudo timestamp；设计单文件一次执行的请求协议及状态机，用普通用户自有临时目录模拟失败注入。密码只经受控管道，禁止 argv、环境、URL、普通日志；没有真实 PAM/sudo 授权时不能说凭据路径已通过。只读核对目标机能力与官方文档，产出 root-owned 安装、PAM/TTY、ACL/SELinux、版本和 crash 一致性所需后续授权清单。正式提权保存仍归 W07。
+
 ## 回滚与限制（所有阶段）
 所有探针有超时、就绪轮询、输出界限与 cleanup，只清理新建资源；失败保留必要脱敏证据并报告残留。提权 helper/生产配置不触碰。sudo 密码不可用时只临时解包官方包；缺少 libevent_core 时仅在同一临时目录下载/解包 tmux 必要 Debian 依赖，LD_LIBRARY_PATH 只作用于自身探针，不修改全局环境或提权安装额外依赖。当前仅为 W02 部分实验，完整 W02 门禁仍保留。

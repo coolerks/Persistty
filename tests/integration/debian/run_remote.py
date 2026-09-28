@@ -149,9 +149,43 @@ def run_snapshot(remote, binary):
     return run_history(remote, binary, analysis_kind="snapshot")
 
 
+def run_cli(remote, binary):
+    if not binary.is_file() or binary.name != "cli-probe":
+        raise TransportError("Debian CLI 本地二进制缺失或名称非法")
+    root = remote.ssh("umask 077; mktemp -d /tmp/persistty-cli-XXXXXXXX").strip()
+    if not re.fullmatch(r"/tmp/persistty-cli-[A-Za-z0-9]{8}", root):
+        raise TransportError("Debian CLI 临时目录身份非法")
+    result = {}
+    try:
+        remote.scp([binary, ROOT / "tests/integration/debian/cli/probe.py"], root)
+        remote.ssh(f"chmod 700 -- {shlex.quote(root + '/cli-probe')}")
+        raw = remote.ssh(f"python3 -B {shlex.quote(root + '/probe.py')} {shlex.quote(root)}")
+        result = json.loads(raw)
+        if result.get("probe_failed") or len(result.get("checks", {})) != 9 or not all(result["checks"].values()):
+            checks = result.get("checks", {})
+            failed = ",".join(key for key, passed in checks.items() if not passed)
+            raise TransportError("Debian CLI 隔离实验未通过: " + (failed or result.get("stage", "unknown"))
+                                 + " statuses=" + json.dumps(result.get("statuses", {}), sort_keys=True)
+                                 + " git_errors=" + json.dumps(result.get("git_errors", {}), sort_keys=True))
+    finally:
+        # Only the newly returned, validated private mktemp root is removed.
+        remote.ssh(f"rm -rf -- {shlex.quote(root)}; test ! -e {shlex.quote(root)}")
+    result["cleanup_verified"] = True
+    return result
+
+
+def run_helper_capabilities(remote):
+    # Read-only existence checks; no sudo invocation or policy file contents.
+    source = ("import json,os; "
+              "print(json.dumps({'sudo_binary':os.path.isfile('/usr/bin/sudo'),"
+              "'pam_service_entry':os.path.isfile('/etc/pam.d/sudo'),"
+              "'sudoedit_binary':os.path.isfile('/usr/bin/sudoedit')}))")
+    return json.loads(remote.ssh("python3 -B -c " + shlex.quote(source)))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=("terminal", "files", "bridge", "history", "snapshot"))
+    parser.add_argument("kind", choices=("terminal", "files", "bridge", "history", "snapshot", "cli", "helper"))
     parser.add_argument("--probe", type=Path, default=Path("/tmp/persistty-files-probe"))
     parser.add_argument("--test", type=Path, default=Path("/tmp/persistty-files-test"))
     parser.add_argument("--binary", type=Path, default=Path("/tmp/bridge-probe"))
@@ -167,6 +201,10 @@ def main():
             result = run_history(remote, args.binary.resolve())
         elif args.kind == "snapshot":
             result = run_snapshot(remote, args.binary.resolve())
+        elif args.kind == "cli":
+            result = run_cli(remote, args.binary.resolve())
+        elif args.kind == "helper":
+            result = run_helper_capabilities(remote)
         else:
             result = run_files(remote, args.probe.resolve(), args.test.resolve())
         print(json.dumps({"redaction": {"kind": "redacted_observation",
