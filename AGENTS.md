@@ -21,6 +21,13 @@
 
 <!-- TRELLIS:END -->
 
+## 单代理执行约束
+
+- 禁用 subagent。研究、实现、审查、测试和规范维护均由当前主会话直接完成；不得调用 spawn_agent、spawn_subagent、trellis_subagent 或通过 trellis channel/独立 AI worker/其他会话转交工作。
+- 不因任务复杂、文件数量、并行效率或“独立检查”自动启用子代理；遇到容量限制时缩小批次、明确进度或向用户说明。
+- Trellis 使用 `.trellis/config.yaml` 的 `codex.dispatch_mode: inline`；实现前读取 `trellis-before-dev`，检查使用 `trellis-check` 技能，而非 Agent 类型。原 JSONL 和历史代理报告保留为资料，不代表当前授权。
+- 仅用户明确要求解除禁用时才能重新配置。普通“继续”“开始实施”“检查”“调研”不构成解除授权。详细契约见 [.trellis/spec/execution-policy.md](.trellis/spec/execution-policy.md)。
+
 ## 项目语言与文档兼容性
 
 项目文档、开发规范和用户界面说明使用简体中文。文件名、引用路径、代码标识符、协议字段、命令和机器解析标记保持原有形式。具体文档维护规则见 [.trellis/spec/guides/index.md](.trellis/spec/guides/index.md)。

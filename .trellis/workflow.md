@@ -223,7 +223,7 @@ python3 ./.trellis/scripts/get_context.py --mode phase --step <X.Y>  # 单个工
 
 [workflow-state:in_progress-inline]
 流程：`trellis-before-dev` → 编辑 → `trellis-check` → 验证 → `trellis-update-spec` → 提交（阶段 3.4）→ `/trellis:finish-work`。
-内联模式不分派 implement/check 子代理。
+本项目禁用所有 subagent：研究、实现和检查都由主会话直接完成，不分派 implement/check/research，不用 channel worker 或其他 AI 会话绕过。普通继续/检查请求不解除禁用，约束见 AGENTS.md 与 .trellis/spec/execution-policy.md。
 读取顺序：`prd.md` → `design.md`（如有）→ `implement.md`（如有），以及技能加载的相关规范和研究。
 [/workflow-state:in_progress-inline]
 
