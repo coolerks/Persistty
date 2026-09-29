@@ -1,0 +1,5 @@
+CREATE TABLE folder_roots (
+ folder_id TEXT NOT NULL PRIMARY KEY REFERENCES folders(id) ON DELETE CASCADE,
+ device TEXT NOT NULL,
+ inode TEXT NOT NULL
+);

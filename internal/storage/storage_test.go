@@ -233,7 +233,11 @@ func TestMigrationsAndPermissions(t *testing.T) {
 func TestHighVersionAndRollback(t *testing.T) {
 	s := openTest(t)
 	ctx := context.Background()
-	if _, err := s.db.ExecContext(ctx, "INSERT INTO schema_migrations VALUES(3,'x','2026-09-27T00:00:00Z')"); err != nil {
+	entries, err := migrationFiles.ReadDir("migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.ExecContext(ctx, "INSERT INTO schema_migrations VALUES(?,'x','2026-09-27T00:00:00Z')", len(entries)+1); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.migrate(ctx); err == nil {

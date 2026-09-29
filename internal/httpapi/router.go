@@ -7,21 +7,28 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"modernc.org/sqlite"
 	"persistty/internal/auth"
 	"persistty/internal/config"
+	"persistty/internal/files"
 	"persistty/internal/storage"
+	"persistty/internal/transfer"
+	"persistty/internal/workspace"
 )
 
 type api struct {
-	cfg    config.Config
-	store  *storage.Store
-	auth   *auth.Service
-	logger *slog.Logger
+	cfg       config.Config
+	store     *storage.Store
+	auth      *auth.Service
+	logger    *slog.Logger
+	deleteKey [32]byte
+	transfer  *transfer.Service
 }
 type failure struct {
 	Code    string `json:"code"`
@@ -41,7 +48,16 @@ func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Eng
 	if err != nil {
 		return nil, err
 	}
-	a := &api{cfg, store, service, logger}
+	a := &api{cfg: cfg, store: store, auth: service, logger: logger}
+	initCtx, initCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer initCancel()
+	a.transfer, err = transfer.New(initCtx, cfg, store)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = rand.Read(a.deleteKey[:]); err != nil {
+		return nil, err
+	}
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	if err = r.SetTrustedProxies(cfg.Server.TrustedProxies); err != nil {
@@ -85,6 +101,27 @@ func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Eng
 		}
 		a.success(c, item)
 	})
+	protected.GET("/directories", a.directories)
+	protected.GET("/events", a.events)
+	protected.POST("/projects", a.createProject)
+	protected.PATCH("/projects/:id", a.updateProject)
+	protected.DELETE("/projects/:id", a.deleteProject)
+	protected.GET("/projects/:id/folders/:folderId/entries", a.entries)
+	protected.GET("/projects/:id/folders/:folderId/content", a.content)
+	protected.GET("/projects/:id/folders/:folderId/metadata", a.metadata)
+	protected.GET("/projects/:id/folders/:folderId/download", a.downloadFile)
+	protected.PUT("/projects/:id/folders/:folderId/content", a.saveContent)
+	protected.POST("/projects/:id/file-operations", a.fileOperation)
+	protected.POST("/projects/:id/delete-preview", a.deletePreview)
+	protected.POST("/uploads", a.createUpload)
+	protected.GET("/uploads/:id", a.uploadStatus)
+	protected.PUT("/uploads/:id/chunks/:index", a.uploadChunk)
+	protected.POST("/uploads/:id/complete", a.completeUpload)
+	protected.DELETE("/uploads/:id", a.cancelUpload)
+	protected.POST("/archives", a.createArchive)
+	protected.GET("/archives/:id", a.archiveStatus)
+	protected.GET("/archives/:id/download", a.downloadArchive)
+	protected.DELETE("/archives/:id", a.cancelArchive)
 	protected.GET("/terminals", func(c *gin.Context) {
 		items, err := store.Terminals(c.Request.Context())
 		if err != nil {
@@ -121,7 +158,13 @@ func (a *api) middleware() gin.HandlerFunc {
 		c.Header("Referrer-Policy", "no-referrer")
 		c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
 		start := time.Now()
-		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		timeout := 10 * time.Second
+		if c.Request.URL.Path == "/api/v1/events" {
+			timeout = 24 * time.Hour
+		} else if strings.Contains(c.Request.URL.Path, "/uploads/") || strings.Contains(c.Request.URL.Path, "/archives/") || strings.HasSuffix(c.Request.URL.Path, "/download") {
+			timeout = 5 * time.Minute
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), timeout)
 		defer cancel()
 		c.Request = c.Request.WithContext(ctx)
 		defer func() {
@@ -219,6 +262,44 @@ func (a *api) error(c *gin.Context, err error) {
 		a.fail(c, 404, "not_found", "资源不存在。")
 	case errors.Is(err, storage.ErrListLimit):
 		a.fail(c, 413, "too_large", "资源数量超过上限。")
+	case errors.Is(err, storage.ErrConflict):
+		a.fail(c, 409, "conflict", "项目配置已改变，请刷新后重试。")
+	case errors.Is(err, storage.ErrInvalidProject), errors.Is(err, workspace.ErrInvalidPath):
+		a.fail(c, 400, "invalid_request", "请求格式无效。")
+	case errors.Is(err, workspace.ErrUnreachable):
+		a.fail(c, 403, "forbidden", "目录不存在或不可访问。")
+	case errors.Is(err, workspace.ErrTooMany):
+		a.fail(c, 413, "too_large", "目录条目过多。")
+	case errors.Is(err, files.ErrInvalidPath):
+		a.fail(c, 400, "invalid_request", "路径或参数无效。")
+	case errors.Is(err, files.ErrRootChanged), errors.Is(err, files.ErrRescan):
+		a.fail(c, 409, "conflict", "目录已变化，请刷新后重试。")
+	case errors.Is(err, files.ErrConflict):
+		a.fail(c, 409, "conflict", "文件已变化，请重新读取后再保存。")
+	case errors.Is(err, files.ErrVersionRequired):
+		a.fail(c, 428, "version_required", "需要来源文件版本。")
+	case errors.Is(err, transfer.ErrInvalid):
+		a.fail(c, 400, "invalid_request", "传输参数无效。")
+	case errors.Is(err, transfer.ErrHash):
+		a.fail(c, 409, "conflict", "传输校验失败。")
+	case errors.Is(err, transfer.ErrExpired):
+		a.fail(c, 410, "expired", "传输已过期。")
+	case errors.Is(err, transfer.ErrNotReady):
+		a.fail(c, 409, "not_ready", "压缩包尚未就绪。")
+	case errors.Is(err, storage.ErrQuota):
+		a.fail(c, 413, "too_large", "传输容量超过上限。")
+	case errors.Is(err, os.ErrExist), errors.Is(err, syscall.ENOTEMPTY):
+		a.fail(c, 409, "conflict", "目标已存在。")
+	case errors.Is(err, files.ErrTooLarge):
+		a.fail(c, 413, "too_large", "文件或目录超过上限。")
+	case errors.Is(err, files.ErrUnsupported):
+		a.fail(c, 415, "unsupported", "此文件类型暂不支持。")
+	case errors.Is(err, os.ErrNotExist):
+		a.fail(c, 404, "not_found", "资源不存在。")
+	case errors.Is(err, syscall.EXDEV), errors.Is(err, syscall.ELOOP), errors.Is(err, syscall.EACCES), errors.Is(err, syscall.EPERM):
+		a.fail(c, 403, "forbidden", "文件不可访问。")
+	case errors.Is(err, syscall.ENOSYS):
+		a.fail(c, 503, "unavailable", "服务器不支持安全文件访问。")
 	default:
 		var sqliteError *sqlite.Error
 		if errors.As(err, &sqliteError) && (sqliteError.Code()&255 == 5 || sqliteError.Code()&255 == 6) {

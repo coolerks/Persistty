@@ -8,3 +8,11 @@ auth:
   session_ttl: 168h
 storage:
   path: /var/lib/persistty/metadata.db
+transfer:
+  staging_path: /var/lib/persistty/staging
+  max_file_bytes: 268435456
+  max_batch_bytes: 1073741824
+  max_staging_bytes: 2147483648
+  chunk_bytes: 4194304
+  upload_ttl: 24h
+  archive_ttl: 1h

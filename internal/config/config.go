@@ -32,6 +32,15 @@ type Config struct {
 	Storage struct {
 		Path string `yaml:"path"`
 	} `yaml:"storage"`
+	Transfer struct {
+		StagingPath     string `yaml:"staging_path"`
+		MaxFileBytes    int64  `yaml:"max_file_bytes"`
+		MaxBatchBytes   int64  `yaml:"max_batch_bytes"`
+		MaxStagingBytes int64  `yaml:"max_staging_bytes"`
+		ChunkBytes      int64  `yaml:"chunk_bytes"`
+		UploadTTL       string `yaml:"upload_ttl"`
+		ArchiveTTL      string `yaml:"archive_ttl"`
+	} `yaml:"transfer"`
 }
 
 func Load(path string) (Config, error) {
@@ -57,6 +66,12 @@ func Load(path string) (Config, error) {
 	}
 	cfg.Server.Listen = "127.0.0.1:8080"
 	cfg.Auth.SessionTTL = "168h"
+	cfg.Transfer.MaxFileBytes = 256 << 20
+	cfg.Transfer.MaxBatchBytes = 1 << 30
+	cfg.Transfer.MaxStagingBytes = 2 << 30
+	cfg.Transfer.ChunkBytes = 4 << 20
+	cfg.Transfer.UploadTTL = "24h"
+	cfg.Transfer.ArchiveTTL = "1h"
 	decoder := yaml.NewDecoder(io.LimitReader(f, 65537))
 	decoder.KnownFields(true)
 	if info.Size() > 65536 {
@@ -73,6 +88,50 @@ func Load(path string) (Config, error) {
 }
 
 func (c Config) TTL() time.Duration { d, _ := time.ParseDuration(c.Auth.SessionTTL); return d }
+func (c Config) StagingPath() string {
+	if c.Transfer.StagingPath != "" {
+		return c.Transfer.StagingPath
+	}
+	return filepath.Join(filepath.Dir(c.Storage.Path), "staging")
+}
+func (c Config) MaxFileBytes() int64 {
+	if c.Transfer.MaxFileBytes > 0 {
+		return c.Transfer.MaxFileBytes
+	}
+	return 256 << 20
+}
+func (c Config) MaxBatchBytes() int64 {
+	if c.Transfer.MaxBatchBytes > 0 {
+		return c.Transfer.MaxBatchBytes
+	}
+	return 1 << 30
+}
+func (c Config) MaxStagingBytes() int64 {
+	if c.Transfer.MaxStagingBytes > 0 {
+		return c.Transfer.MaxStagingBytes
+	}
+	return 2 << 30
+}
+func (c Config) ChunkBytes() int64 {
+	if c.Transfer.ChunkBytes > 0 {
+		return c.Transfer.ChunkBytes
+	}
+	return 4 << 20
+}
+func (c Config) UploadDuration() time.Duration {
+	d, e := time.ParseDuration(c.Transfer.UploadTTL)
+	if e != nil {
+		return 24 * time.Hour
+	}
+	return d
+}
+func (c Config) ArchiveDuration() time.Duration {
+	d, e := time.ParseDuration(c.Transfer.ArchiveTTL)
+	if e != nil {
+		return time.Hour
+	}
+	return d
+}
 func (c Config) SecureCookie() bool { return c.Server.Mode == "tls" }
 func (c Config) CookieName() string {
 	if c.SecureCookie() {
@@ -139,6 +198,24 @@ func (c Config) Validate() error {
 	}
 	if c.Storage.Path == "" || !filepath.IsAbs(c.Storage.Path) || filepath.Clean(c.Storage.Path) != c.Storage.Path {
 		return fmt.Errorf("storage.path必须是规范绝对文件路径")
+	}
+	if c.Transfer.StagingPath != "" && (!filepath.IsAbs(c.Transfer.StagingPath) || filepath.Clean(c.Transfer.StagingPath) != c.Transfer.StagingPath || c.Transfer.StagingPath == c.Storage.Path) {
+		return errors.New("transfer.staging_path必须是规范绝对目录")
+	}
+	if c.MaxFileBytes() < 1<<20 || c.MaxFileBytes() > 20<<30 || c.MaxBatchBytes() < c.MaxFileBytes() || c.MaxBatchBytes() > 20<<30 || c.MaxStagingBytes() < c.MaxBatchBytes() || c.MaxStagingBytes() > 40<<30 || c.ChunkBytes() < 64<<10 || c.ChunkBytes() > 16<<20 || c.ChunkBytes() > c.MaxFileBytes() {
+		return errors.New("transfer容量配置无效")
+	}
+	if c.Transfer.UploadTTL != "" {
+		d, e := time.ParseDuration(c.Transfer.UploadTTL)
+		if e != nil || d < time.Minute || d > 7*24*time.Hour {
+			return errors.New("transfer.upload_ttl无效")
+		}
+	}
+	if c.Transfer.ArchiveTTL != "" {
+		d, e := time.ParseDuration(c.Transfer.ArchiveTTL)
+		if e != nil || d < time.Minute || d > 24*time.Hour {
+			return errors.New("transfer.archive_ttl无效")
+		}
 	}
 	return nil
 }

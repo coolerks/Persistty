@@ -13,11 +13,15 @@ import (
 var errBodyLarge = errors.New("body too large")
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any, fields ...string) error {
+	return decodeJSONWithLimit(w, r, target, 8192, fields...)
+}
+
+func decodeJSONWithLimit(w http.ResponseWriter, r *http.Request, target any, limit int64, fields ...string) error {
 	contentType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || contentType != "application/json" {
 		return errors.New("expected json")
 	}
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 8192))
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
 	if err != nil {
 		var large *http.MaxBytesError
 		if errors.As(err, &large) {

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -28,7 +29,10 @@ var ErrListLimit = errors.New("list limit exceeded")
 // Fixed fractional precision keeps UTC expiry strings lexically sortable.
 const storedTimeFormat = "2006-01-02T15:04:05.000000000Z"
 
-type Store struct{ db *sql.DB }
+type Store struct {
+	db        *sql.DB
+	projectMu sync.Mutex
+}
 type Folder struct {
 	ID   string `json:"id"`
 	Path string `json:"path"`

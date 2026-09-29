@@ -88,7 +88,7 @@ func run(args []string, in *os.File, out, stderr io.Writer) error {
 		if err != nil {
 			return errors.New("HTTP初始化失败")
 		}
-		server := &http.Server{Addr: cfg.Server.Listen, Handler: router, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
+		server := &http.Server{Addr: cfg.Server.Listen, Handler: router, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 2 * time.Minute, WriteTimeout: 5 * time.Minute, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
 		done := make(chan error, 1)
 		go func() { done <- server.ListenAndServe() }()
 		logger.Info("服务启动", "event", "server_start")
