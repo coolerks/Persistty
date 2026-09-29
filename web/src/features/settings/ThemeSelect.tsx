@@ -20,7 +20,7 @@ export function ThemeSelect() {
       try { localStorage.setItem(themeKey, value); setStorageError(false); }
       catch { setStorageError(true); }
     }}>
-      <SelectTrigger aria-label="主题" className="w-[136px]"><SelectValue /></SelectTrigger>
+      <SelectTrigger aria-label="主题" className="w-[136px]"><SelectValue>{value => value === "light" ? "浅色" : value === "dark" ? "深色" : "跟随系统"}</SelectValue></SelectTrigger>
       <SelectContent><SelectGroup>
         <SelectItem value="system"><Monitor />跟随系统</SelectItem>
         <SelectItem value="light"><Sun />浅色</SelectItem>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../../../../tests/contracts/foundation.json";
-import { decodeEnvelope, decodeError, decodeList, decodeProject, decodeSession, decodeTerminal, ProtocolError } from "./decoder";
+import workspaceFixture from "../../../../tests/contracts/workspace-files.json";
+import { decodeArchive, decodeDeletePreview, decodeEnvelope, decodeError, decodeFileContent, decodeFileListing, decodeFileMetadata, decodeList, decodeOperationResult, decodeProject, decodeSession, decodeTerminal, decodeUploadState, ProtocolError } from "./decoder";
 
 describe("Go/TypeScript 共同 API fixture", () => {
   it("读取全部成功和错误形状", () => {
@@ -25,5 +26,22 @@ describe("Go/TypeScript 共同 API fixture", () => {
     expect(() => decodeList(decodeProject)({ items: Array.from({ length: 201 }, () => fixture.project.data) })).toThrow(ProtocolError);
     expect(() => decodeList(decodeProject)({ items: [fixture.project.data, fixture.project.data] })).toThrow(ProtocolError);
     expect(() => decodeEnvelope({ data: fixture.project.data }, decodeProject)).toThrow(ProtocolError);
+  });
+});
+
+describe("W04 共享文件契约", () => {
+  it("解码列表、版本、部分结果、传输状态和错误", () => {
+    expect(decodeEnvelope(workspaceFixture.listing, decodeFileListing).items[0]?.name).toBe("-说明.txt");
+    expect(decodeEnvelope(workspaceFixture.content, decodeFileContent).content).toContain("\r\n");
+    expect(decodeEnvelope(workspaceFixture.metadata, decodeFileMetadata).version.identity).toBe("1:2");
+    expect(decodeEnvelope(workspaceFixture.partial_operation, decodeOperationResult).state).toBe("partial");
+    expect(decodeEnvelope(workspaceFixture.delete_preview, decodeDeletePreview).token).toBe("preview-token");
+    expect(decodeEnvelope(workspaceFixture.upload, decodeUploadState).received).toEqual([0]);
+    expect(decodeEnvelope(workspaceFixture.archive, decodeArchive).status).toBe("ready");
+    expect(decodeError(workspaceFixture.conflict).code).toBe("conflict");
+  });
+  it("拒绝不认识的传输状态与缺失的强版本", () => {
+    expect(() => decodeUploadState({ ...workspaceFixture.upload.data, status: "done" })).toThrow(ProtocolError);
+    expect(() => decodeFileMetadata({ kind: "file", version: { ...workspaceFixture.metadata.data.version, etag: null } })).toThrow(ProtocolError);
   });
 });

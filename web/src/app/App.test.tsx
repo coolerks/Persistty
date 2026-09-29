@@ -53,12 +53,12 @@ it("项目打开位置弹窗支持取消和当前标签，直达不重复询问"
   vi.stubGlobal("fetch", vi.fn((path: string) => Promise.resolve(path.endsWith("/auth/session") ? sessionResponse() : Response.json(path.endsWith("/projects") ? fixture.projects : fixture.project))));
   mount("/projects");
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: /示例项目/ }));
+  await user.click(await screen.findByRole("button", { name: "打开 示例项目" }));
   expect(screen.getByRole("dialog", { name: "打开项目" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "新标签页" })).toHaveAttribute("rel", "noopener noreferrer");
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-  await user.click(screen.getByRole("button", { name: /示例项目/ }));
+  await user.click(screen.getByRole("button", { name: "打开 示例项目" }));
   await user.click(screen.getByRole("button", { name: "当前标签页" }));
   expect(await screen.findByRole("heading", { name: "示例项目" })).toBeInTheDocument();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -90,8 +90,8 @@ it("切换项目取消旧请求，忽略不遵守abort的迟到响应", async ()
   mount("/projects/old");
   await waitFor(() => expect(oldReplies.length).toBeGreaterThan(0));
   const user = userEvent.setup();
-  await user.click(screen.getByRole("link", { name: /^项目$/ }));
-  await user.click(await screen.findByRole("button", { name: /示例项目/ }));
+  await user.click(screen.getByRole("link", { name: "Persistty" }));
+  await user.click(await screen.findByRole("button", { name: "打开 示例项目" }));
   await user.click(screen.getByRole("button", { name: "当前标签页" }));
   expect(await screen.findByRole("heading", { name: "示例项目" })).toBeInTheDocument();
   await act(async () => oldReplies.forEach(resolve => resolve(Response.json({ ...fixture.project, data: { ...fixture.project.data, id: "old", name: "旧响应" } }))));

@@ -18,5 +18,9 @@ export function useResource<T>(load: (signal: AbortSignal) => Promise<T>) {
     });
     return () => controller.abort();
   }, [load, attempt, expire]);
-  return { resource, refresh: () => { setResource({ status: "loading" }); setAttempt(value => value + 1); } };
+  return {
+    resource,
+    refresh: () => { setResource({ status: "loading" }); setAttempt(value => value + 1); },
+    refreshQuietly: () => setAttempt(value => value + 1),
+  };
 }

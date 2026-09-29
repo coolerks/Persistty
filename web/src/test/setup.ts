@@ -8,3 +8,9 @@ HTMLElement.prototype.scrollIntoView = vi.fn();
 HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
 HTMLElement.prototype.setPointerCapture = vi.fn();
 HTMLElement.prototype.releasePointerCapture = vi.fn();
+class TestResizeObserver implements ResizeObserver {
+  observe() { /* jsdom has no layout */ }
+  unobserve() { /* jsdom has no layout */ }
+  disconnect() { /* jsdom has no layout */ }
+}
+Object.defineProperty(window, "ResizeObserver", { configurable: true, writable: true, value: TestResizeObserver });

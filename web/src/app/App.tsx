@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from "react-router";
 import { TerminalSquare, Folder, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuthProvider } from "@/features/auth/AuthProvider";
@@ -22,6 +22,8 @@ function Authenticated() {
 
 function Shell() {
   const auth = useAuth();
+  const location = useLocation();
+  const workspaceRoute = /^\/projects\/[^/]+\/?$/.test(location.pathname);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const request = useRef<AbortController | null>(null);
@@ -34,24 +36,24 @@ function Shell() {
     catch (error: unknown) { if (!controller.signal.aborted) setError(errorMessage(error)); }
     finally { request.current = null; if (!controller.signal.aborted) setPending(false); }
   }
-  return <div className="app-shell">
+  return <div className={`app-shell ${workspaceRoute ? "app-shell-workspace" : ""}`}>
     <header className="app-header">
       <Link to="/projects" className="brand"><TerminalSquare aria-hidden="true" />Persistty</Link>
       <div className="flex items-center gap-2"><ThemeSelect />
-        {auth.state.status === "authenticated" && <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" aria-label="退出登录" disabled={pending} onClick={() => { void logout(); }}><LogOut /></Button></TooltipTrigger><TooltipContent>退出登录</TooltipContent></Tooltip>}
+        {auth.state.status === "authenticated" && <Tooltip><TooltipTrigger render={<Button variant="ghost" size="icon" aria-label="退出登录" disabled={pending} onClick={() => { void logout(); }} />}><LogOut /></TooltipTrigger><TooltipContent>退出登录</TooltipContent></Tooltip>}
       </div>
     </header>
     {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-    {auth.state.status === "authenticated" && <nav aria-label="主导航" className="main-nav">
+    {auth.state.status === "authenticated" && !workspaceRoute && <nav aria-label="主导航" className="main-nav">
       <NavLink to="/projects"><Folder aria-hidden="true" />项目</NavLink><NavLink to="/terminals"><TerminalSquare aria-hidden="true" />终端</NavLink>
     </nav>}
     {auth.state.status === "loading" ? <main className="page-main"><Loading /></main> : auth.state.status === "error" ? <main className="page-main"><Failure error={auth.state.error} retry={auth.retry} /></main> : <Outlet />}
-    <footer className="app-footer">{auth.state.status === "authenticated" ? "已登录" : "Persistty"}</footer>
+    {!workspaceRoute && <footer className="app-footer">{auth.state.status === "authenticated" ? "已登录" : "Persistty"}</footer>}
   </div>;
 }
 
 export function App() {
-  return <TooltipProvider delayDuration={300}><AuthProvider><Routes><Route element={<Shell />}>
+  return <TooltipProvider delay={300}><AuthProvider><Routes><Route element={<Shell />}>
     <Route path="/login" element={<LoginPage />} />
     <Route element={<Authenticated />}>
       <Route path="/projects" element={<ProjectsPage />} />
@@ -60,6 +62,6 @@ export function App() {
       <Route path="/terminals/:terminalId" element={<TerminalsPage />} />
     </Route>
     <Route path="/" element={<Navigate to="/projects" replace />} />
-    <Route path="*" element={<main className="page-main"><h1>页面不存在</h1><Button asChild variant="outline"><Link to="/projects">项目面板</Link></Button></main>} />
+    <Route path="*" element={<main className="page-main"><h1>页面不存在</h1><Link className={buttonVariants({ variant: "outline" })} to="/projects">项目面板</Link></main>} />
   </Route></Routes></AuthProvider></TooltipProvider>;
 }

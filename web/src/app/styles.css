@@ -73,6 +73,83 @@
 .resource-path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted-foreground); }
 .folder-list { display: flex; flex-direction: column; gap: 16px; margin: 0 0 24px; }
 .folder-list li { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.app-shell-workspace { height: 100dvh; min-height: 0; overflow: hidden; }
+.app-shell-workspace .app-header { min-height: 48px; padding: 5px 14px; }
+.app-shell-workspace .brand { font-size: 16px; }
+.app-shell-workspace .brand svg { width: 20px; height: 20px; }
+.app-shell-workspace .app-header [aria-label="主题"] { height: 32px; }
+.workbench { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--background); }
+.workbench-title { height: 32px; display: flex; align-items: center; justify-content: center; gap: 4px; flex: none; border-bottom: 1px solid var(--border); background: var(--secondary); }
+.workbench-title-name { max-width: 50vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted-foreground); }
+.workbench-title button { width: 26px; height: 26px; }
+.workbench-title svg { width: 14px; height: 14px; }
+.workbench-body { display: flex; flex: 1; min-height: 0; min-width: 0; }
+.workbench-body > [data-group], .workbench-body [data-group], .editor-area [data-group] { height: 100%; min-height: 0; min-width: 0; }
+.activity-bar { display: flex; flex: none; flex-direction: column; align-items: center; gap: 4px; width: 48px; padding-top: 8px; border-right: 1px solid var(--border); background: var(--secondary); }
+.activity-bar button, .activity-bar a { width: 38px; height: 38px; }
+.activity-bar svg { width: 20px; height: 20px; }
+.workbench-separator { position: relative; z-index: 1; flex: none; background: var(--border); }
+.workbench-separator.vertical { width: 1px; cursor: col-resize; }
+.workbench-separator.horizontal { height: 1px; cursor: row-resize; }
+.workbench-separator:hover, .workbench-separator:focus-visible { background: var(--primary); }
+.workbench-separator::after { content: ""; position: absolute; }
+.workbench-separator.vertical::after { width: 8px; height: 100%; left: -4px; }
+.workbench-separator.horizontal::after { height: 8px; width: 100%; top: -4px; }
+.explorer { display: flex; flex-direction: column; height: 100%; min-width: 0; overflow: hidden; }
+.explorer-heading { display: flex; align-items: center; justify-content: space-between; height: 38px; padding: 0 10px 0 14px; flex: none; border-bottom: 1px solid var(--border); font-size: 12px; }
+.explorer-heading button { width: 26px; height: 26px; }
+.explorer-heading svg { width: 14px; height: 14px; }
+.explorer-scroll { flex: 1; min-height: 0; overflow: auto; padding: 6px 0 14px; }
+.tree-root { min-width: 0; }
+.tree-root + .tree-root { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
+.tree-root-title { height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 12px; font-size: 13px; font-weight: 600; }
+.tree-root-main { color: var(--muted-foreground); font-size: 11px; font-weight: 400; }
+.tree-toolbar { display: flex; align-items: center; min-height: 30px; padding: 0 6px 0 12px; gap: 1px; flex-wrap: wrap; }
+.tree-toolbar button { width: 26px; height: 26px; }
+.tree-toolbar svg { width: 14px; height: 14px; }
+.tree-toolbar > div { display: flex; align-items: center; gap: 1px; }
+.tree-target { min-width: 22px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; color: var(--muted-foreground); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.tree-entry-wrap { display: flex; align-items: center; min-width: 0; height: 28px; }
+.tree-entry { display: flex; flex: 1; justify-content: flex-start; align-items: center; min-width: 0; height: 28px; border-radius: 0; gap: 5px; padding-right: 4px; font-size: 13px; font-weight: 400; }
+.tree-entry-selected { background: var(--accent); }
+.tree-entry-wrap > [data-slot="context-menu-trigger"] { flex: 1; min-width: 0; }
+.tree-entry-wrap > button:last-child { width: 25px; height: 25px; margin-right: 4px; }
+.tree-entry-wrap > button:last-child svg { width: 14px; height: 14px; }
+.tree-message { padding: 6px 14px; font-size: 12px; color: var(--muted-foreground); }
+.editor-area, .editor-group, .file-editor { display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0; }
+.editor-tabs { height: 38px; flex: none; display: flex; align-items: stretch; min-width: 0; overflow-x: auto; overflow-y: hidden; background: var(--secondary); border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+.editor-tab { display: flex; align-items: center; min-width: 120px; max-width: 220px; flex: none; border-right: 1px solid var(--border); color: var(--muted-foreground); }
+.editor-tab.active { background: var(--background); color: var(--foreground); border-top: 2px solid var(--primary); }
+.editor-tab-label { flex: 1; min-width: 0; justify-content: flex-start; gap: 6px; border-radius: 0; height: 36px; padding: 0 8px; font-weight: 400; }
+.editor-tab-label span { text-align: left; }
+.editor-tab-close { width: 26px; height: 26px; flex: none; margin-right: 3px; }
+.editor-tab-close svg, .editor-tabs > button svg { width: 14px; height: 14px; }
+.editor-tab-spacer { flex: 1; min-width: 4px; }
+.editor-tabs > button { width: 32px; height: 32px; flex: none; align-self: center; }
+.editor-empty { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted-foreground); font-size: 13px; }
+.editor-breadcrumb { height: 30px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted-foreground); }
+.editor-breadcrumb > span { flex: 1; min-width: 0; }
+.editor-breadcrumb button, .editor-breadcrumb a { width: 24px; height: 24px; }
+.editor-breadcrumb svg { width: 14px; height: 14px; }
+.editor-surface { flex: 1; min-height: 0; min-width: 0; }
+.editor-surface textarea { display: block; width: 100%; height: 100%; resize: none; border: 0; outline: none; padding: 12px; background: var(--background); color: var(--foreground); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.5; }
+.editor-feedback { padding: 14px; }
+.terminal-pane { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.terminal-heading { display: flex; align-items: center; gap: 6px; height: 35px; flex: none; padding: 0 10px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.terminal-heading-spacer { flex: 1; }
+.terminal-heading button { width: 26px; height: 26px; }
+.terminal-heading button svg { width: 16px; height: 16px; }
+.terminal-unavailable { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; text-align: center; color: var(--muted-foreground); font-size: 13px; }
+.workbench-status { height: 25px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 8px; border-top: 1px solid var(--border); background: var(--secondary); color: var(--muted-foreground); font-size: 11px; }
+.workbench-status > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workbench-status > span:first-child { flex: 1; }
+.status-controls { display: flex; gap: 1px; margin-left: auto; }
+.status-controls button { width: 23px; height: 23px; }
+.status-controls svg { width: 13px; height: 13px; }
+.mobile-workbench-nav { display: flex; flex: none; border-bottom: 1px solid var(--border); }
+.mobile-workbench-nav button { flex: 1; border-radius: 0; gap: 5px; }
+.mobile-workbench-nav svg { width: 15px; height: 15px; }
+.mobile-workbench-content { flex: 1; min-height: 0; min-width: 0; }
 @media (max-width: 600px) {
   .app-header { padding: 12px; gap: 8px; flex-wrap: wrap; }
   .brand { font-size: 19px; }
@@ -81,4 +158,9 @@
   .login-main { padding-top: 56px; }
   .resource-row { flex-wrap: wrap; }
   .app-footer { padding: 0 16px; }
+  .app-shell-workspace .app-header { flex-wrap: nowrap; padding: 5px 8px; }
+  .app-shell-workspace .brand { font-size: 14px; }
+  .app-shell-workspace .app-header [aria-label="主题"] { width: 105px; }
+  .editor-tabs { height: 36px; }
+  .editor-tab { min-width: 105px; max-width: 170px; }
 }

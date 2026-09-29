@@ -19,7 +19,7 @@ it("跟随系统监听，显式主题不被系统覆盖且移除监听", async (
   expect(document.documentElement).toHaveClass("dark");
   const user = userEvent.setup();
   await user.click(screen.getByRole("combobox", { name: "主题" }));
-  await user.click(screen.getByRole("option", { name: "浅色" }));
+  await user.click(await screen.findByRole("option", { name: "浅色" }));
   expect(localStorage.getItem(themeKey)).toBe("light");
   act(() => listeners.forEach(listener => listener()));
   expect(document.documentElement).not.toHaveClass("dark");
