@@ -4,6 +4,8 @@
 
 ## 强制约定：先查找并使用 shadcn/ui
 
+当前工程的 `web/components.json` 使用 shadcn 官方 `base-nova` 样式；基础组件由 shadcn CLI 安装到 `web/src/components/ui/`，业务组件从 `@/components/ui/*` 引用。shadcn/ui 是复制到项目的组件源码，不是需要写入 `package.json` 的 `shadcn/ui` 运行时依赖；该样式生成的交互原语为 `@base-ui/react`。不得把直接安装或调用 `radix-ui` 当成已经使用 shadcn/ui，也不得把项目自制的同名按钮/弹窗冒充 CLI 组件。新增组件先核对 `web/components.json`、CLI 生成文件和锁文件，运行 `rg 'radix-ui|@radix-ui' web/src web/package.json web/package-lock.json`；允许依赖树中其他包的传递依赖，但业务代码不得直接引入 Radix。未来若决定切换 shadcn 样式，须单独审查交互 API 与迁移范围，不能混用两套原语。
+
 新增或修改 UI 前，先查找项目已有的 `web/src/components/ui/` 与业务封装，再查询 shadcn/ui 官方组件目录、文档和官方 registry。凡 shadcn/ui 已提供对应组件或可通过其组件组合满足需求的，必须找到并使用，不能一上来手写替代品。此约定用于保持样式、交互和无障碍行为一致，避免重复维护基础控件。
 
 1. 项目已引入对应组件时，直接复用；未引入时，按工程锁定的包管理器、shadcn 配置及官方安装方式添加所需组件至 `web/src/components/ui/`，不复制一份到 feature 中，也不凭记忆重写官方实现。

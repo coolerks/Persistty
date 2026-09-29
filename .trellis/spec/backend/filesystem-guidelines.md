@@ -1,7 +1,7 @@
 # 文件路径、版本与原子保存
 
 ## 1. 范围 / 触发
-所有 File/preview/upload/download/search/Git cwd/Terminal initial cwd 输入都不可信。API 只接受 workspace_id + workspace 相对 POSIX path；内部映射到已批准根目录，不能接受客户端绝对路径。shell 自身权限边界见 [认证](security-config.md)。
+所有 File/preview/upload/download/search/Git cwd/Terminal initial cwd 输入都不可信。W04 文件 API 接受 `project_id + folder_id + project_version +` 该 folder 下相对 POSIX path；每次检查当前关联、根身份与权限，不能接受客户端绝对文件目标。目录选择器的服务器绝对路径是独立入口，只用于验证并登记项目文件夹。已实现签名见 [W04 契约](workspace-files-contract.md)；shell 自身权限边界见 [认证](security-config.md)。
 
 ## 2. 签名
 初始接口形状：`Open(ctx, workspaceID, path) (FileSnapshot, error)`、`Save(ctx, workspaceID, path, content, expectedVersion) (FileVersion, error)`。

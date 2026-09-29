@@ -20,7 +20,8 @@
   "subtasks": [],
   "children": [
     "09-27-foundation",
-    "09-27-debian-spike"
+    "09-27-debian-spike",
+    "09-28-workspace-files"
   ],
   "parent": null,
   "relatedFiles": [],

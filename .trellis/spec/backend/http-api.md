@@ -1,13 +1,13 @@
 # HTTP 与共享概念（跨层权威）
 
 ## 1. 范围 / 触发
-当前W01实施的完整签名与请求/响应见[基础协议](foundation-contract.md)，下文文件/终端写入是历史候选，未经对应交付实现不得注册假接口。多文件夹文件定位为project_id/folder_id/relative path/config version，非旧workspace_id；三种关闭命令按U71/U73区分，不能照旧文字把上方terminal标签X隐藏。
+W01 的完整签名与请求/响应见[基础协议](foundation-contract.md)，已实现的 W04 项目/文件/传输/事件接口见[W04 契约](workspace-files-contract.md)。下文文件/终端片段是历史候选，不可覆盖 W04 实际签名；三种关闭命令按 U71/U73 区分，不能照旧文字把上方 terminal 标签 X 隐藏。
 所有 HTTP API 使用 /api/v1；新端点必须在 owning task 固化完整 request/response/error fixture，并由前后端契约测试共用。以下是初始公共契约，未创建实现。前端不自行定义不同版本。
 
 ## 2. 签名
 - POST /auth/login；POST /auth/logout；GET /auth/session。
 - GET/POST /terminals；POST /terminals/{id}/close；PATCH /terminals/{id} 仅元数据。
-- GET /files/content?workspace_id=...&path=...；PUT /files/content body 含 workspace_id/path/content/expected_version。
+- W04 文件入口见 [W04 契约](workspace-files-contract.md)：按 `project_id/folder_id/project_version/relative_path` 定位，不存在旧 `workspace_id` 文件 API。
 - GET /terminals/{id}/attach 是 WS upgrade；GET /events 是受认证 watcher WS。
 全部路径相对于 /api/v1；其他 Explorer/search/upload/git/settings 端点在对应任务设计中补齐，不自由增加任意执行命令 API。
 

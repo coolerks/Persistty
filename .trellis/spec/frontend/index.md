@@ -1,6 +1,6 @@
 # 前端开发规范
 
-W01已有React/Vite登录、项目与终端元数据路由、严格API解码、三主题及布局命令类型。兼容版本和npm锁文件见web/package.json/package-lock.json；Monaco、xterm、react-resizable-panels等功能引擎留待对应工作包，尚未安装不能声称已有。下述未交付功能片段仍为契约，不是已验证实现。
+W01 已有 React/Vite 登录、项目与终端元数据路由、严格 API 解码和三主题；兼容版本及 npm 锁文件见 `web/package.json`/`web/package-lock.json`。W04 工作树已引入 shadcn `base-nova` 组件、Zustand、react-resizable-panels 与桌面只读 Monaco；Monaco 按需加载，手机用基础文本视图。`@xterm/xterm` 已安装但 W03 真实终端运行时未接入，W05 自动保存/草稿也未完成。下述未交付功能片段仍为契约，不是已验证实现。
 
 ## 规范索引
 | 文档 | 内容 |

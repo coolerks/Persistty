@@ -8,7 +8,7 @@
 
 ## 2. 签名
 repository 以 context 为首参数；SQL 用独立参数。迁移目录约定 `internal/storage/migrations/0001_metadata.sql`，递增不可变。迁移表：`schema_migrations(version INTEGER PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL)`。
-W01 实际 schema 以 [0001](../../../internal/storage/migrations/0001_metadata.sql) 与 [0002](../../../internal/storage/migrations/0002_resource_ids.sql) 为准，保存认证 sessions、projects、project_folders、terminals。资源 TEXT PRIMARY KEY 必须显式 NOT NULL；SQLite 普通表的 TEXT PRIMARY KEY 本身不拒绝 NULL，CHECK 的 NULL 结果也不等于失败。主文件夹使用项目与文件夹的复合外键保证归属，终端关联项目删除时 SET NULL。tmux 身份及后续状态字段由终端任务追加迁移，不预建 workspaces/settings/editor_tabs。
+W01 实际 schema 以 [0001](../../../internal/storage/migrations/0001_metadata.sql) 与 [0002](../../../internal/storage/migrations/0002_resource_ids.sql) 为准，保存认证 sessions、projects、folders、terminals；W04 追加 [0003](../../../internal/storage/migrations/0003_folder_roots.sql) 的注册根 device/inode 与 [0004](../../../internal/storage/migrations/0004_transfers.sql) 的 uploads/upload_chunks/archives，见 [W04 契约](workspace-files-contract.md)。资源 TEXT PRIMARY KEY 必须显式 NOT NULL；SQLite 普通表的 TEXT PRIMARY KEY 本身不拒绝 NULL，CHECK 的 NULL 结果也不等于失败。主文件夹使用项目与文件夹的复合外键保证归属，终端关联项目删除时 SET NULL。tmux 身份及后续状态字段由终端任务追加迁移，不预建 workspaces/settings/editor_tabs。
 
 标签、Explorer 展开目录、侧栏宽度、终端面板高度、最近项目和主题归浏览器本地；不保存文件正文或终端输出到 SQLite，不以 active 标签推断资源存在。布局版本、范围校验及恢复规则见 [状态规范](../frontend/state-management.md)。
 

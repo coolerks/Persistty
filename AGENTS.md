@@ -36,7 +36,7 @@
 
 Persistty 是面向 Debian 开发机的单用户、自托管 Web IDE，提供持久化终端、文件浏览与编辑、搜索替换、上传下载、只读 Git 查看及后端认证。
 
-目前仓库以规范、需求研究和设计稿为主，尚无产品源码、`go.mod`、`package.json` 或可运行服务。下述目录和技术栈是规划约定，不能描述为已经实现或验证。不要为补齐目录创建空包，也不要在未建立工程基础时安装依赖。
+W01 工程基础已建立并归档，仓库已有 Go 服务、`go.mod`、前端 `package.json`/npm 锁文件与可运行的认证页面；W02 Debian 实验已归档。W04 多文件夹项目与文件管理正在实施，当前工作树包含尚未提交的代码。技术栈中“已安装”“已接入界面”“完成运行时验收”是不同状态：桌面 Monaco 和可调整布局已接入 W04 工作台，移动端使用基础文本视图；`@xterm/xterm` 虽已锁入依赖，真实终端运行时仍属于 W03，自动保存/草稿仍属于 W05。不要为补齐目录创建空包或把未接入功能称为完成。
 
 - 后端：Go、Gin、SQLite（`database/sql`），终端使用 tmux 与 PTY；外部工具包括 `git`、`rg`、`tmux`。
 - 前端：React、TypeScript、Vite、React Router、Tailwind CSS、shadcn/ui、lucide-react、Zustand；桌面编辑器使用 Monaco，终端使用 xterm，布局使用 react-resizable-panels。
@@ -70,7 +70,7 @@ Gin handler 负责输入校验与响应映射，业务服务不依赖 `*gin.Cont
 
 ## 验证与版本管理
 
-当前文档阶段检查 Markdown 本地链接、规范一致性、忽略规则和 `git diff --check`；没有产品 manifest 时，Go/前端测试记为不适用，不能声称通过。
+现有产品工程须按以下门禁实际运行，另检查 Markdown 本地链接、规范一致性、忽略规则和 `git diff --check`。未运行或跳过的检查不能声称通过。
 
 产品工程建立后，按实际目录与工具运行以下检查：
 

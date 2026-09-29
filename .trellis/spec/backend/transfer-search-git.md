@@ -9,8 +9,8 @@
 ## 3. 契约
 ### 上传与下载
 以 [配置](security-config.md) 的 threshold/chunk_size/max_file_size 为准。临时状态/bitmap/hash 与不完整数据在服务私有目录，0700/0600；记录持久状态以支持 Web restart 后查询已收到 chunks。固定 chunk index/offset、检查总大小/最后 chunk 长度、重复相同 chunk 幂等、不同内容拒绝。chunk hash 和整文件 SHA-256 由后端验证，不信任客户端声明。complete 有界流式读校验，目标目录同 filesystem staging，安全 atomic rename 后才标记 committed；跨 filesystem 不直接 rename，改用目标同目录暂存。complete 重试返回同一结果；DB 与 filesystem 间崩溃必须可恢复辨认，不把 partial 目标当完成。
-磁盘空间/并发/累计 quota/闲置 TTL 在上传任务锁定；不能只有限单文件 20GB 导致磁盘耗尽。TTL 回收仅自身 staging。小文件同样先验证再发布。目录上传含显式 empty-dir manifest；每个相对路径由后端验证，不信任 webkitRelativePath。
-冲突策略 skip/replace/keep_both；replace 使用当前目标 expected_version，发生变更 409；keep_both 在安全父目录原子保留名称，不用先 exists 再写，格式 config (1).yaml。批量 apply_to_all 为本批 UI 决策，不变成无条件覆盖开关。
+磁盘空间/并发/累计 quota/闲置 TTL 在上传任务锁定；不能只有限单文件 20GB 导致磁盘耗尽。TTL 回收仅自身 staging。小文件同样先验证再发布。W04 目录上传通过逐项受验证的 `create_directory` 操作与文件上传实现；拖拽目录遍历可显式建立空目录，文件选择器的 `webkitRelativePath` 不保证暴露空目录。每个相对路径由后端验证，不信任浏览器提供的路径。
+W04 上传冲突仅提供 skip/replace，不提供 keep_both。replace 使用弹窗初次确认时捕获的目标 `expected_version`，发布前复验；确认后再变更返回 409 并重新提示确认。批量上传不变成无条件覆盖开关，具体签名见 [W04 契约](workspace-files-contract.md)。
 文件下载流式、nosniff、attachment 文件名安全编码 Unicode；ZIP archive entry 为相对 path、无 ../、保留空目录、大文件流式、有界内存。symlink 默认跳过并报告（不 follow，不导出根外目标）；不得递归打开 device/FIFO。断开取消流并释放 fd；目录压缩不是磁盘一致快照，变动错误不能输出伪造成功。SVG 默认 source；safe preview 用独立 sandbox 无脚本/同源权限、禁外部资源，不以内联 HTML 信任其内容。PDF 只读隔离；binary metadata/有界 hex/download，不能 text/replace。
 
 ### 搜索与替换
@@ -28,7 +28,7 @@ chunk 错 hash/非法 offset：400；目标版本变更：409；超大小/磁盘
 优：上传网络断开后只补缺 chunks，最终 hash 等于原始文件；Search 后 Terminal 修改一个结果，该文件 replace conflict。基础：Unicode 空文件夹 ZIP。错误：逐 chunk 直接写最终目标、Search 后直接无 preview 修改全部、忽略 git/rg 非正常退出。
 
 ## 6. 必需测试
-上传：单/多/文件夹/空目录/Unicode/大文件/hash/冲突三策略/中断恢复/Web restart/重复 chunk/错误 hash/超额/并发 keep_both/崩溃完成。
+上传：单/多/文件夹/拖拽空目录/Unicode/大文件/hash/skip 与 replace/中断恢复/Web restart/重复 chunk/错误 hash/超额/确认后再变更。未实现 keep_both 的测试不作为 W04 门禁。
 下载：真实 unzip 验路径/内容/hash/空目录/symlink/大文件流式内存界限。
 搜索：src、公有目录/.github/.env.example 可搜；node_modules/dist/.next 按 ignore 排除、.git 强排除、binary/symlink 不搜；emoji 定位；preview 与 apply 同输出；外部改动 conflict。
 Git：临时真实 repo 与 CLI 对照 clean/modified/staged/untracked/deleted/branch/log/diff/rename，恶意 path/option/config 不执行外部命令。
