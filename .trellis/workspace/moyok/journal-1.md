@@ -28,3 +28,27 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 2: 完成 W04 多文件夹项目与文件管理
+<!-- trellis-session: v=2 fp=bcb411d46e54ddb8 -->
+
+**Date**: 2026-09-29
+**Task**: 完成 W04 多文件夹项目与文件管理
+**Branch**: `main`
+
+### Summary
+
+完成多根项目、目录选择、安全文件操作、上传下载与 ZIP、文件事件和 shadcn 工作台；Go/前端/真实 Debian 验收通过，已归档 W04。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `22d4fb8` | feat: 实现 W04 多根项目与安全文件传输 |
+| `985c0f2` | feat: 完成 W04 项目工作台与 shadcn 界面 |
+| `3b0fa55` | docs: 同步 W04 契约与验收记录 |
+
+### Status
+
+[OK] **Completed**

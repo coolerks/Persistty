@@ -10,8 +10,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 1
-- **Last Active**: 2026-09-28
+- **Total Sessions**: 2
+- **Last Active**: 2026-09-29
 <!-- @@@/auto:current-status -->
 
 ---
@@ -21,7 +21,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~30 | Active |
+| `journal-1.md` | ~54 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 2 | 2026-09-29 | 完成 W04 多文件夹项目与文件管理 | `22d4fb8`, `985c0f2`, `3b0fa55` | `main` |
 | 1 | 2026-09-28 | 完成 W02 Debian 隔离实验 | `d7e55eb`, `cb9729c` | `main` |
 <!-- @@@/auto:session-history -->
 
