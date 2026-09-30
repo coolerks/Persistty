@@ -14,7 +14,7 @@
 - Tests：根 `go test ./...`、`go test -race ./...`、`go vet ./...` 全通过，6 个第一方包；隔离模块 12 个顶层测试，最终 `go test -count=1 ./...` 与 `go test -race -count=3 ./...`、`go vet ./...` 通过，无 skip。真实 PTY/httptest 覆盖认证/Origin/单 attach、无效 UTF-8 与零字节、resize 严格 JSON/限额、取消及 15 次 detach 回收。
 - Python：bridge 6 项、terminal/remote_config 21 项通过，均不靠 mock 声称 Debian 验收。两份真实证据校验包含在 bridge 测试中。
 - 依赖：锁定 creack/pty v1.1.24、coder/websocket v1.8.15；通知与实际两个模块完整 LICENSE、Go 1.26.8 LICENSE 一致，最终 Linux 二进制包含完整通知文件。独立 go.mod 不影响产品 manifest，根模块测试不包含该模块，已分别运行门禁。
-- 最终 Linux amd64 二进制 SHA-256：`788be5a918f7593e63d023b77c98a7d9dc88a99ccb51d0d2a00d162cd0bbbe78`。独立 Debian 实测使用这个修正后的版本，见 [evidence-review.json](../../../tests/integration/debian/bridge/evidence-review.json)。实验错误不回显真实连接值或原始命令。
+- 最终 Linux amd64 二进制 SHA-256：`788be5a918f7593e63d023b77c98a7d9dc88a99ccb51d0d2a00d162cd0bbbe78`。独立 Debian 实测使用这个修正后的版本，见 [evidence-review.json](../../../../../tests/integration/debian/bridge/evidence-review.json)。实验错误不回显真实连接值或原始命令。
 - 13 次样本心跳为 `1,7,20,24,27,31,35,39,43,47,51,55,59`；server/pane PID、start ticks、cgroup 与固定初始身份相同。一次明确输入后 input_count 始终为 1，stop/restart/SIGKILL 与重新 attach 未重放输入。真实 attach-client 位于 Web unit，server/pane 不在 Web cgroup；tmux server 为专属预启动，Go 只使用 `-N` attach。
 - WS exercise 7 次 attach 的 started/reaped 均为 7，FD=8、goroutines=6 与本次基准相同；随后 hold/observe 验证正在连接时的 Go 生命周期。三个精确自有 unit 和记录的精确派生 scope 均 inactive，ROOT 已删除，未修改既有服务、网络、系统安装状态。
 - 隐私：报告新增前的可提交工作树文本 280 个与 HEAD 文本 264 个，私有 `.env` 仅在内存解析，实际三个字段精确匹配扫描零命中，只输出计数/路径；`.env` 不入库。任务 JSONL validate 通过（4+4），报告完成后的文档局部链接 22 个无缺失，`git diff --check` 通过。主会话新增报告后应再次运行提交前扫描。

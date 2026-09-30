@@ -4,7 +4,7 @@
 
 仅新增隔离实验；没有产品 API、认证、前端或根 Go module 修改，没有远端系统安装/sudo/helper。连接只用私有 .env 和现有安全 transport；未记录连接值。D06 两份既有 evidence 保持原样。
 
-最终 Linux amd64 CGO=0 binary SHA256：`c294742fb8848421b3da04b956199327df981c36ebcdf5b9ee2c2b6319e16501`。真实 Debian tmux 3.5a，临时解包既定 3.5a-3/libevent 包；远端不安装 Go/Node。结果见 [摘要证据](../../../tests/integration/debian/history/evidence.json)。
+最终 Linux amd64 CGO=0 binary SHA256：`c294742fb8848421b3da04b956199327df981c36ebcdf5b9ee2c2b6319e16501`。真实 Debian tmux 3.5a，临时解包既定 3.5a-3/libevent 包；远端不安装 Go/Node。结果见 [摘要证据](../../../../../tests/integration/debian/history/evidence.json)。
 
 | 场景 | 实际判定 |
 | --- | --- |
@@ -24,7 +24,7 @@
 - `tests/integration/debian/bridgego/`：main CLI 最小 record 分支，record.go/record_test.go，以及 README；不改 server 或既有 D06 client 行为。
 - `tests/integration/debian/run_remote.py`：history 入口；不打印 raw frames，暂存 `.cache` 内 0600 文件后删除，只输出脱敏摘要。
 
-实际 npm manifest/registry 确认 `@xterm/headless@5.5.0`、MIT、integrity 已锁。包是 CommonJS，使用 default import 再取 Terminal。实际 typings 确认 proposed buffer/Uint8Array write callback API。发布包没有 LICENSE，完整通知来自固定官方 5.5.0 tag，见 [notice](../../../tests/integration/debian/history/third-party-notices.txt)。不声称该版本为最新版本。
+实际 npm manifest/registry 确认 `@xterm/headless@5.5.0`、MIT、integrity 已锁。包是 CommonJS，使用 default import 再取 Terminal。实际 typings 确认 proposed buffer/Uint8Array write callback API。发布包没有 LICENSE，完整通知来自固定官方 5.5.0 tag，见 [notice](../../../../../tests/integration/debian/history/third-party-notices.txt)。不声称该版本为最新版本。
 
 ## 检查
 

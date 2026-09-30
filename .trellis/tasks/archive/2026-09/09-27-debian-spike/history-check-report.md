@@ -32,7 +32,7 @@
 
 ## 独立真实 Debian 结果
 
-使用最终 Linux amd64 CGO=0 binary，SHA256 为 `c294742fb8848421b3da04b956199327df981c36ebcdf5b9ee2c2b6319e16501`。修正前后分别独立执行，最终 runner 的摘要保存在 [evidence-review.json](../../../tests/integration/debian/history/evidence-review.json)，保留首次 D07 的 evidence.json。
+使用最终 Linux amd64 CGO=0 binary，SHA256 为 `c294742fb8848421b3da04b956199327df981c36ebcdf5b9ee2c2b6319e16501`。修正前后分别独立执行，最终 runner 的摘要保存在 [evidence-review.json](../../../../../tests/integration/debian/history/evidence-review.json)，保留首次 D07 的 evidence.json。
 
 - 8 项实验断言成立；raw attach 缺少完整历史、capture/attach 滚动间隙丢失、外层 alternate 隐藏已捕获历史是成功观测限制，而不是产品无损恢复验收。
 - 7 次实际 WS 记录逐字节重分块后，与原帧解析的 normal/alternate cells、字符宽度、颜色、基本样式和光标一致；使用真实锁定 @xterm/headless 5.5.0、Uint8Array/write callback，MIT 完整通知保留。

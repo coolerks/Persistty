@@ -2,7 +2,7 @@
   "id": "workbench-ui-layout",
   "name": "workbench-ui-layout",
   "title": "工作台 UI 布局调整",
-  "description": "已批准实施：合并顶栏、精简终端、名称元数据与统一倒计时；自动化验收收尾，真实手机软键盘待实机检查",
+  "description": "工作台顶栏与终端操作调整已实现并归档；真实手机软键盘等未验证项保留为后续验收事项",
   "status": "completed",
   "dev_type": null,
   "scope": null,
@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "2026-09-30 用户明确要求标记完成并归档；本任务已完成收尾。真实手机软键盘、输入法和触控等未验证项保留为后续验收事项，本次归档不将它们记为通过。实现已提交 b01e47c。",
   "meta": {}
 }

@@ -1,5 +1,7 @@
 # 中文化与规范补充审查报告
 
+> 归档状态：2026-09-30 用户明确要求标记完成并归档；本任务已完成收尾。
+
 审查日期：2026-09-26。范围为 AGENTS.md、README.md、`.trellis/**/*.md` 和 `.agents/skills/**/*.md`。依据本任务 PRD、design、implement、check.jsonl、研究上下文及 `/private/tmp/persistty-chinese-original/` 原文快照审查；没有实施产品功能、提交或归档任务。
 
 ## 已修复的发现

@@ -4,7 +4,7 @@
 
 2026-09-27 在用户指定 Debian 13.4 amd64 机器，以非 root 用户执行隔离实验。tmux 3.5a-3 和必要 libevent-core-2.1-7t64 2.1.13-stable-1~deb13u1 从该机器配置的软件源下载解包到临时目录，未安装系统软件。systemd 为 257.9-1~deb13u1。临时目录 0700，socket 0600，未使用默认 socket，未修改 Nginx、WireGuard、防火墙或已有服务。
 
-终端探针提供 W02 部分 D01/D02/D03/D05 证据，不代表真实 Go/WS/浏览器/TUI 终端交付验收。详见 [可重复步骤](../../../tests/integration/debian/terminal/README.md) 与 [脱敏实测 JSON](../../../tests/integration/debian/terminal/evidence.json)。连接身份及 cgroup 中的用户标识已去敏，实验关联与判定保留，不称为原始逐字记录。
+终端探针提供 W02 部分 D01/D02/D03/D05 证据，不代表真实 Go/WS/浏览器/TUI 终端交付验收。详见 [可重复步骤](../../../../../tests/integration/debian/terminal/README.md) 与 [脱敏实测 JSON](../../../../../tests/integration/debian/terminal/evidence.json)。连接身份及 cgroup 中的用户标识已去敏，实验关联与判定保留，不称为原始逐字记录。
 
 ## 实测结果
 

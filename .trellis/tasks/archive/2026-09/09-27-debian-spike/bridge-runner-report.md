@@ -14,7 +14,7 @@
 - 三次操作前都有真实活动 WS/PTY attach；所采集 attach-client PID/cgroup 均归 Web unit。systemctl restart 后新 Web PID 已改变且再次真实观察到输出，原 pane 继续运行。
 - exercise 的认证拒绝 401、错误 Origin 403、单活动 attach 409、正确 resize、非法 resize 1008、超限输入 1009、UTF-8 二进制往返和 detach/reconnect 回收断言均通过。7 次 started=7 次 reaped，FD=8、goroutines=6 与本次基准一致。只是有限 trace，不保证任意负载下无泄漏或完整慢客户端策略。
 
-首轮完整去敏数据在 [evidence.json](../../../tests/integration/debian/bridge/evidence.json)。不是原始逐字 stdout；cgroup 身份使用稳定占位符，保留进程关联及实验判定。
+首轮完整去敏数据在 [evidence.json](../../../../../tests/integration/debian/bridge/evidence.json)。不是原始逐字 stdout；cgroup 身份使用稳定占位符，保留进程关联及实验判定。
 
 ## 失败与清理
 

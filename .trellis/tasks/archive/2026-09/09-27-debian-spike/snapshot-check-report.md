@@ -2,10 +2,10 @@
 
 ## Findings (fixed)
 
-- File: [model.mjs](../../../tests/integration/debian/snapshot/model.mjs)。Issue: ring 有界但串行 Promise 待处理队列无容量限制，producer 不等待时可无限保留 payload。Fix: owner/observer 分别限制 64 个待处理请求与 2 MiB payload（含正在应用的请求），超限同步 `queue_full`，不推进 seq、不调用 write；成功/失败均 finally 释放。observer 超大 bytes 在复制前拒绝。回归分别验证两端 event/byte 上限及失败后释放。
-- File: [model.mjs](../../../tests/integration/debian/snapshot/model.mjs)。Issue: restore 入队闭包保留调用者快照对象，可在执行前被修改而改变序号/尺寸/内容。Fix: 入队前复制字段及冻结字符串值；回归修改原对象后恢复状态仍与连续 owner 一致。已有 bytes/返回 tail 复制行为保留。
-- File: [analyze.test.mjs](../../../tests/integration/debian/snapshot/analyze.test.mjs)。Issue: CLI 文件权限/非普通文件/符号链接/大小及尺寸边界缺少直接回归。Fix: 增补子进程拒绝测试和尺寸边界；测试资源仅自有临时目录。
-- File: [README.md](../../../tests/integration/debian/snapshot/README.md)。Fix: 同步 pending 队列限额与 ring 独立边界、拒绝和请求复制契约。未改产品接口或既有 D06/D07 证据。
+- File: [model.mjs](../../../../../tests/integration/debian/snapshot/model.mjs)。Issue: ring 有界但串行 Promise 待处理队列无容量限制，producer 不等待时可无限保留 payload。Fix: owner/observer 分别限制 64 个待处理请求与 2 MiB payload（含正在应用的请求），超限同步 `queue_full`，不推进 seq、不调用 write；成功/失败均 finally 释放。observer 超大 bytes 在复制前拒绝。回归分别验证两端 event/byte 上限及失败后释放。
+- File: [model.mjs](../../../../../tests/integration/debian/snapshot/model.mjs)。Issue: restore 入队闭包保留调用者快照对象，可在执行前被修改而改变序号/尺寸/内容。Fix: 入队前复制字段及冻结字符串值；回归修改原对象后恢复状态仍与连续 owner 一致。已有 bytes/返回 tail 复制行为保留。
+- File: [analyze.test.mjs](../../../../../tests/integration/debian/snapshot/analyze.test.mjs)。Issue: CLI 文件权限/非普通文件/符号链接/大小及尺寸边界缺少直接回归。Fix: 增补子进程拒绝测试和尺寸边界；测试资源仅自有临时目录。
+- File: [README.md](../../../../../tests/integration/debian/snapshot/README.md)。Fix: 同步 pending 队列限额与 ring 独立边界、拒绝和请求复制契约。未改产品接口或既有 D06/D07 证据。
 
 ## Findings (not fixed)
 
@@ -25,7 +25,7 @@
 
 ## 最终独立 Debian 证据
 
-自修后新一次成功执行的直接脱敏 runner 输出保存于 [evidence-review.json](../../../tests/integration/debian/snapshot/evidence-review.json)，不覆盖实施者 evidence-first/evidence 或 D06/D07。source binary SHA256 `c294742fb8848421b3da04b956199327df981c36ebcdf5b9ee2c2b6319e16501`，没有修改 Go binary。额外一次较早成功复核仅用于检查自修，最终文件对应最后一次执行。
+自修后新一次成功执行的直接脱敏 runner 输出保存于 [evidence-review.json](../../../../../tests/integration/debian/snapshot/evidence-review.json)，不覆盖实施者 evidence-first/evidence 或 D06/D07。source binary SHA256 `c294742fb8848421b3da04b956199327df981c36ebcdf5b9ee2c2b6319e16501`，没有修改 Go binary。额外一次较早成功复核仅用于检查自修，最终文件对应最后一次执行。
 
 `tui120` 单 WS 连接 120x40，5 帧 2013 bytes，SHA256 `f9b0acc415fdd9fa13c3fed7c8c2cdea9259835f12b2027f6da0e4459591c955`。帧界 0/1/2/4 等价，帧界 5 不等价（`alternate.cells`）；第 1 帧人工 split 1/2/419/838 等价，共 9 个有限截点、8 等价/1 不同。只比较这一连接，不拼接各次 attach，不提交 raw、cells 或 serialized 正文。
 

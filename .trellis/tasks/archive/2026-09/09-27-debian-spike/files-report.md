@@ -30,7 +30,7 @@
 - 本机 `go vet ./tests/integration/debian/files`：通过。默认 Go cache 的 sandbox 权限报错后，改用独立 `/private/tmp/persistty-files-gocache` 成功；未改系统或仓库配置。
 - `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build` 和 `go test -c`：通过。
 - 真实 Debian `timeout 25s .../persistty-files-test -test.v -test.timeout=20s`：2 项测试通过，RootProbe 约 0.24 秒。
-- 独立 JSON 探针有 25 项检查，全部通过；实际参数与复现、失败清理流程见 [探针说明](../../../tests/integration/debian/files/README.md)。
+- 独立 JSON 探针有 25 项检查，全部通过；实际参数与复现、失败清理流程见 [探针说明](../../../../../tests/integration/debian/files/README.md)。
 
 全部本地编译/测试会话已结束；远端探针未启动持久服务，SSH 退出后无探针资源。局部检查不能代替主会话整体 Go/frontend 门禁。
 

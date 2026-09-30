@@ -1,5 +1,7 @@
 # Monaco 完整语言高亮
 
+> 归档状态：2026-09-30 用户明确要求标记完成并归档；本任务已完成收尾。高亮/图标及相关修复已提交 6cf29aa，终端几何修复已提交 b7ac848；既有验收限制继续保留。
+
 ## 目标与背景
 
 用户要求当前桌面编辑器覆盖其列出的全部 Monaco 语言。现有完整引擎已导入，但 `DesktopEditor.tsx:33-37` 的手写白名单将其他文件强制设为 plaintext。依据见[研究记录](../09-30-editor-language-material-icons/research/upstream-assets.md)。

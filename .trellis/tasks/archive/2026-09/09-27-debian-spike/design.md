@@ -2,7 +2,7 @@
 
 ## 数据与职责
 探针只消费明确实验参数；输出脱敏 JSON/版本/PID/start time/cgroup/判定，不采集 shell 输入、环境凭据或业务数据。临时目录 mktemp 0700，随机私有 socket 与 unit 名称；资源标识在日志中留证。main 负责安装条件及授权、规范；终端探针和文件探针分别拥有独立子目录，不并行修改共享产品文件。
-最新连接约定：仅安全解析仓库根已忽略的私有 .env，键为 DEBIAN_USER/DEBIAN_IP/DEBIAN_PORT，不读进程环境覆盖或 fallback，不 source/eval。实际值、展开后的 SSH/SCP 命令与原始错误不落盘；证据关联身份去敏并明确标注，保留原实验判定。遵守 [远端验证规范](../../spec/backend/remote-validation.md)。第一批已提交 5f392ed，当前继续阶段另行验收并请求提交。
+最新连接约定：仅安全解析仓库根已忽略的私有 .env，键为 DEBIAN_USER/DEBIAN_IP/DEBIAN_PORT，不读进程环境覆盖或 fallback，不 source/eval。实际值、展开后的 SSH/SCP 命令与原始错误不落盘；证据关联身份去敏并明确标注，保留原实验判定。遵守 [远端验证规范](../../../../spec/backend/remote-validation.md)。第一批已提交 5f392ed，当前继续阶段另行验收并请求提交。
 
 ## 生命周期
 以用户级 systemd-run 分别启动 tmux foreground server 与模拟 Web attach。显式预启动 server，空 server 存活参数按实际版本验证；Web 只通过 -N 连接既有 server。停止 Web 使用正常 control-group 清理，确认 pane 与 server cgroup 均不属于 Web。禁止通过 nohup/setsid 代替 cgroup 证据。跨 SSH 分次采样证明连接生命周期分离；只关闭自身实验单位。

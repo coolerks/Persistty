@@ -1,5 +1,7 @@
 # 工作台 UI 调整验收记录
 
+> 归档状态：2026-09-30 用户明确要求标记完成并归档；本任务已完成收尾。真实手机软键盘、输入法和触控等未验证项保留为后续验收事项，本次归档不将它们记为通过。实现已提交 b01e47c。
+
 日期：2026-09-30。当前任务 in_progress；产品实现与自动化验收已接入，真实手机软键盘仍待实机检查。单代理 inline，未提交、未归档，未修改用户现有开发服务或 tmux 会话。
 
 ## 实现范围
@@ -29,7 +31,7 @@ Go httptest 默认沙箱禁止绑定 loopback 端口，获准执行后全量通�
 
 ## 真实测试与证据
 
-沿用 [Debian/browser harness](../../../tests/integration/debian/browser/README.md)，连接仅从已忽略 `.env` 读取；独立 0700 root、私有 tmux socket、Web/tmux 分离 user unit，15 分钟自动过期。长树 fixture 只排他创建自有 120 个文本文件和 extra 目录。未在用户正式目录运行破坏性测试。
+沿用 [Debian/browser harness](../../../../../tests/integration/debian/browser/README.md)，连接仅从已忽略 `.env` 读取；独立 0700 root、私有 tmux socket、Web/tmux 分离 user unit，15 分钟自动过期。长树 fixture 只排他创建自有 120 个文本文件和 extra 目录。未在用户正式目录运行破坏性测试。
 
 - 强制重启：三个真实计数/HTTP/TUI 负载，原 pane PID/start/cgroup 保持，输入/resize/鼠标恢复、断线零重放、登出不终止。
 - 原八条常规路径：桌面/手机输入、控制字节、历史、粘贴、原样链接、三端接管/取消、到期精确终止、按钮/拖拽/收起移动零新增 WS、正常 Web 重启。

@@ -47,7 +47,7 @@ W01 工程基础、W02 Debian 实验和 W04 多文件夹项目与文件管理已
 
 先读取当前任务的 `prd.md`，再读取存在的 `design.md`、`implement.md` 及相关规范。后端入口为 [.trellis/spec/backend/index.md](.trellis/spec/backend/index.md)，前端入口为 [.trellis/spec/frontend/index.md](.trellis/spec/frontend/index.md)，跨层修改同时读取 [思考指南](.trellis/spec/guides/index.md) 及其对应文档。
 
-当前需求研究见 [.trellis/tasks/09-26-requirements-research/prd.md](.trellis/tasks/09-26-requirements-research/prd.md)，设计审查稿见 [.trellis/tasks/09-26-requirements-research/design.md](.trellis/tasks/09-26-requirements-research/design.md)。其中的多文件夹项目、VPN HTTP 部署、终端控制与终止流程、自动保存等内容与初始规范存在差异，设计稿列出了需要更新的 owner 契约。研究稿不代表实现已获批准；遇到冲突先确认最新已批准需求，再同步对应规范，不能自行选取旧默认值或将候选协议视为现有 API。任务归档后通过 `.trellis/tasks/` 查找迁移后的记录，不依赖原路径一直存在。
+当前需求研究见 [已归档需求研究](.trellis/tasks/archive/2026-09/09-26-requirements-research/prd.md)，设计审查稿见 [设计审查稿](.trellis/tasks/archive/2026-09/09-26-requirements-research/design.md)。其中的多文件夹项目、VPN HTTP 部署、终端控制与终止流程、自动保存等内容与初始规范存在差异，设计稿列出了需要更新的 owner 契约。研究稿不代表实现已获批准；遇到冲突先确认最新已批准需求，再同步对应规范，不能自行选取旧默认值或将候选协议视为现有 API。任务归档后通过 `.trellis/tasks/` 查找迁移后的记录，不依赖原路径一直存在。
 
 ## 代码组织与职责
 

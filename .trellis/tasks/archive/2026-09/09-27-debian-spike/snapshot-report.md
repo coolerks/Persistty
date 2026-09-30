@@ -2,7 +2,7 @@
 
 ## 修改与依赖
 
-新增独立 [snapshot 实验](../../../tests/integration/debian/snapshot/README.md)：manifest/lock、完整 MIT 通知、串行 owner/observer 模型、Node 比较/测试、Python runner 回归、两份脱敏摘要。`run_remote.py` 新增 snapshot 入口，以默认不变的 history runner 取得新一次固定记录，使用独立 analyzer，严格只选 `tui120` 一次连接。产品包、Go bridge/record 协议与 D06/D07 既有证据没有修改。没有提交、推送、归档。
+新增独立 [snapshot 实验](../../../../../tests/integration/debian/snapshot/README.md)：manifest/lock、完整 MIT 通知、串行 owner/observer 模型、Node 比较/测试、Python runner 回归、两份脱敏摘要。`run_remote.py` 新增 snapshot 入口，以默认不变的 history runner 取得新一次固定记录，使用独立 analyzer，严格只选 `tui120` 一次连接。产品包、Go bridge/record 协议与 D06/D07 既有证据没有修改。没有提交、推送、归档。
 
 实际安装锁定 headless 5.5.0 / serialize 0.13.0 / peer xterm 5.5.0，npm 官方 registry、lock integrity 和实际包 manifest 对照；没有 legacy-peer-deps 或关闭校验。公共 `loadAddon`、`serialize`、同尺寸新实例 `write` callback 的 smoke 通过，未调用 DOM/HTML API或复制私有 parser 状态。完整许可证通知在实验目录保留；headless/addon 发布包省略 LICENSE，使用固定 5.5.0 源码 tag 通知并对照 peer 包 LICENSE。
 
@@ -18,7 +18,7 @@
 
 运行两次新的隔离 history workload，经既有 Go/PTY/WS record 取得固定记录。最终 binary SHA256 `c294742fb8848421b3da04b956199327df981c36ebcdf5b9ee2c2b6319e16501`；没有重建或修改 Go。
 
-最终直接保存 runner 的脱敏 JSON [evidence.json](../../../tests/integration/debian/snapshot/evidence.json)。首轮为注明整理方式的 [evidence-first.json](../../../tests/integration/debian/snapshot/evidence-first.json)，最终增加差异类别后复跑。两次同一合成连接记录的 hash/大小相同，但各自是独立执行，不拼接证据或 raw 帧。
+最终直接保存 runner 的脱敏 JSON [evidence.json](../../../../../tests/integration/debian/snapshot/evidence.json)。首轮为注明整理方式的 [evidence-first.json](../../../../../tests/integration/debian/snapshot/evidence-first.json)，最终增加差异类别后复跑。两次同一合成连接记录的 hash/大小相同，但各自是独立执行，不拼接证据或 raw 帧。
 
 单连接 `tui120` 为 120x40，5 帧 2013 bytes，SHA256 `f9b0acc415fdd9fa13c3fed7c8c2cdea9259835f12b2027f6da0e4459591c955`。五个帧界 0/1/2/4/5 和第 1 帧的人工 split 1/2/419/838 共九个有限截点中，八个等价；帧界 5 后 snapshot、零 tail 不等价，差异类别 `alternate.cells`。这不是 seq gap，说明库序列化状态对当前对照仍不足；未进一步将 cells 整体差异认定为可见文字丢失。`real_single_connection_compared` 仅代表执行对照，不代表恢复验收通过。
 

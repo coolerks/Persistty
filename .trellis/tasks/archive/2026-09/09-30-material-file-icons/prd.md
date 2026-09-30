@@ -1,5 +1,7 @@
 # Material 文件与目录图标
 
+> 归档状态：2026-09-30 用户明确要求标记完成并归档；本任务已完成收尾。高亮/图标及相关修复已提交 6cf29aa，终端几何修复已提交 b7ac848；既有验收限制继续保留。
+
 ## 目标与背景
 
 用户指定 VS Code Material Icon Theme 的图标与映射，要求 yaml/yml 等别名正确。当前 Explorer 与文件标签均为通用 lucide 图标。研究见[发布包核对](../09-30-editor-language-material-icons/research/upstream-assets.md)，先依赖[语言子任务](../09-30-monaco-language-coverage/prd.md)提供轻量路径推断。

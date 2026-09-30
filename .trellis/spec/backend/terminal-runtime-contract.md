@@ -95,7 +95,7 @@ v3 新增严格文本帧 `{type:"device_attributes",kind:"primary"|"secondary"}`
 
 共享 JSON/WS fixture 与 Go/TS decoder 测试需覆盖三端控制、旧 generation 二进制帧、观察端 resize、背压、重连、Web restart、倒计时取消竞态、项目解绑。真实 Debian/systemd 必须证明原 pane PID/start/cgroup 保持、TUI/普通历史分离、split UTF-8/OSC、resize、慢端回收及只清理自身资源。已通过的 40 项探针检查与 9 条 Playwright 路径见验收记录，mock 不能替代此门禁。
 
-新增名称并发/CAS/空号/镜像失败测试、共享 v2/v3 fixture、批次 A/B/C 与独立 D/E 撤销、校验失败零 timer/kill、锁外 kill 与无重试、HTTP 写保护与严格解码，均须运行 race。浏览器新增接管零重放、跨端改名同 DOM/零 WS、上下目标隔离和 v2 observer 整批取消。最新证据与未验证边界见 [UI 调整验收](../../tasks/09-30-workbench-ui-layout/check-report.md)，不能将单测记为所有真实设备验收。
+新增名称并发/CAS/空号/镜像失败测试、共享 v2/v3 fixture、批次 A/B/C 与独立 D/E 撤销、校验失败零 timer/kill、锁外 kill 与无重试、HTTP 写保护与严格解码，均须运行 race。浏览器新增接管零重放、跨端改名同 DOM/零 WS、上下目标隔离和 v2 observer 整批取消。最新证据与未验证边界见 [UI 调整验收](../../tasks/archive/2026-09/09-30-workbench-ui-layout/check-report.md)，不能将单测记为所有真实设备验收。
 
 设备应答回归：HTTP decoder 用共享 fixture 验 v3 可达/v2 拒绝、null/重复/任意 payload 拒绝；`device_attributes_test.go` 用独立 pipes 验 controller/observer 各自应答与 owner 零多余输入、失效/非法状态零写。`device_attributes_integration_test.go` 自建私有 tmux socket/raw-input Python pane，真实观察两端 DA 查询并应答，pane 仅收到显式键盘字节；缺 tmux/Python 显式 skip，不能计为真实验收。测试仅清理自身 server/session/root，运行 race。该本机证据不代替 Debian/systemd 持久性验收。
 

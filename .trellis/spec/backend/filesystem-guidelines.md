@@ -16,7 +16,7 @@
 ### Go 根句柄实测边界
 Go 1.26.8 在 Debian 13.4 的 [独立探针](../../../tests/integration/debian/files/README.md) 已验证根内相对链接、越界拒绝及有限 parent swap；仅是底层能力证据，不是 File API 验收。`os.Root` 绑定打开目录的身份：通过 `OpenRoot` 打开的内部目录被外部进程移出原树后，旧句柄仍可访问其内容。不能将句柄存活、Abs/EvalSymlinks 或一次检查当成请求时当前项目成员证明。W04 必须在注册/config version/根身份及提交裁决中明确移动后的处理，不以普通绝对路径 fallback 修补。
 
-`os.Root` 不禁止跨挂载点、设备/FIFO 或 Linux `/proc` 魔术文件；须按产品契约单独验证与拒绝。W02 后续已有真实 [Landlock CLI 临时树实验](../../tasks/09-27-debian-spike/cli-report.md)，但动态工具的系统路径许可仍不能证明仅批准项目根可读，正式 CLI adapter 门禁未通过。有限竞态测试未发现越界，不能宣传任意竞争下的完整证明。
+`os.Root` 不禁止跨挂载点、设备/FIFO 或 Linux `/proc` 魔术文件；须按产品契约单独验证与拒绝。W02 后续已有真实 [Landlock CLI 临时树实验](../../tasks/archive/2026-09/09-27-debian-spike/cli-report.md)，但动态工具的系统路径许可仍不能证明仅批准项目根可读，正式 CLI adapter 门禁未通过。有限竞态测试未发现越界，不能宣传任意竞争下的完整证明。
 
 ### 冲突和保存
 Open 从同一打开句柄读取、hash、stat，若读取中发生变化就有界重试或报 conflict；不要把不同时间读取的 metadata/hash 拼成快照。

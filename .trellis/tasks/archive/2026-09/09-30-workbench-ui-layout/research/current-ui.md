@@ -28,7 +28,7 @@
 - 删除工具栏不等于删除操作：创建目录选择对多根项目有意义；接管是既有明确授权动作；移动、终止、历史与手动重连仍须可达。
 - 初始工作目录字段不是 shell 实际 cwd；提示中不得冒称实时 shell 所在目录。
 - 控制权/连接状态来自 runtime，选中会话信息来自列表；迁移时需明确 terminal ID，不将全局状态栏误当所有终端的状态。
-- 组件/状态迁移以 [前端终端契约](../../../spec/frontend/terminal-runtime-contract.md) 与 [组件规范](../../../spec/frontend/component-guidelines.md) 为准。
+- 组件/状态迁移以 [前端终端契约](../../../../../spec/frontend/terminal-runtime-contract.md) 与 [组件规范](../../../../../spec/frontend/component-guidelines.md) 为准。
 - 原始 UX 决策见 [UI 原型记录](../../09-26-requirements-research/research/ui-layout.md)；本任务仅按新标注调整，不擅自扩展为完整 IDE 或重新选择技术栈。
 
 ## 新增标签交互的协议差距
@@ -41,7 +41,7 @@
 - `web/src/features/terminal/TerminalSession.tsx:78`、`:132` 禁止观察端 stdin，`:117` 处理 onData；仅修改报错文本不足以支持输入触发确认，需研究键盘/粘贴/手机输入意图捕获且绝不绕过服务端控制权。
 - `web/src/lib/ws/terminal.ts:140`..`:146` 只接受单终端 takeover/resize/terminate/cancel_termination。`internal/terminal/termination.go:19` 复验当前 viewer/generation；控制转移、断线或认证失效取消单目标 pending，任一有效查看端可取消。
 - 对话框 `web/src/features/terminal/TerminalSession.tsx:285` 泛称“此终端”，没有名称列表。批量关闭不能同时弹出 N 个旧 Dialog 就称为已完成用户要求的统一列表/取消体验。
-- 既有不重放约束在 [终端协议](../../../spec/backend/terminal-runtime-contract.md)、[W03 PRD](../../archive/2026-09/09-29-terminal-runtime/prd.md)；用户明确的是确认成功后可正常输入，没有明确授权补发提示前的回车、快捷键或粘贴命令。
+- 既有不重放约束在 [终端协议](../../../../../spec/backend/terminal-runtime-contract.md)、[W03 PRD](../../09-29-terminal-runtime/prd.md)；用户明确的是确认成功后可正常输入，没有明确授权补发提示前的回车、快捷键或粘贴命令。
 
 批量目标权限的 UX 已确认：明确确认批量接管、全部取得控制权后才能统一计时，失败不启动该批次。`web/src/lib/ws/terminal.ts:140` 的 sendControl 返回值只表示本地可以发送，不是服务器接管成功；需等待 control/ready 的有效角色和 generation。
 

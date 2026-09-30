@@ -1,5 +1,7 @@
 # 工作台 UI 调整实施清单
 
+> 2026-09-30：用户已明确要求完成并归档本任务；归档范围与保留的验收限制见 [验收报告](check-report.md)。下文实施阶段状态保留为历史记录。
+
 ## 状态与门禁
 
 当前 in_progress，用户已明确批准实施。M01..M04 已接入并通过相应自动化测试；M05 已完成桌面/模拟手机与真实 Debian 浏览器回归，真实手机软键盘仍待实机检查。依赖 [PRD](prd.md)、[设计](design.md) 以及 [现状](research/current-ui.md)、[尺寸证据](research/browser-geometry.md)、[组件查找](research/shadcn-components.md)。详细结果与未验证项见 [验收记录](check-report.md)，不能只凭 UI 截图宣布全部完成。
@@ -82,7 +84,7 @@ npm --prefix web run build
 git diff --check
 ```
 
-真实 Debian/browser harness 沿用 [现有 README](../../../tests/integration/debian/browser/README.md) 和 `tests/integration/debian/run_remote.py`，仅从已忽略根 `.env` 读取 SSH 参数；不要在本清单写连接值。新 fixture 用合成项目/目录与测试密码，不能对用户当前工作台跑破坏性 e2e。
+真实 Debian/browser harness 沿用 [现有 README](../../../../../tests/integration/debian/browser/README.md) 和 `tests/integration/debian/run_remote.py`，仅从已忽略根 `.env` 读取 SSH 参数；不要在本清单写连接值。新 fixture 用合成项目/目录与测试密码，不能对用户当前工作台跑破坏性 e2e。
 
 `npm --prefix web run test:e2e` 前必须显式指定隔离实例的 `PERSISTTY_E2E_BASE_URL`、`PERSISTTY_E2E_PASSWORD`、`PERSISTTY_E2E_PROJECT`；按 README 建 own socket/root/units 和对应 tunnel/Vite，测试后仅清自己资源。每个新协议与界面批次完成后先跑对应单测，再在最终门禁跑全部检查，不用局部成功代替整任务完成。
 

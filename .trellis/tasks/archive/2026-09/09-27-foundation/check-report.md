@@ -4,11 +4,11 @@
 
 ## 已修复
 
-- [HTTP 错误分类](../../../internal/httpapi/router.go:209)：原来客户端取消进入未知错误分支，返回500并写服务故障日志。现在匹配包装后的 context.Canceled 及已取消 request context，只终止处理，不写故障 JSON/ERROR。新增完整已认证路由和包装错误的[取消测试](../../../internal/httpapi/router_test.go:191)。真正未知故障与 DB busy 分类不变。
-- [迁移收尾](../../../internal/storage/storage.go:166)：原来恢复 foreign_keys 的错误被忽略。现在用独立、有界5秒 context 恢复并读取 PRAGMA 验证为1；任一恢复错误并入迁移错误，Open关闭数据库并拒绝服务，不能带无约束连接接收流量。
-- [升级回归](../../../internal/storage/storage_test.go:123)：补充真实v1认证会话、密码指纹，断言升级保留登录会话、项目版本/主folder/路径及terminal显示名、项目关联、真实session名称。失败时保持v1版本、旧数据/会话和关联，不残留重建表；成功及失败迁移后均核实外键恢复。原已应用0001未修改。
-- [认证异步协调](../../../web/src/features/auth/AuthProvider.tsx:5)：旧logout请求在本地过期后可能晚于新login完成，既覆盖React状态，也存在Cookie响应次序风险。过期、卸载或新login先取消旧logout；当前视图的login等待旧logout fetch结算或abort reject之后才发POST，并只允许对应session的有效logout响应清理状态。新增[认证时序测试](../../../web/src/features/auth/AuthProvider.test.tsx)：忽略abort的旧logout结算前不能发新login，取消login的迟到响应被丢弃，TTL计时退出不触发资源写入。
-- [许可证生成脚本](../../../web/scripts/collect-licenses.mjs:4)：URL未显式从node:url导入导致eslint no-undef，已使用Node标准模块导入，无规则豁免。
+- [HTTP 错误分类](../../../../../internal/httpapi/router.go:209)：原来客户端取消进入未知错误分支，返回500并写服务故障日志。现在匹配包装后的 context.Canceled 及已取消 request context，只终止处理，不写故障 JSON/ERROR。新增完整已认证路由和包装错误的[取消测试](../../../../../internal/httpapi/router_test.go:191)。真正未知故障与 DB busy 分类不变。
+- [迁移收尾](../../../../../internal/storage/storage.go:166)：原来恢复 foreign_keys 的错误被忽略。现在用独立、有界5秒 context 恢复并读取 PRAGMA 验证为1；任一恢复错误并入迁移错误，Open关闭数据库并拒绝服务，不能带无约束连接接收流量。
+- [升级回归](../../../../../internal/storage/storage_test.go:123)：补充真实v1认证会话、密码指纹，断言升级保留登录会话、项目版本/主folder/路径及terminal显示名、项目关联、真实session名称。失败时保持v1版本、旧数据/会话和关联，不残留重建表；成功及失败迁移后均核实外键恢复。原已应用0001未修改。
+- [认证异步协调](../../../../../web/src/features/auth/AuthProvider.tsx:5)：旧logout请求在本地过期后可能晚于新login完成，既覆盖React状态，也存在Cookie响应次序风险。过期、卸载或新login先取消旧logout；当前视图的login等待旧logout fetch结算或abort reject之后才发POST，并只允许对应session的有效logout响应清理状态。新增[认证时序测试](../../../../../web/src/features/auth/AuthProvider.test.tsx)：忽略abort的旧logout结算前不能发新login，取消login的迟到响应被丢弃，TTL计时退出不触发资源写入。
+- [许可证生成脚本](../../../../../web/scripts/collect-licenses.mjs:4)：URL未显式从node:url导入导致eslint no-undef，已使用Node标准模块导入，无规则豁免。
 
 ## 继承修复的核验
 

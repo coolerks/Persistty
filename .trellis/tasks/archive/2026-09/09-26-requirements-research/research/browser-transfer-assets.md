@@ -75,7 +75,7 @@ File/Blob 可序列化，因此也存在将字节复制进 IndexedDB/OPFS 的方
 
 skip、replace、keep_both 是初始建议，后续确认可简化首版，但必须避免默默覆盖终端或其他设备写出的文件。replace 在提交时复验版本；keep_both 必须原子争取名称；目录与同名文件冲突、父目录消失、权限改变、目标被替换为 symlink 等需逐项失败可见。批量“应用全部”只适用于本批次。
 
-单文件上限无法限制总磁盘消耗。容量需求应同时覆盖总 staging quota、完成文件空间、重复 chunk、最大活动任务/文件数/目录深度/路径长度、hash worker/上传并发、inode 耗尽、TTL/取消清理、ZIP 压缩 CPU 与断开取消。目标同目录 staging 与完整副本校验可能放大空间占用，不能按单文件字节数预测峰值。现有 20 GiB/8 MiB/32 MiB 只是初始默认形状，尚无 Debian 内存、磁盘、吞吐实测。[本地规范](../../../spec/backend/transfer-search-git.md)
+单文件上限无法限制总磁盘消耗。容量需求应同时覆盖总 staging quota、完成文件空间、重复 chunk、最大活动任务/文件数/目录深度/路径长度、hash worker/上传并发、inode 耗尽、TTL/取消清理、ZIP 压缩 CPU 与断开取消。目标同目录 staging 与完整副本校验可能放大空间占用，不能按单文件字节数预测峰值。现有 20 GiB/8 MiB/32 MiB 只是初始默认形状，尚无 Debian 内存、磁盘、吞吐实测。[本地规范](../../../../../spec/backend/transfer-search-git.md)
 
 资源限制属于设计建议和实验范围，不是本轮已经确定的数值。代理 Nginx 的 body/timeouts、响应 buffering 与后端限制要在部署设计中一起验证。
 

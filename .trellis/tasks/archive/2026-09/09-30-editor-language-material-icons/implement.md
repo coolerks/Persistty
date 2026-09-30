@@ -1,5 +1,7 @@
 # 综合实施与验收
 
+> 2026-09-30：用户已明确要求完成并归档本任务；归档范围与保留的验收限制见 [验收报告](check-report.md)。下文实施阶段状态保留为历史记录。
+
 1. 用户在后续消息明确批准最新最终规划；批准前所有任务保持 planning，不运行 task.py start 或编辑产品代码。
 2. 读取 trellis-before-dev；激活语言子任务（inline 允许空 JSONL，遵循实际 CLI选项），按[语言清单](../09-30-monaco-language-coverage/implement.md)实现并检查。
 3. 顺序激活图标子任务，按[图标清单](../09-30-material-file-icons/implement.md)实现，复用同一轻量路径 adapter；不得分派代理。

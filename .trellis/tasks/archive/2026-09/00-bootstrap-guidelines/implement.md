@@ -1,5 +1,7 @@
 # 执行与验收
 
+> 2026-09-30：用户已明确要求完成并归档本任务；归档范围与保留的验收限制见 [验收报告](check-report.md)。下文实施阶段状态保留为历史记录。
+
 1. 阅读 AGENTS.md、workflow、全部现有 spec/task 及 skills；确认无产品源码。
 2. 补齐本任务需求/设计/执行文档和研究证据，绑定现有 in_progress task。
 3. 单一负责人按 trellis-spec-bootstrap 更新所有 project specs；不编辑产品代码或框架。

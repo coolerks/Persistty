@@ -25,6 +25,6 @@
     ".trellis/spec/frontend/",
     ".trellis/spec/guides/"
   ],
-  "notes": "First-time setup task created by trellis init (fullstack project)",
+  "notes": "First-time setup task created by trellis init (fullstack project)\n2026-09-30 用户明确要求标记完成并归档；本任务已完成收尾。",
   "meta": {}
 }

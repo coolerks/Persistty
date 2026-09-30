@@ -1,5 +1,7 @@
 # Material 图标实施清单
 
+> 2026-09-30：用户已明确要求完成并归档本任务；归档范围与保留的验收限制见 [验收报告](check-report.md)。下文实施阶段状态保留为历史记录。
+
 ## 依赖与开始前
 
 先完成语言子任务的轻量路径 metadata/adapter。用户批准最终父任务规划后，按 inline 激活本任务，使用 trellis-before-dev 读取 PRD/design/本文、研究与 frontend 目录/组件/主题/状态/类型/质量及复用指南。主会话实施/检查，禁用 subagent。
