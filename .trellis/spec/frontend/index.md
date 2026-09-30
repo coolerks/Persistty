@@ -1,6 +1,6 @@
 # 前端开发规范
 
-W01 已有 React/Vite 登录、项目与终端元数据路由、严格 API 解码和三主题；兼容版本及 npm 锁文件见 `web/package.json`/`web/package-lock.json`。W04 工作树已引入 shadcn `base-nova` 组件、Zustand、react-resizable-panels 与桌面只读 Monaco；Monaco 按需加载，手机用基础文本视图。`@xterm/xterm` 已安装但 W03 真实终端运行时未接入，W05 自动保存/草稿也未完成。下述未交付功能片段仍为契约，不是已验证实现。
+W01 已有 React/Vite 登录、项目路由、严格 API 解码和三主题；版本及 npm 锁文件见 `web/package.json`/`web/package-lock.json`。W04 已归档，使用 shadcn `base-nova`、Zustand、react-resizable-panels 与按需加载的桌面只读 Monaco；手机用基础文本视图。W03 已接入真实 xterm/WS，桌面与手机验收通过；W05 自动保存/草稿及完整布局恢复仍未完成。下述未交付功能片段仍为契约，不是已验证实现。
 
 ## 规范索引
 | 文档 | 内容 |
@@ -12,6 +12,7 @@ W01 已有 React/Vite 登录、项目与终端元数据路由、严格 API 解�
 | [类型](type-safety.md) | strict TS、DTO decoding |
 | [API/WS](clients.md) | 请求、重连、错误 |
 | [编辑器/终端生命周期](editor-terminal-lifecycle.md) | Monaco/xterm/IndexedDB |
+| [W03 前端终端契约](terminal-runtime-contract.md) | 稳定 runtime、宿主移动、控制/重连与浏览器验收 |
 | [主题与资源](theme-assets.md) | 统一主题、字体、图标许可 |
 | [质量](quality-guidelines.md) | lint/typecheck/test/build/E2E |
 

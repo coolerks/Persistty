@@ -36,7 +36,7 @@
 
 Persistty 是面向 Debian 开发机的单用户、自托管 Web IDE，提供持久化终端、文件浏览与编辑、搜索替换、上传下载、只读 Git 查看及后端认证。
 
-W01 工程基础已建立并归档，仓库已有 Go 服务、`go.mod`、前端 `package.json`/npm 锁文件与可运行的认证页面；W02 Debian 实验已归档。W04 多文件夹项目与文件管理正在实施，当前工作树包含尚未提交的代码。技术栈中“已安装”“已接入界面”“完成运行时验收”是不同状态：桌面 Monaco 和可调整布局已接入 W04 工作台，移动端使用基础文本视图；`@xterm/xterm` 虽已锁入依赖，真实终端运行时仍属于 W03，自动保存/草稿仍属于 W05。不要为补齐目录创建空包或把未接入功能称为完成。
+W01 工程基础、W02 Debian 实验和 W04 多文件夹项目与文件管理已完成并归档。W03 已接入真实 tmux/PTY/WS 与 xterm，持久性、多端单控制权、倒计时终止、桌面与手机浏览器验收通过；证据见终端运行时规范及对应任务验收报告。桌面 Monaco 和可调整布局已接入，移动端使用基础文本视图；自动保存/草稿及完整布局恢复仍属于 W05，正式部署仍属于 W08。不要把依赖已安装、界面已接入和运行时已验收混为一谈，也不创建空包充数。
 
 - 后端：Go、Gin、SQLite（`database/sql`），终端使用 tmux 与 PTY；外部工具包括 `git`、`rg`、`tmux`。
 - 前端：React、TypeScript、Vite、React Router、Tailwind CSS、shadcn/ui、lucide-react、Zustand；桌面编辑器使用 Monaco，终端使用 xterm，布局使用 react-resizable-panels。

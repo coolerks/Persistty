@@ -21,7 +21,8 @@
   "children": [
     "09-27-foundation",
     "09-27-debian-spike",
-    "09-28-workspace-files"
+    "09-28-workspace-files",
+    "09-29-terminal-runtime"
   ],
   "parent": null,
   "relatedFiles": [],

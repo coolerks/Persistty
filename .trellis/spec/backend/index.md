@@ -1,7 +1,7 @@
 # 后端开发规范
 
 ## 适用状态
-Persistty是Debian单用户浏览器终端与轻量文件工作台。W01 已有配置、认证、SQLite 和元数据读接口，见[基础协议](foundation-contract.md)；W04 已实现的项目与文件接口见[W04 契约](workspace-files-contract.md)。终端运行时及 W05 编辑器仍属后续任务，不因 W04 页面占位而视为已实现。规范用简体中文，标识符/协议字段保持英文。
+Persistty是Debian单用户浏览器终端与轻量文件工作台。W01 已有配置、认证、SQLite 和元数据读接口，见[基础协议](foundation-contract.md)；W04 项目与文件接口见[W04 契约](workspace-files-contract.md)。W03 真实终端已通过 Debian/systemd 与浏览器验收，见[运行时契约](terminal-runtime-contract.md)；W05 自动保存/草稿仍未交付。规范用简体中文，标识符/协议字段保持英文。
 
 ## 规范索引
 | 文档 | 归属 |
@@ -14,6 +14,7 @@ Persistty是Debian单用户浏览器终端与轻量文件工作台。W01 已有�
 | [远端验证](remote-validation.md) | 私有 .env 连接、SSH/SCP 与证据去敏 |
 | [命令与取消](process-guidelines.md) | context、git/rg/tmux 适配器 |
 | [Terminal 生命周期](terminal-lifecycle.md) | tmux、PTY、systemd Spike |
+| [W03 终端运行时契约](terminal-runtime-contract.md) | 终端 HTTP/WS、历史/控制/终止与验收门禁 |
 | [Go 桥接实验](bridge-validation.md) | 独立模块、真实 WS/PTY、D06 门禁 |
 | [历史/TUI 实验](history-validation.md) | capture/attach 反例、库解析与 D07 门禁 |
 | [快照截点实验](snapshot-validation.md) | 序号/ring 模型、解析状态限制与 D08 门禁 |
