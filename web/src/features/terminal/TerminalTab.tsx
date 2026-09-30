@@ -16,7 +16,9 @@ export function TerminalTab({ terminal, region, value = terminal.id, active, onA
   const item = entry?.terminal ?? terminal;
   const controlled = entry?.state.connection === "connected" && entry.state.role === "controller";
   const running = item.state === "running";
-  function close(items: Terminal[]) { scope.close(items.filter(item => (scope.entry(item.id)?.terminal ?? item).state === "running").map(item => scope.entry(item.id)?.terminal ?? item)); }
+  const closable = item.state !== "unavailable";
+  const canClose = (terminal: Terminal) => (scope.entry(terminal.id)?.terminal ?? terminal).state !== "unavailable";
+  function close(items: Terminal[]) { scope.close(items.map(item => scope.entry(item.id)?.terminal ?? item)); }
   const actions = [
     { label: "接管", icon: Eye, disabled: !running || controlled, run: () => scope.takeover(item) },
     { label: "刷新终端", icon: RefreshCw, run: onRefresh },
@@ -25,10 +27,10 @@ export function TerminalTab({ terminal, region, value = terminal.id, active, onA
     ...(entry?.state.history ? [{ label: "刷新终端历史", icon: RotateCw, run: () => entry.actions?.refreshHistory() }] : []),
     ...(entry?.state.connection === "disconnected" ? [{ label: "重试连接", icon: RotateCw, run: () => entry.actions?.retry() }] : []),
     ...(onMove ? [{ label: position === "top" ? "移回下方终端面板" : "移到上方标签", icon: position === "top" ? PanelBottom : PanelTop, run: () => onMove(item) }] : []),
-    { label: "关闭当前", icon: X, destructive: true, disabled: !running, run: () => close([item]) },
+    { label: "关闭当前", icon: X, destructive: true, disabled: !closable, run: () => close([item]) },
     ...(allowBatch ? [
-      { label: "关闭其他", icon: X, destructive: true, disabled: !region.some(other => other.id !== item.id && other.state === "running"), run: () => close(region.filter(other => other.id !== item.id)) },
-      { label: "全部关闭", icon: X, destructive: true, disabled: !region.some(other => other.state === "running"), run: () => close(region) },
+      { label: "关闭其他", icon: X, destructive: true, disabled: !region.some(other => other.id !== item.id && canClose(other)), run: () => close(region.filter(other => other.id !== item.id)) },
+      { label: "全部关闭", icon: X, destructive: true, disabled: !region.some(canClose), run: () => close(region) },
     ] : []),
   ];
   const connection = entry ? ({ connecting: "连接中", connected: "已连接", reconnecting: "重连中", disconnected: "已断开" })[entry.state.connection] : "未连接";
@@ -43,7 +45,7 @@ export function TerminalTab({ terminal, region, value = terminal.id, active, onA
       <TerminalSquare data-icon="inline-start" /><span className="truncate">{item.display_name}</span>
       <span className={cn("terminal-state-dot", item.state)} aria-label={description} />
     </TooltipTrigger><TooltipContent>{description}</TooltipContent></Tooltip>
-    <Button size="icon-xs" variant="ghost" className="terminal-tab-close" aria-label={`关闭终端 ${item.display_name}`} disabled={!running} onClick={() => close([item])}><X /></Button>
+    <Button size="icon-xs" variant="ghost" className="terminal-tab-close" aria-label={`关闭终端 ${item.display_name}`} disabled={!closable} onClick={() => close([item])}><X /></Button>
     <DropdownMenu><DropdownMenuTrigger render={<Button size="icon-xs" variant="ghost" className="terminal-tab-more" aria-label={`${item.display_name} 更多`} />}><MoreHorizontal /></DropdownMenuTrigger>
       <DropdownMenuContent className="terminal-menu"><DropdownMenuGroup><DropdownMenuLabel className="break-all">初始目录：{item.working_directory}</DropdownMenuLabel>
         {actions.map(action => <DropdownMenuItem key={action.label} disabled={action.disabled} variant={action.destructive ? "destructive" : "default"} onClick={action.run}><action.icon />{action.label}</DropdownMenuItem>)}

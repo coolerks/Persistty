@@ -58,4 +58,34 @@ describe("W03 终端 WS 协议", () => {
     expect(event).toHaveBeenCalledTimes(1);
     expect(closed).toHaveBeenCalledExactlyOnceWith(1001);
   });
+  it("observer 的固定设备应答与键盘通道分离，未 ready/背压/离线不发送", () => {
+    class FakeSocket {
+      static OPEN = 1;
+      static instance: FakeSocket;
+      readyState = 1;
+      bufferedAmount = 0;
+      binaryType = "";
+      onmessage: ((event: { data: string }) => void) | null = null;
+      onclose = null;
+      close = vi.fn();
+      send = vi.fn();
+      constructor() { FakeSocket.instance = this; }
+    }
+    vi.stubGlobal("WebSocket", FakeSocket);
+    const socket = new TerminalSocket(fixture.ready.terminal_id, { event: vi.fn(), closed: vi.fn(), output: vi.fn() });
+    const transport = FakeSocket.instance;
+    expect(socket.sendDeviceAttributes("primary")).toBe(false);
+    transport.onmessage!({ data: JSON.stringify({ ...fixture.observer_ready, protocol: 3, pending_termination: null }) });
+    expect(socket.sendDeviceAttributes("primary")).toBe(true);
+    expect(socket.sendDeviceAttributes("secondary")).toBe(true);
+    expect(transport.send.mock.calls.map(([value]) => JSON.parse(value as string))).toEqual([fixture.device_attributes_primary_v3, fixture.device_attributes_secondary_v3]);
+    expect(socket.sendInput(new Uint8Array([3]))).toBe(false);
+    transport.bufferedAmount = (1 << 20) + 1;
+    expect(socket.sendDeviceAttributes("primary")).toBe(false);
+    transport.bufferedAmount = 0;
+    window.dispatchEvent(new Event("offline"));
+    expect(socket.sendDeviceAttributes("primary")).toBe(false);
+    expect(transport.send).toHaveBeenCalledTimes(2);
+    socket.dispose();
+  });
 });

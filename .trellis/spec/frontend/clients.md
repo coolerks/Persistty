@@ -4,6 +4,7 @@
 先检查 HTTP status 再解码；204 不解析 JSON；下载/preview 使用 blob/stream，不套 JSON decoder。typed ApiError(code,status,requestId,details) 供 conflict/auth/rate-limit UI，网络错误和业务错误区分。401 保存 UI draft、进入登录、终止重试；429 尊重 Retry-After；409 不自动 overwrite。AbortError 不 toast 服务故障。
 
 WS transport 统一拥有 socket、reader dispatch、close/retry timer/generation；feature 消费 typed control 或 raw bytes。协议来自 [backend WS](../backend/websocket-protocol.md)，不创建私有 close-terminal frame。连接状态 connecting/connected/reconnecting/disconnected 独立于 tmux status。以当前页面 origin 构造 ws/wss，生产不 token query，不任意连用户指定 WS URL。
+自动 DA1/DA2 应答调用 `sendDeviceAttributes` 发送已批准的 v3 固定 kind 文本帧，不经 `sendInput`；它只回答本连接只读 attach，无控制权变更。ready/OPEN/背压/释放检查与失败不重放同样必需，详见 [前端终端契约](terminal-runtime-contract.md)。
 重新 attach 获取 metadata 状态和尺寸，历史与宿主生命周期采用已验收的 [W03 前端契约](terminal-runtime-contract.md)。输出有界排队，xterm.write callback 协调渲染；高 bufferedAmount 时输入暂停反馈，不积累无界 input。掉线键盘输入不自动 replay；offline 事件立即 dispose 并禁输入，晚到 socket 帧无效。浏览器原生 WebSocket 不暴露握手 HTTP status：握手失败后通过同源 GET /auth/session 探测认证，401/403 停止并提示重新登录/拒绝访问；升级后 control error 或 close 1008 也停止重连。认证仍有效而失败原因未知时最多 5 次指数退避（500..8000ms）+jitter，耗尽后显示错误和手动重试，不能臆测 HTTP 状态或永久重连。dispose 取消所有重连；不能关闭服务器 session。
 watcher rescan/断线后刷新目录，invalidate server snapshot；不直接以 event payload 替代 filesystem 事实。工作区切换丢弃旧连接事件。
 

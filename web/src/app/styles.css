@@ -112,9 +112,8 @@
 .tree-entry-wrap { display: flex; align-items: center; min-width: 0; height: 28px; }
 .tree-entry { display: flex; flex: 1; justify-content: flex-start; align-items: center; min-width: 0; height: 28px; border-radius: 0; gap: 5px; padding-right: 4px; font-size: 13px; font-weight: 400; }
 .tree-entry-selected { background: var(--accent); }
+.tree-entry[aria-expanded="true"]:not(:hover) { background: transparent; }
 .tree-entry-wrap > [data-slot="context-menu-trigger"] { flex: 1; min-width: 0; }
-.tree-entry-wrap > button:last-child { width: 25px; height: 25px; margin-right: 4px; }
-.tree-entry-wrap > button:last-child svg { width: 14px; height: 14px; }
 .tree-message { padding: 6px 14px; font-size: 12px; color: var(--muted-foreground); }
 .editor-area, .editor-group, .file-editor { display: flex; flex-direction: column; height: 100%; min-width: 0; min-height: 0; }
 .editor-tab-layout { flex: 1; height: 100%; min-height: 0; min-width: 0; flex-direction: column; gap: 0; }
@@ -122,7 +121,7 @@
 .editor-tabs { width: 100%; height: 38px !important; padding: 0; flex: none; display: flex; justify-content: flex-start; align-items: stretch; min-width: 0; overflow-x: auto; overflow-y: hidden; background: var(--secondary); border-bottom: 1px solid var(--border); scrollbar-width: thin; }
 .editor-tab { display: flex; align-items: center; min-width: 120px; max-width: 220px; flex: none; border-right: 1px solid var(--border); color: var(--muted-foreground); }
 .editor-tab.active { background: var(--background); color: var(--foreground); border-top: 2px solid var(--primary); }
-.editor-tab-label { flex: 1; min-width: 0; justify-content: flex-start; gap: 6px; border-radius: 0; height: 36px; padding: 0 8px; font-weight: 400; }
+.editor-tab-label { flex: 1; min-width: 0; justify-content: flex-start; gap: 6px; border-radius: 0; height: 100%; padding: 0 8px; font-weight: 400; }
 .editor-tab-label span { text-align: left; }
 .editor-tab-close { width: 26px; height: 26px; flex: none; margin-right: 3px; }
 .editor-tab-close svg, .editor-tabs > button svg { width: 14px; height: 14px; }
@@ -131,7 +130,7 @@
 .editor-empty { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted-foreground); font-size: 13px; }
 .editor-breadcrumb { height: 30px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted-foreground); }
 .editor-breadcrumb > span { flex: 1; min-width: 0; }
-.editor-breadcrumb button, .editor-breadcrumb a { width: 24px; height: 24px; }
+.editor-breadcrumb button:not([data-slot="select-trigger"]), .editor-breadcrumb a { width: 24px; height: 24px; }
 .editor-breadcrumb svg { width: 14px; height: 14px; }
 .editor-surface { flex: 1; min-height: 0; min-width: 0; }
 .editor-upper-terminal { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; }
@@ -148,7 +147,19 @@
 .terminal-tab-row { width: 100%; height: 36px; min-width: 0; display: flex; align-items: center; gap: 3px; flex: none; border-bottom: 1px solid var(--border); padding-inline: 5px; }
 .terminal-tab-row > button { flex: none; }
 .terminal-tabs { height: 34px !important; min-width: 0; max-width: calc(100% - 110px); display: flex; justify-content: flex-start; align-items: stretch; gap: 2px; overflow-x: auto; overflow-y: hidden; padding: 0; scrollbar-width: thin; }
-.terminal-tab { display: flex; align-items: center; max-width: 240px; min-width: 120px; height: 34px; flex: none; border-radius: 4px; }
+@supports not selector(::-webkit-scrollbar) {
+  .editor-tabs, .terminal-tabs { scrollbar-color: transparent transparent; }
+  .editor-tabs:hover, .editor-tabs:has(:focus-visible), .terminal-tabs:hover, .terminal-tabs:has(:focus-visible) { scrollbar-color: color-mix(in oklch, var(--muted-foreground) 45%, transparent) transparent; }
+}
+@supports selector(::-webkit-scrollbar) {
+  .editor-tabs, .terminal-tabs { scrollbar-width: auto; scrollbar-color: auto; --tab-scrollbar-thumb: transparent; }
+  .editor-tabs:hover, .editor-tabs:has(:focus-visible), .terminal-tabs:hover, .terminal-tabs:has(:focus-visible) { --tab-scrollbar-thumb: color-mix(in oklch, var(--muted-foreground) 45%, transparent); }
+  .editor-tabs::-webkit-scrollbar, .terminal-tabs::-webkit-scrollbar { height: 4px; }
+  .editor-tabs::-webkit-scrollbar-track, .terminal-tabs::-webkit-scrollbar-track { background: transparent; }
+  .editor-tabs::-webkit-scrollbar-thumb, .terminal-tabs::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--tab-scrollbar-thumb); }
+}
+.terminal-tab { display: flex; align-items: center; max-width: 240px; min-width: 120px; height: 30px; flex: none; border-radius: 4px; }
+.editor-tabs .terminal-tab { align-self: center; }
 .terminal-tab.active { background: var(--accent); }
 .terminal-tab-label { min-width: 0; flex: 1; justify-content: flex-start; padding-inline: 5px; }
 .terminal-tab-label > span.truncate { flex: 1; min-width: 0; text-align: left; }
@@ -173,11 +184,12 @@
 .terminal-connection svg { width: 12px; height: 12px; }
 .terminal-connection.connected { color: var(--primary); }
 .terminal-role { color: var(--muted-foreground); white-space: nowrap; }
-.terminal-live, .terminal-history-surface { flex: 1; min-width: 0; min-height: 0; overflow: hidden; padding: 5px 8px; }
+.terminal-live, .terminal-history-surface { flex: 1; min-width: 0; min-height: 0; overflow: clip; overscroll-behavior: none; padding: 5px 8px; }
 .terminal-live .xterm, .terminal-history-surface .xterm { height: 100%; }
 .terminal-history { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; }
 .terminal-history-heading { height: 25px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 8px; border-bottom: 1px solid var(--border); color: var(--muted-foreground); font-size: 11px; }
 .terminal-history-heading svg { width: 13px; height: 13px; }
+.terminal-history-loading { position: absolute; inset: 0 0 auto; z-index: 12; background: var(--background); }
 .terminal-inline-error { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 5px 8px; color: var(--destructive); border-bottom: 1px solid var(--border); font-size: 12px; }
 .terminal-feedback, .terminal-empty { flex: 1; min-height: 0; }
 .terminal-shortcuts { display: none; }
@@ -219,3 +231,5 @@
   .editor-tabs { height: 36px; }
   .editor-tab { min-width: 105px; max-width: 170px; }
 }
+
+.editor-breadcrumb .editor-language-select { flex: none; width: 150px; max-width: 40%; height: 24px; font-size: 12px; }

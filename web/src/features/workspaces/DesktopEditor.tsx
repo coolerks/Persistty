@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffectiveTheme } from "@/features/settings/use-effective-theme";
 import { Editor as MonacoEditor, loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
+import { editorURI, retainEditorModel } from "./editor-model-lifecycle";
 import editorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import jsonWorker from "monaco-editor/language/json/json.worker.js?worker";
 import cssWorker from "monaco-editor/language/css/css.worker.js?worker";
@@ -16,28 +17,19 @@ self.MonacoEnvironment = {
     return new editorWorker();
   },
 };
-monaco.typescript.typescriptDefaults.setDiagnosticsOptions({ noSemanticValidation: true, noSyntaxValidation: true });
-monaco.typescript.javascriptDefaults.setDiagnosticsOptions({ noSemanticValidation: true, noSyntaxValidation: true });
+monaco.typescript.typescriptDefaults.setDiagnosticsOptions({ noSemanticValidation: true, noSyntaxValidation: true, noSuggestionDiagnostics: true });
+monaco.typescript.javascriptDefaults.setDiagnosticsOptions({ noSemanticValidation: true, noSyntaxValidation: true, noSuggestionDiagnostics: true });
+monaco.json.jsonDefaults.setDiagnosticsOptions({ validate: false, enableSchemaRequest: false });
+monaco.css.cssDefaults.setDiagnosticsOptions({ validate: false });
+monaco.css.scssDefaults.setDiagnosticsOptions({ validate: false });
+monaco.css.lessDefaults.setDiagnosticsOptions({ validate: false });
+monaco.html.htmlDefaults.setModeConfiguration({ ...monaco.html.htmlDefaults.modeConfiguration, diagnostics: false });
 loader.config({ monaco });
 
-function useMonacoTheme(): "vs" | "vs-dark" {
-  const [theme, setTheme] = useState<"vs" | "vs-dark">(() => document.documentElement.classList.contains("dark") ? "vs-dark" : "vs");
-  useEffect(() => {
-    const observer = new MutationObserver(() => setTheme(document.documentElement.classList.contains("dark") ? "vs-dark" : "vs"));
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-  return theme;
-}
-
-function languageFor(path: string): string {
-  const name = path.split("/").at(-1)?.toLowerCase() ?? "";
-  if (name === "dockerfile") return "dockerfile";
-  const suffix = name.split(".").at(-1);
-  return ({ ts: "typescript", tsx: "typescript", js: "javascript", jsx: "javascript", json: "json", css: "css", html: "html", go: "go", py: "python", sh: "shell", md: "markdown", yaml: "yaml", yml: "yaml", sql: "sql", xml: "xml" } as Record<string, string>)[suffix ?? ""] ?? "plaintext";
-}
-
-export default function DesktopEditor({ projectId, folderId, path, content }: { projectId: string; folderId: string; path: string; content: string }) {
-  const theme = useMonacoTheme();
-  return <MonacoEditor path={`persistty:///${encodeURIComponent(projectId)}/${encodeURIComponent(folderId)}/${path.split("/").map(encodeURIComponent).join("/")}`} value={content} language={languageFor(path)} theme={theme} saveViewState options={{ readOnly: true, minimap: { enabled: true }, automaticLayout: true, wordWrap: "on", fontSize: 13, scrollBeyondLastLine: false, glyphMargin: true }} />;
+export default function DesktopEditor({ projectId, folderId, path, content, language }: { projectId: string; folderId: string; path: string; content: string; language: string }) {
+  const theme = useEffectiveTheme() === "dark" ? "vs-dark" : "vs";
+  return <MonacoEditor path={editorURI(projectId, { folderId, path })} value={content} language={language} theme={theme} keepCurrentModel saveViewState onMount={editor => {
+    const model = editor.getModel();
+    if (model) retainEditorModel(projectId, { folderId, path }, () => { if (!model.isDisposed()) model.dispose(); });
+  }} options={{ readOnly: true, minimap: { enabled: true }, automaticLayout: true, wordWrap: "on", fontSize: 13, scrollBeyondLastLine: false, glyphMargin: true }} />;
 }

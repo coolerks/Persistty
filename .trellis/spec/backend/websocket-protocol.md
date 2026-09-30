@@ -18,6 +18,7 @@ Terminal WS v2 签名见 [W03 运行时契约](terminal-runtime-contract.md)。W
 ## 3. 契约
 Terminal 服务端二进制帧为原始只读 attach PTY bytes；客户端输入帧前 8 字节是大端 generation，后续 1..65536 字节是原始键盘/粘贴 bytes。不能将任意 bytes 当 UTF-8 字符串丢数据。客户端不得在掉线时缓存并自动重放 input（避免重复执行命令）。服务端 `ready`、控制转移、resize 和倒计时通知均为 JSON 文本，具体字段见 [W03 运行时契约](terminal-runtime-contract.md)。历史走独立 HTTP 快照并整体替换虚拟滚动视图，不进入活动 xterm。
 每个连接一个 reader + 串行 writer，PTY 读取与慢 WS 写入用有界队列隔离，input 二进制帧上限 65544 字节、控制 JSON 4KiB，resize rows/cols 为 1..1000 整数；超过容量主动关闭慢客户端，只回收其 attach，不 kill tmux。心跳/读写 deadline 清理假连接。多个只读 viewer 可同时 attach；只有服务端当前 controller 可通过唯一可写控制 attach 输入/resize。
+v3 的自动 DA1/DA2 应答使用固定枚举 `device_attributes` 文本帧，允许有效 viewer 只回答自身 read-only attach，绝不进入 owner；原二进制 input 仍仅 controller 可写。严格字段/应答常量与错误矩阵归 [W03 运行时契约](terminal-runtime-contract.md#da1da2-应答归属2026-09-30)，不能将其扩为任意 observer payload。
 关闭：1000 正常 detach；1008 认证失效/协议错误；1009 超限；1011 内部错误；1013 背压/暂不可用。握手前用 HTTP error；升级后统一 control error+close。客户端有限次数指数退避加 jitter、有界上限；浏览器不能直接读取握手 HTTP status，失败后用 /auth/session probe 判断认证，probe 401/403 或已升级连接 1008 停止重试，未知原因仅有界重试后提示手动操作（详见 [客户端](../frontend/clients.md)）。每次重连重鉴权、重查状态、发送当前尺寸。
 W04 watcher 事件只含 `project_id,folder_id,revision,rescan,mode`；`revision` 为本连接递增整数，新连接重新同步，不能当永久 journal。每条连接只监听 URL 指定的已展开目录；watcher 无法建立或溢出时以 `mode=polling` 兜底，客户端无论哪种模式都重新列举，不能靠事件猜磁盘事实。不自动对全树递归；上面的旧订阅帧/paths 机制未实现。
 
@@ -33,7 +34,7 @@ W04 watcher 事件只含 `project_id,folder_id,revision,rescan,mode`；`revision
 | watcher overflow/断线 | rescan / reconnect 后重新查询 |
 
 ## 5. 优 / 基础 / 错误用例
-优：重连重新鉴权、独立 capture 有界历史、只读 attach 输出 Unicode 分块保持 bytes。基础：controller resize 同步可写 PTY。错误：在 unmount 发送终止或把 input 写日志。
+优：重连重新鉴权、独立 capture 有界历史、只读 attach 输出 Unicode 分块保持 bytes。基础：controller resize 同步 owner 和所有只读输出 PTY，再向各 viewer 发 resized；迟加入端继承当前网格，观察端 renderer 跟随，尺寸与失败边界见 [运行时契约](terminal-runtime-contract.md)。错误：只缩放输入 PTY、观察端自行 fit 与 attach 错配，在 unmount 发送终止或把 input 写日志。
 
 ## 6. 必需测试
 真实 WS/PTY 测试错误 Origin、过期连接撤销、二进制 Unicode/控制帧/大小/背压、resize、网络断开，断开后 job PID 不变。watcher 集成覆盖 mkdir/write/rename/remove、git switch、overflow、目录展开/折叠、连接退出释放 watcher；前端 E2E 操作 Terminal 外部改变 Explorer。

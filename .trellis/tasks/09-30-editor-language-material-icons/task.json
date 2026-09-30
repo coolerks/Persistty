@@ -1,0 +1,29 @@
+{
+  "id": "editor-language-material-icons",
+  "name": "editor-language-material-icons",
+  "title": "完整代码高亮与 Material 文件图标",
+  "description": "覆盖 Monaco 全语言识别并接入锁定版本的 Material Icon Theme 图标和别名映射",
+  "status": "in_progress",
+  "dev_type": "frontend",
+  "scope": "workspaces",
+  "package": null,
+  "priority": "P2",
+  "creator": "moyok",
+  "assignee": "moyok",
+  "createdAt": "2026-09-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-30-monaco-language-coverage",
+    "09-30-material-file-icons"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "2026-09-30 用户批准规划并开始执行。实现完成，主会话检查及验收见父任务 check-report.md；按批准范围保留未提交修改和任务，不自动归档。",
+  "meta": {}
+}

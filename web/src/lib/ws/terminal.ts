@@ -1,6 +1,7 @@
 import { decodeBatchMembers, decodeBatchResults, ProtocolError, type BatchMember, type BatchResult } from "@/lib/api/decoder";
 
 export type TerminalRole = "controller" | "observer";
+export type DeviceAttributes = "primary" | "secondary";
 export type PendingTermination = { request_id: string; deadline: string; members?: BatchMember[] };
 export type TerminalEvent =
   | { type: "ready"; protocol: 2 | 3; terminal_id: string; viewer_id: string; role: TerminalRole; generation: number; cols: number; rows: number; pending_termination: PendingTermination | null }
@@ -139,6 +140,12 @@ export class TerminalSocket {
     new DataView(frame.buffer).setBigUint64(0, BigInt(this.currentGeneration));
     frame.set(bytes, 8);
     this.socket.send(frame);
+    return true;
+  }
+
+  sendDeviceAttributes(kind: DeviceAttributes): boolean {
+    if (this.disposed || !this.ready || this.socket.readyState !== WebSocket.OPEN || this.socket.bufferedAmount > 1 << 20) return false;
+    this.socket.send(JSON.stringify({ type: "device_attributes", kind }));
     return true;
   }
 

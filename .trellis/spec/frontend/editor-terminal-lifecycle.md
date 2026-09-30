@@ -1,9 +1,24 @@
 # Monaco、xterm 与草稿生命周期
 
 ## 当前批准规则（覆盖旧候选）
-默认去抖1秒自动保存且绑定buffer generation/文件版本，Ctrl+S只复用同保存入口；冲突暂停、不自动overwrite。桌面Monaco禁诊断/LSP，手机基础textarea无diff。恢复草稿先服务器复验/diff再明确允许写回，手机基线变化只保留/导出。model/runtime与布局宿主解耦，跨组/移上下不清undo、不dispose原终端连接；controller才发正尺寸，observer只本地fit。文件身份按project/folder/真实资源及view修订隔离。当前文本8MiB/图片16MiB另限像素，PDF/Office/hex均下载不预览。下文旧手动保存/PDF/hex/共享workspace键示例已被覆盖，W05实现前必须按新规则固化真实fixture和测试。
+默认去抖1秒自动保存且绑定buffer generation/文件版本，Ctrl+S只复用同保存入口；冲突暂停、不自动overwrite。桌面Monaco禁诊断/LSP，手机基础textarea无diff。恢复草稿先服务器复验/diff再明确允许写回，手机基线变化只保留/导出。model/runtime与布局宿主解耦，跨组/移上下不清undo、不dispose原终端连接；controller才 fit/发正尺寸，observer live 跟随服务端字符网格、在容器裁剪/留空，详见[终端运行时](terminal-runtime-contract.md)。文件身份按project/folder/真实资源及view修订隔离。当前文本8MiB/图片16MiB另限像素，PDF/Office/hex均下载不预览。下文旧手动保存/PDF/hex/共享workspace键示例已被覆盖，W05实现前必须按新规则固化真实fixture和测试。
 
 ## Monaco
+
+### 当前语言与只读 model 实现（2026-09-30）
+
+`web/src/features/workspaces/file-language.ts` 提供 `languageForFile(path: string, content?: string): string` 及完整清单。`web/scripts/generate-language-metadata.mjs` 从锁定 Monaco 0.57.0 的真实注册 AST 提取 91 个 ID（89 基础语言、JSON、plaintext），沿主入口注册顺序，不维护少量后缀白名单。非静态元数据、版本或集合变化须停止生成并复核。图标可复用轻量 metadata，但文件树不能因此提前加载引擎/worker。
+
+推断为 exact basename → 最长 registered extension → 有界首行上游 shebang → plaintext，名称小写匹配。桌面 breadcrumb 用既有 shadcn Select 提供自动识别及全部模式；FreeMarker 六变体、mysql/pgsql/redshift 无独立后缀，保留手动入口。选择只改变 model language，不写文件/启用诊断/LSP；JSON/CSS/HTML/TS/JS 的诊断关闭，语法/worker 本地动态加载。
+
+`editor-model-lifecycle.ts` 的 `editorURI(projectId, { folderId, path })` 按项目/文件夹/分段编码路径生成 URI。DesktopEditor 使用 keepCurrentModel，切标签/模式/主题及同文件分组复用 model；`watchEditorModels(projectId)` 在最后文件视图关闭、路径移除或项目 scope 退出后释放，延后到 React editor 脱离后执行，StrictMode 立即重挂不得误释放。临时覆盖归[状态规范](state-management.md)。当前仍是只读快照，下文保存/草稿是 W05 契约。
+
+正常：.yaml/.yml 同 YAML，.html.liquid 最长后缀为 Liquid。基础：未知文件 plaintext，SQL 方言可手选。错误：仅 ID 注册便声称高亮通过，或切语言重建 URI/model。正确：既有 model 更新 language，真实浏览器验证所有非 plaintext 模式的样例语法 token。
+
+file-language/workspace-view/editor-model-lifecycle 单测与 `web/tests/e2e/editor-assets.spec.ts` 验完整加载、model 身份、光标/滚动及模式恢复；真实工作台用例验分组/窄屏。mock 不代替着色，视口模拟不声称真机验收。
+
+### W05 保存与草稿契约
+
 model 以 workspace ID + 正规化相对 path 的 URI 为 key；每文件一个 model，editor view 与 model 生命周期分开。tabs 复用 model 保留 undo/view state；关 tab 或切工作区按 dirty 提示与 draft 策略处理。dispose editor/diff editor、listeners、decorations、models、worker；避免每次 render 重建或给受控 props setValue 清空 undo。
 打开 snapshot 得 content/version，buffer 修改只设 dirty。Ctrl/Cmd+S 捕获应用 command，以 base expected_version 调 PUT；成功更新 snapshot，pending 期间继续输入不得被旧保存响应标成 clean（按保存时 buffer generation 比较）。409 保存本地内容并显示 Diff/Reload/Overwrite；diff 使用只读 server model + draft model，不能覆盖旧 buffer。
 外部 watcher 变更：clean tab 可安全刷新，dirty tab 只标 external modification。DiffEditor 的 models/disposables 同样释放。find/replace/go to line/语言推断从文件类型 adapter，不让 binary 或超编辑大小进 model。

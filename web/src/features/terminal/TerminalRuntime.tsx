@@ -11,6 +11,7 @@ import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
 import type { Terminal, TerminationBatch } from "@/lib/api/decoder";
 import { TerminalSessionView } from "./TerminalSession";
 import { RuntimeContext, type RuntimeActions, type RuntimeEntry, type RuntimeScope } from "./runtime-context";
+import { useTerminalView } from "./terminal-view";
 
 export function TerminalRuntimeProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
@@ -48,6 +49,19 @@ export function TerminalRuntimeProvider({ children }: { children: ReactNode }) {
       if (terminal) { entry.terminal = terminal; render(value => value + 1); notify(terminal.id); }
     }).catch(() => { /* The owning list reports refresh failures. */ }).finally(() => requests.current.delete(request));
   }, [notify, tracked]);
+  const close = useCallback((terminals: Terminal[]) => {
+    const running: Terminal[] = [];
+    for (const terminal of terminals) {
+      const current = entries.current.get(terminal.id)?.terminal ?? terminal;
+      if (current.state === "running") running.push({ ...current });
+      else if (current.state === "terminated") {
+        useTerminalView.getState().dismiss(current);
+        notify(current.id);
+      }
+    }
+    if (running.length) { setError(null); setClosing(running); }
+    render(value => value + 1);
+  }, [notify]);
   const scope = useMemo<RuntimeScope>(() => ({
     ensure(terminal) {
       let entry = entries.current.get(terminal.id);
@@ -62,8 +76,8 @@ export function TerminalRuntimeProvider({ children }: { children: ReactNode }) {
       return entry;
     },
     entry(id) { return entries.current.get(id); },
-    requestClose(id) { const entry = entries.current.get(id); if (entry) { setError(null); setClosing([{ ...entry.terminal }]); } },
-    close(terminals) { if (terminals.length) { setError(null); setClosing(terminals.map(item => ({ ...item }))); } },
+    requestClose(id) { const entry = entries.current.get(id); if (entry) close([entry.terminal]); },
+    close,
     takeover(terminal) {
       setError(null);
       if (readyRef.current) void readyRef.current(terminal).then(actions => actions.takeover()).catch(reason => { if (active.current) setError(`${terminal.display_name}：${errorMessage(reason)}`); });
@@ -98,7 +112,7 @@ export function TerminalRuntimeProvider({ children }: { children: ReactNode }) {
         for (const listener of changes.current) listener(id);
       }
     },
-  }), [notify, remember, stateChanged]);
+  }), [close, notify, remember, stateChanged]);
   useEffect(() => {
     active.current = true;
     const pending = requests.current;

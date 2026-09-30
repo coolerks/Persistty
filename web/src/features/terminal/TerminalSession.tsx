@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -13,6 +13,7 @@ import type { Terminal } from "@/lib/api/decoder";
 import { useAuth } from "@/features/auth/auth-context";
 import { type TerminalEvent, TerminalSocket, type TerminalRole } from "@/lib/ws/terminal";
 import { useTerminalRuntime, type RuntimeState } from "./runtime-context";
+import { isVerticalWheel, wheelPixels } from "./terminal-scrolling";
 
 const encoder = new TextEncoder();
 
@@ -53,6 +54,21 @@ export function TerminalSessionView({ terminal, onStateChange }: {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyRevision, setHistoryRevision] = useState(0);
+  const historyWheelRef = useRef(0);
+  const historyModeRef = useRef(false);
+  const historyScrollRef = useRef<((pixels: number) => void) | null>(null);
+  const setHistoryMode = useCallback((visible: boolean) => {
+    historyModeRef.current = visible;
+    setHistoryVisible(visible);
+  }, []);
+  const openHistory = useCallback((pixels = 0) => {
+    if (!historyModeRef.current) {
+      historyWheelRef.current = pixels;
+      setHistoryBytes(null);
+      setHistoryMode(true);
+    } else if (historyScrollRef.current) historyScrollRef.current(pixels);
+    else historyWheelRef.current += pixels;
+  }, [setHistoryMode]);
   const [externalLink, setExternalLink] = useState<string | null>(null);
   const [ctrl, setCtrl] = useState(false);
   const [alt, setAlt] = useState(false);
@@ -81,10 +97,10 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     },
     cancel: id => socketRef.current?.sendControl("cancel_termination", { request_id: id }) ?? false,
     retry: () => retryRef.current?.(),
-    history: () => setHistoryVisible(value => !value),
+    history: () => { if (historyModeRef.current) setHistoryMode(false); else openHistory(); },
     refreshHistory: () => setHistoryRevision(value => value + 1),
     focus: () => xtermRef.current?.focus(),
-  }), [scope, terminal.id]);
+  }), [scope, terminal.id, openHistory, setHistoryMode]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -109,8 +125,29 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     xterm.loadAddon(fit);
     xterm.loadAddon(links);
     xterm.open(host);
+    let viewportHeight = host.clientHeight;
+    // Queries originate from this viewer's read-only attach, not the input owner.
+    // Keep automatic DA replies out of onData and the shell keyboard channel.
+    const deviceAttributes = (["primary", "secondary"] as const).map(kind =>
+      xterm.parser.registerCsiHandler({ ...(kind === "secondary" ? { prefix: ">" } : {}), final: "c" }, params => {
+        if (params[0] === 0) socketRef.current?.sendDeviceAttributes(kind);
+        return true;
+      }));
+    const wheel = (event: WheelEvent) => {
+      if (event.ctrlKey) { event.stopImmediatePropagation(); return; }
+      if (!isVerticalWheel(event.deltaX, event.deltaY)) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+      // tmux's outer alternate buffer is not evidence of a TUI in the pane.
+      // Preserve explicit application mouse tracking only for the controller.
+      if (!historyModeRef.current && !event.shiftKey && socketRef.current?.canControl() && xterm.modes.mouseTrackingMode !== "none") return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      viewportHeight = host.clientHeight || viewportHeight;
+      const screenHeight = Number.parseFloat(host.querySelector<HTMLElement>(".xterm-screen")?.style.height ?? "") || xterm.rows * (xterm.options.fontSize ?? 13);
+      if (event.deltaY < 0 || historyModeRef.current) openHistory(wheelPixels(event.deltaY, event.deltaMode, screenHeight / xterm.rows, viewportHeight || screenHeight));
+    };
+    host.addEventListener("wheel", wheel, { capture: true, passive: false });
     xterm.attachCustomKeyEventHandler(event => !(event.type === "keydown" && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c" && xterm.hasSelection()));
     const inputIntent = (event: Event) => {
+      if (historyModeRef.current) return;
       if (socketRef.current?.canControl() || runtimeRef.current.connection !== "connected") return;
       if (event instanceof KeyboardEvent) {
         if (event.type !== "keydown" || ["Shift", "Control", "Alt", "Meta", "CapsLock"].includes(event.key)) return;
@@ -126,6 +163,8 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     fitRef.current = fit;
     const resize = () => {
       if (host.clientWidth < 20 || host.clientHeight < 20) return;
+      viewportHeight = host.clientHeight;
+      if (!socketRef.current?.canControl()) return;
       fit.fit();
       socketRef.current?.sendControl("resize", { cols: xterm.cols, rows: xterm.rows });
     };
@@ -135,6 +174,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     const themeObserver = new MutationObserver(() => { xterm.options.theme = colors(host); });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     const applyInput = (value: string) => {
+      if (historyModeRef.current) return;
       if (!socketRef.current?.canControl()) {
         ctrlRef.current = false; altRef.current = false; setCtrl(false); setAlt(false);
         return;
@@ -154,6 +194,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     };
     const input = xterm.onData(applyInput);
     const binary = xterm.onBinary(value => {
+      if (historyModeRef.current) return;
       if (!socketRef.current?.canControl()) return;
       const bytes = Uint8Array.from(value, char => char.charCodeAt(0) & 255);
       if (!socketRef.current?.sendInput(bytes)) setError("当前端没有控制权，或连接暂时不可用。")
@@ -174,6 +215,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
             scope.report(terminal.id, runtimeRef.current);
             setRole(event.role);
             setConnection("connected");
+            if (event.role === "observer") xterm.resize(event.cols, event.rows);
             setError(null);
             attempts = 0;
             window.setTimeout(resize, 0);
@@ -185,6 +227,8 @@ export function TerminalSessionView({ terminal, onStateChange }: {
             if (event.role === "controller") takeoverRef.current?.resolve();
             if (event.role !== "controller") { ctrlRef.current = false; altRef.current = false; setCtrl(false); setAlt(false); }
             else resize();
+          } else if (event.type === "resized") {
+            if (!socketRef.current?.canControl()) xterm.resize(event.cols, event.rows);
           } else if (event.type === "error") { setError(event.message); takeoverRef.current?.reject(new Error(event.message)); }
         },
         output(bytes) {
@@ -239,13 +283,15 @@ export function TerminalSessionView({ terminal, onStateChange }: {
       socketRef.current = null;
       observer.disconnect();
       themeObserver.disconnect();
+      for (const handler of deviceAttributes) handler.dispose();
       input.dispose(); binary.dispose(); links.dispose(); fit.dispose(); xterm.dispose();
       for (const type of ["keydown", "beforeinput", "paste", "compositionstart"]) host.removeEventListener(type, inputIntent, true);
+      host.removeEventListener("wheel", wheel, true);
       xtermRef.current = null; fitRef.current = null;
       retryRef.current = null;
       takeoverRef.current?.reject(new Error("终端运行时已关闭。"));
     };
-  }, [terminal.id, expire, scope]);
+  }, [terminal.id, expire, scope, openHistory]);
 
   useEffect(() => {
     if (!historyVisible) return;
@@ -267,7 +313,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
   useEffect(() => {
     if (!historyVisible || !historyBytes || !historyHostRef.current) return;
     const host = historyHostRef.current;
-    const terminal = new XTerm({ scrollback: historyLines, fontSize: 13,
+    const terminal = new XTerm({ scrollback: historyLines, convertEol: true, fontSize: 13,
       fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", theme: colors(host), disableStdin: true });
     const fit = new FitAddon();
     terminal.loadAddon(fit);
@@ -275,23 +321,70 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     const observer = new ResizeObserver(() => { if (host.clientWidth > 20 && host.clientHeight > 20) fit.fit(); });
     observer.observe(host);
     fit.fit();
-    terminal.write(historyBytes, () => terminal.scrollToBottom());
-    return () => { observer.disconnect(); fit.dispose(); terminal.dispose(); };
-  }, [historyVisible, historyBytes, historyLines]);
+    let active = true;
+    let parsed = false;
+    let bottomPixels = 0;
+    let scrollFrame = 0;
+    // Re-target momentum latched to live into this independent native viewport.
+    const scroll = (pixels: number) => {
+      if (!pixels) return;
+      const event = new WheelEvent("wheel", { deltaY: pixels, bubbles: true, cancelable: true });
+      // Chromium gives synthetic events zero legacy wheelDelta fields. xterm
+      // prefers those over deltaY; remove them on this forwarded event only.
+      Object.defineProperties(event, { wheelDeltaY: { value: undefined }, wheelDeltaX: { value: undefined }, wheelDelta: { value: undefined } });
+      terminal.element?.querySelector(".xterm-scrollable-element")?.dispatchEvent(event);
+    };
+    historyScrollRef.current = scroll;
+    terminal.write(historyBytes, () => {
+      if (!active) return;
+      terminal.scrollToBottom();
+      // write parsing finishes before Viewport's queued render/dimension sync.
+      // Apply the initial gesture only after that sync, otherwise it is reset.
+      scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = requestAnimationFrame(() => {
+          if (!active) return;
+          terminal.options.smoothScrollDuration = 120;
+          parsed = true;
+          const pixels = historyWheelRef.current;
+          historyWheelRef.current = 0;
+          scroll(pixels);
+        });
+      });
+    });
+    const wheel = (event: WheelEvent) => {
+      if (event.ctrlKey) { event.stopImmediatePropagation(); return; }
+      if (!isVerticalWheel(event.deltaX, event.deltaY)) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+      const lineHeight = Number.parseFloat(host.querySelector<HTMLElement>(".xterm-screen")?.style.height ?? "") / terminal.rows || (terminal.options.fontSize ?? 13);
+      const pixels = wheelPixels(event.deltaY, event.deltaMode, lineHeight, host.clientHeight);
+      if (!parsed) { historyWheelRef.current += pixels; event.preventDefault(); event.stopImmediatePropagation(); return; }
+      if (pixels > 0 && terminal.buffer.active.viewportY === terminal.buffer.active.baseY) {
+        bottomPixels += pixels;
+        event.preventDefault(); event.stopImmediatePropagation();
+        if (bottomPixels >= lineHeight) setHistoryMode(false);
+      } else bottomPixels = 0;
+      // Native xterm viewport retains fractional position and trackpad inertia.
+    };
+    host.addEventListener("wheel", wheel, { capture: true, passive: false });
+    const themeObserver = new MutationObserver(() => { terminal.options.theme = colors(host); });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => { active = false; cancelAnimationFrame(scrollFrame); historyScrollRef.current = null; observer.disconnect(); themeObserver.disconnect(); host.removeEventListener("wheel", wheel, true); fit.dispose(); terminal.dispose(); };
+  }, [historyVisible, historyBytes, historyLines, setHistoryMode]);
 
   const controlled = connection === "connected" && role === "controller";
   function shortcut(value: string) {
+    if (historyModeRef.current) return;
     if (!controlled) { if (connection === "connected") scope.inputIntent(terminal.id); else setError("请等待连接恢复。"); }
     else if (!socketRef.current?.sendInput(encoder.encode(value))) setError("输入未发送，请检查控制权和连接。")
     xtermRef.current?.focus();
   }
-  function toggleCtrl(pressed: boolean) { if (!controlled) { scope.inputIntent(terminal.id); return; } ctrlRef.current = pressed; setCtrl(pressed); xtermRef.current?.focus(); }
-  function toggleAlt(pressed: boolean) { if (!controlled) { scope.inputIntent(terminal.id); return; } altRef.current = pressed; setAlt(pressed); xtermRef.current?.focus(); }
+  function toggleCtrl(pressed: boolean) { if (historyModeRef.current) return; if (!controlled) { scope.inputIntent(terminal.id); return; } ctrlRef.current = pressed; setCtrl(pressed); xtermRef.current?.focus(); }
+  function toggleAlt(pressed: boolean) { if (historyModeRef.current) return; if (!controlled) { scope.inputIntent(terminal.id); return; } altRef.current = pressed; setAlt(pressed); xtermRef.current?.focus(); }
 
   return <div className="terminal-runtime" data-terminal-id={terminal.id} data-role={role} data-connection={connection}>
     {error && <Alert variant="destructive" className="shrink-0"><AlertDescription>{error}</AlertDescription><AlertAction><Button size="icon-xs" variant="ghost" aria-label="关闭错误" onClick={() => setError(null)}><X /></Button></AlertAction></Alert>}
-    <div className="terminal-live" ref={hostRef} style={{ display: historyVisible ? "none" : undefined }} aria-label="实时终端" />
-    {historyVisible && <div className="terminal-history"><div className="terminal-history-heading"><History />普通历史快照{historyLoading && <span>读取中…</span>}{historyError && <span role="alert">{historyError}</span>}</div><div className="terminal-history-surface" ref={historyHostRef} aria-label="终端历史" /></div>}
+    {historyVisible && !historyBytes && <div className="terminal-history-heading terminal-history-loading" role="status"><History />普通历史快照{historyLoading && <span>读取中…</span>}{historyError && <span role="alert">{historyError}</span>}</div>}
+    <div className="terminal-live" ref={hostRef} style={{ display: historyVisible && historyBytes ? "none" : undefined }} aria-label="实时终端" />
+    {historyVisible && historyBytes && <div className="terminal-history"><div className="terminal-history-heading"><History />普通历史快照{historyLines === 0 && <span>暂无历史输出</span>}{historyLoading && <span>读取中…</span>}{historyError && <span role="alert">{historyError}</span>}</div><div className="terminal-history-surface" ref={historyHostRef} aria-label="终端历史" /></div>}
     <div className="terminal-shortcuts" aria-label="手机终端快捷键">
       <Toggle size="sm" variant="outline" pressed={ctrl} onPressedChange={toggleCtrl}>Ctrl</Toggle>
       <Toggle size="sm" variant="outline" pressed={alt} onPressedChange={toggleAlt}>Alt</Toggle>

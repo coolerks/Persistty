@@ -15,18 +15,27 @@ scope 新动作：`takeover(terminal)`、`inputIntent(id)`、`close(terminals)`�
 - provider 通过 portal 将 runtime 渲染进固定 DOM element；上下移动只是将同 element 挂到另一宿主。收起面板、刷新资源列表、宿主卸载不销毁 xterm/WS、不复制 session、不自动接管。离开 scope 才 dispose 浏览器资源，仍不终止 tmux。
 - StrictMode 下延后到 microtask 建 WS，并检查已清理标志，避免废弃 mount 产生连接。DTO 刷新不等于新 terminal ID；项目切换用独立 scope，旧请求 abort。
 - 活动 xterm `scrollback:0`；history HTTP 返回的快照整体替换虚拟滚动视图，行数使用 `returned_lines`，不写进 live xterm。最多 1 MiB 的待渲染输出由 write callback 排空，超限关闭 1013 后重新 attach 当前画面。
-- 可见、正尺寸才 fit；observer 可本地 fit，不发送服务器 resize。输入必须当前 ready/controller/generation；离线立刻取消 ready，socket dispose 后晚到帧无效。输入不缓存、不重放。
+- 历史 `capture-pane -p -e` 快照为 LF 分行，独立只读 xterm 必须 `convertEol:true`，保留 ANSI/Unicode，避免逐行列坐标累积；实时 PTY 仍 `convertEol:false`。历史主题变化同步独立实例，不重建 live DOM/WS。
+- 普通/观察端垂直滚轮在宿主 DOM capture 阶段截获，阻止 xterm 在零 scrollback 时转成上下方向键；向上滚读取独立有界历史。仅首次进入清旧快照并请求，不能让已隐藏 live 上锁定的连续惯性事件反复清 historyBytes。等待 HTTP/解析/viewport 尺寸同步期间保留 live 画面并累加像素位移，历史模式（含加载/失败）不向 shell 发送键盘、粘贴、鼠标或手机快捷键。
+- 历史纵向事件交给 xterm 原生 viewport，保留小数位移与触控板分类，`smoothScrollDuration:120` 用于物理滚轮；不要把每个小于一行的事件强制放大为 `scrollLines(±1)`。锁定 live target 的事件以归一化像素转交同一历史 DOM；Chromium 合成 WheelEvent 的零值 legacy wheelDelta 字段须在转交事件上置 undefined，避免 xterm 优先读零而忽略 deltaY。首位移在 write callback 后等待 viewport 渲染同步，再转交；callback/rAF 随实例清理，不访问 `_core`。
+- 历史在底部继续向下累计一行位移才回实时，微小噪声不切模式；水平主轴（含 ±0.25px 纵向噪声）阻止默认滚动且不清内容、不请求、不切历史。历史错误保留原 live 实例与可返回/刷新入口；终端宿主 overflow:clip、overscroll-behavior:none，只允许内部 viewport 纵向滚动，不引入外层水平滚动或导航。
+- tmux 外层 alternate buffer 不代表 pane 是 TUI。只有当前 controller 的显式 `mouseTrackingMode !== "none"` 才将普通滚轮交给应用鼠标协议；Shift+wheel 强制查看历史，observer 不发鼠标报告。Ctrl+wheel 保留浏览器缩放且阻止 xterm 转输入；纯横向滚轮不触发历史。不要仅使用 xterm custom wheel handler，它不覆盖显式 mouse tracking 路径。
+- xterm onData 同时含用户输入与自动设备应答。live 实例用公开 parser.registerCsiHandler 对 `{final:"c"}` / `{prefix:">",final:"c"}` 消费 DA1/DA2，首参数为 0 时调用 `TerminalSocket.sendDeviceAttributes("primary"|"secondary")`，阻止默认 onData 应答误入 owner shell。参数大于 0 与原实现一样消费但不回答，分帧序列由原 parser 处理。handler 随 live 实例释放，不因 role 变化重建。
+- `sendDeviceAttributes` 发送后端批准的 v3 固定枚举文本帧，允许 observer 回答自己的 read-only attach；必须已 ready、未 dispose、OPEN 且 bufferedAmount 不超过 1 MiB，失败不缓存/重放或回退 sendInput。键盘/粘贴/鼠标仍复验当前 controller/generation，粘贴与应答相同的字节也保持原输入；不能基于字符串 regex 猜输入来源。
+- 可见、正尺寸且当前 controller 才 fit/发送 resize。observer live xterm 使用 ready/resized 的服务端字符网格，不按自己容器 fit，不发送 resize；较小容器裁剪、较大容器留空，不能让只读 PTY、pane 与 renderer 尺寸各异而出现 tmux 边界线/句点填充。接管后才 fit 自己尺寸；历史独立实例仍按本地容器 fit。输入必须当前 ready/controller/generation；离线立刻取消 ready，socket dispose 后晚到帧无效。输入不缓存、不重放。
 - 失败后探测认证，1008/401/403 停止；其余最多 5 次指数退避（500..8000 ms 加 jitter），耗尽显示手动重试。控制被他端接管后不自动夺回。
-- 上方标签 X/会话 trash 请求终止；下方面板 X 仅收起。Dialog 使用应用 body portal，不受终端 DOM 隐藏影响；显示服务器截止，新端从 ready 接收同 request/deadline。取消/失败保留入口，执行后重新查真实状态。
+- running 的上方标签 X/会话 trash 请求终止；下方面板 X 仅收起。明确 terminated 的标签关闭仅调整本浏览器视图，详见下文；unavailable 不当作已结束。Dialog 使用应用 body portal，不受终端 DOM 隐藏影响；显示服务器截止，新端从 ready 接收同 request/deadline。取消/失败保留入口，执行后重新查真实状态。
 - 手机 Ctrl/Alt 使用官方 shadcn Toggle 的 pressed 状态，其他按键用 Button，发送真实控制字节。错误用 Alert，空/结束状态用 Empty，确认用 Dialog，选择用 Select；遵守官方查找记录，禁止手写适用基础组件替代品和直接引入 Radix。
 - 链接只接受 HTTP/HTTPS，桌面 Ctrl 点击/手机确认后原样新标签打开并 noopener；不改写 localhost、不提供预览代理。
 
 ### 精简工作台与批次
 
-- 项目工作台单顶栏与单终端标签行；删除旧目录/连接/接管常驻行。Tabs/菜单/Tooltip 使用官方 shadcn 源码，不混用原语。面板最右 X 只收起，标签 X/关闭菜单才进入带名称确认及倒计时。手机用更多菜单且不提供移动。
+- 项目工作台单顶栏与单终端标签行；删除旧目录/连接/接管常驻行。Tabs/菜单/Tooltip 使用官方 shadcn 源码，不混用原语。面板最右 X 只收起，running 标签 X/关闭菜单才进入带名称确认及倒计时。手机用更多菜单且不提供移动。
 - 名称更新同步完整 DTO，不以名称作 key、不重建固定 runtime。默认编号由后端分配；重命名用旧名 CAS，不在客户端计数。
 - 图标/菜单显式接管直接等待 ACK；观察端输入意图先确认。observer 保持 xterm disableStdin=true，DOM 捕获 keydown/beforeinput/paste/compositionstart，手机快捷操作走同确认；触发输入完全丢弃，不存字节、不在成功后补发。纯修饰键、选择复制、滚动、链接不误判；onData/onBinary 仍复验当前角色/ready，不能把 focus/mouse report 当输入确认。
 - close 冻结当前上/下区域目标及名称，确认前不接管。确认后逐个 ready + takeover ACK，再一次 POST batch；任一失败零 POST，显示失败名与已接管列表，不假装回滚控制权。统一终端页没有跨项目关闭其他/全部入口。
+- `RuntimeScope.close(terminals)` 先按稳定 ID 从已有 runtime 取最新 DTO：terminated 使用 `useTerminalView.dismiss` 关闭浏览器标签，零接管/终止/删除请求；running 才进入上述确认；unavailable 保留。混合关闭立即关闭 ended 标签，确认取消只影响尚未终止的 running 目标。X、右键与手机更多菜单复用此入口，不在 TerminalTab 过滤 ended。
+- `terminal-view.ts` 只将 `dismissed: Record<terminalId,true>` 持久化到 `persistty.terminal-view.v1`；上下区域与统一页通过 `terminalVisible` 一致过滤，列表刷新与页面重载不重新显示已关闭 ended。未知状态或 running 总是可见，旧偏好不能隐藏真实运行进程。服务端元数据/历史保留；保留已结束 runtime 的最新 DTO，避免上方标签旧 running 快照使 closed 标签重新出现。
 - scope Dialog 按 request ID 合并成员通知；隐藏宿主仍可见，不同批次分别显示取消入口。取消等服务端通知，不乐观移除；GET 查询短时结果，404 提示重新核实，不重发终止。结果逐项展示。
 - 新 TerminalSocket 显式 protocol=3；decoder 保留可选 v2 exact 解析，不以未知字段降级。ApiError 只接收已定义的 terminal_id details，其他陌生 details 拒绝。
 - runtime portal 的 React 事件跟随原 owner，不跟随 DOM 移动。内部拖拽用 `useDropTarget` 在目标 DOM 捕获，只拦截专用 MIME，并 stopPropagation，避免 xterm 消费标签数据；普通文本/文件拖拽不能误变为移动。监听与 scope/宿主同步释放。
@@ -40,7 +49,15 @@ scope 新动作：`takeover(terminal)`、`inputIntent(id)`、`close(terminals)`�
 | 掉线/认证撤销 | 立即禁输入，不重发，不修改 server session |
 | observer/旧 generation | 前端不写入；后端仍复验，不以 UI 当权限边界 |
 | 1013/真实状态改变 | 刷新 DTO，显示已结束/不可用，而非无限 loading |
+| terminated 标签 X/关闭其他/全部 | 本浏览器移除并持久化，零终止请求；上下区域均生效 |
+| unavailable 标签关闭 | 禁用，不能推断真实进程已结束 |
+| running + terminated 混合关闭 | ended 标签直接关闭；仅 running 弹确认，取消零终止请求 |
 | 历史请求失败/超限 | 可见错误，不清空或伪造实时画面 |
+| LF/CRLF/ANSI/中文历史 | 各行从行首正确呈现，保留颜色与字符 |
+| 普通/观察端上下滚轮 | 浏览历史 viewport，零输入/接管/新增 WS；底部继续下滚回实时 |
+| controller 显式鼠标 tracking | 普通滚轮为应用鼠标报告；Shift 滚轮只读历史；不以 alternate 推断 TUI |
+| DA1/DA2 查询/重复/分帧 | 仅固定 device_attributes 文本帧，零二进制垃圾输入，role 不变 |
+| 正常输入或粘贴相同 DA bytes | 原样二进制输入，controller/generation 仍必需，不当作自动应答 |
 | 手机链接取消 | 无新标签，无控制权变化 |
 | 批量部分接管失败 | 不 POST、不开始计时，显示已取得控制权的对象 |
 | 改名/菜单刷新 | 同固定 DOM/WS；刷新只读状态、不清画面 |
@@ -55,6 +72,12 @@ scope 新动作：`takeover(terminal)`、`inputIntent(id)`、`close(terminals)`�
 `TerminalRuntime.test.tsx` 在 StrictMode 验同实例、同 element 和仅 scope 退出释放。WS 单测验证 decoder、8 字节 generation、离线立即失效、晚到帧忽略、零重放。Playwright 验真实非空桌面/手机画面、所有快捷字节、粘贴、链接、主题、双端/新第三端、宿主移动时零新 WS、取消与到期终止。Debian 正常/SIGKILL Web 重启验证原 PID/start/cgroup、三负载及恢复后 TUI 按键/鼠标/resize；详见 [浏览器步骤](../../../tests/integration/debian/browser/README.md)。
 
 UI 调整新增 provider 部分接管失败零 POST、共享 v3 fixture、改名同 DOM/零 WS、上下区域与混合协议取消、120 文件/双根三主题/四视口 document 几何与内部滚动。移动必须同时覆盖按钮和真实 dragTo 落在活跃 xterm 上，不能用人工 dispatchEvent 代替拖拽回归。
+
+已结束关闭回归由 `terminal-view.test.ts`、`TerminalRuntime.test.tsx` 与 `workbench-interactions.spec.ts` 验证：上下标签 X/关闭其他/全部、持久偏好重载、running/unavailable 保护、混合批次取消零 POST。合成接口工作台测试只验 UI 状态流，不代替真实 PTY、tmux、倒计时执行和 Debian 持久性验收。
+
+历史/滚轮回归由 `terminal-scrolling.test.ts` 验 pixel/line/page、小数与主轴换算，`terminal-scrolling.spec.ts` 用真实 xterm/WS decoder 与合成 HTTP/WS 分别验 controller/observer：LF/CRLF/ANSI/中文对齐、原 live target 的连续惯性、40 次 0.5px 位移不过度放大、纯横向/带纵向噪声横向、慢 HTTP 期间保留画面/单请求/零输入、历史不重建、底部噪声与返回 live、Ctrl 缩放、单 WS、TUI 鼠标及 Shift 强制历史。`terminal-device-attributes.spec.ts` 同时验 observer ready/resized 网格固定，隔离真实 tmux 录制中的边界线/句点经同步重绘消失；录制解析与当次真实后端 PTY 尺寸测试配套，不能用录制代替运行时或 Debian 验收。
+
+设备应答由 WS 单测验 observer 可发固定枚举且无键盘权限、未 ready/离线/背压零发送；`terminal-device-attributes.spec.ts` 在真实 xterm 中分别验 controller/observer 的省略/0/非零参数、分帧/重复/晚到 DA 查询仅发固定文本帧，真实键盘/方向键及合成 paste 事件保留原字节；配合后端 pipe/真实隔离 tmux 测试验证 attach 归属，不把合成 WS 浏览器证据称为真实后端集成。
 
 ## 7. 错误与正确示例
 

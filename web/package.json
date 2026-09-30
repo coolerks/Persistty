@@ -13,7 +13,14 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "build": "node scripts/collect-licenses.mjs && tsc --noEmit && vite build"
+    "build": "node scripts/collect-licenses.mjs && tsc --noEmit && vite build",
+    "prepare:assets": "node scripts/generate-language-metadata.mjs && node scripts/generate-material-icons.mjs",
+    "predev": "npm run prepare:assets",
+    "prelint": "npm run prepare:assets",
+    "pretypecheck": "npm run prepare:assets",
+    "pretest": "npm run prepare:assets",
+    "pretest:e2e": "npm run prepare:assets",
+    "prebuild": "npm run prepare:assets"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
@@ -47,6 +54,7 @@
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.7",
     "jsdom": "30.1.1",
+    "material-icon-theme": "5.38.1",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1",

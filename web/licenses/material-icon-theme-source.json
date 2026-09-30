@@ -1,0 +1,10 @@
+{
+  "name": "material-icon-theme",
+  "version": "5.38.1",
+  "source": "https://github.com/material-extensions/vscode-material-icon-theme",
+  "commit": "448ab3977ef83b817c2c722ce7cd5034d195b39f",
+  "tarball": "https://registry.npmjs.org/material-icon-theme/-/material-icon-theme-5.38.1.tgz",
+  "integrity": "sha512-14cFM4NJGdbuo68rIZTq9TSX0f5BtA6VF+eNX3zq23Z5NoEeVtM4Zn4PpZ0ERl++50jCBrywKFWXmOjbxf0xTA==",
+  "archiveSha256": "d4342dc13a24bd40c4f417337dc19d2d2c42e47f8bb42ca677109bce769f078e",
+  "license": "MIT"
+}

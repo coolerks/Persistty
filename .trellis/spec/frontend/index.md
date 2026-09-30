@@ -1,6 +1,6 @@
 # 前端开发规范
 
-W01 已有 React/Vite 登录、项目路由、严格 API 解码和三主题；版本及 npm 锁文件见 `web/package.json`/`web/package-lock.json`。W04 已归档，使用 shadcn `base-nova`、Zustand、react-resizable-panels 与按需加载的桌面只读 Monaco；手机用基础文本视图。W03 已接入真实 xterm/WS，桌面与手机验收通过；W05 自动保存/草稿及完整布局恢复仍未完成。下述未交付功能片段仍为契约，不是已验证实现。
+W01 已有 React/Vite 登录、项目路由、严格 API 解码和三主题；版本及 npm 锁文件见 `web/package.json`/`web/package-lock.json`。W04 已归档，使用 shadcn `base-nova`、Zustand、react-resizable-panels 与按需加载的桌面只读 Monaco；手机用基础文本视图。2026-09-30 已覆盖完整 91 个 Monaco 模式及 Material 文件/目录图标，真实 Chromium 验收见相应任务报告。W03 已接入真实 xterm/WS，桌面与手机验收通过；W05 自动保存/草稿及完整布局恢复仍未完成。下述未交付功能片段仍为契约，不是已验证实现。
 
 ## 规范索引
 | 文档 | 内容 |

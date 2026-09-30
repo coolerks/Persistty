@@ -66,3 +66,17 @@ Terminal “隐藏/分离”只调整 UI。`Close Terminal` 始终 Dialog：`关
 菜单、快捷键、命令面板复用同一操作入口。文件操作后按服务端成功结果使列表与相关编辑器快照失效，不能只依赖 watcher；外部变化遵循已有 dirty buffer 保护规则。目标冲突必须显式解决，不能复用上传的“全部应用”来静默覆盖编辑器文件。完整 API 签名和错误映射由对应任务补入 [HTTP 契约](../backend/http-api.md)，操作安全归 [文件契约](../backend/filesystem-guidelines.md)。
 
 测试从用户操作验证菜单类型差异、键盘操作、取消删除零请求、失败保留原列表、重命名后标签定位、复制与上传的来源区分、目录拖入不支持时的替代入口。
+
+### 文件树选择与展开定位（2026-09-30）
+
+`Explorer` 的 `selectedFile: OpenFile | null` 表示跨项目根唯一文件选择，目录不输出 `aria-selected` 或选中样式；目录展开仍使用 `aria-expanded`，覆盖 ghost Button 的 `aria-expanded:bg-muted`，避免所有展开目录持续着色。工具栏操作目录另存，点击目录只展开并更新操作目录，点击/定位文件使用父目录作为操作目录。
+
+`ProjectWorkbench` 只在 sidebar `onResize` 检测到 0 → 正尺寸（含初始可见恢复、拖拽、活动栏或状态栏）时传入新 `reveal: { file: OpenFile | null }`；手机从编辑器/终端返回文件视图同样触发。树可见时切换 tab 不改变 reveal、选择或滚动；同一路径再次展开必须传新请求对象。按 focused group/current file 与 folderId 定位，上方为终端时不定位旧文件。
+
+树收到 reveal 后展开目标祖先，沿当前目录分页找到目标子项，待实际节点挂载后 `scrollIntoView({ block: "nearest", inline: "nearest" })`；不存在、分页结束或请求失败即停止，错误保持可重试。不能将路径相同的其他项目根当目标。条目只保留现有 shadcn ContextMenu 右键操作，删除重复的末尾三点 DropdownMenu；删除/重命名确认与共享 action owner 保持原契约。
+
+编辑器/终端原生横向滚动容器统一细轨道：Chromium/WebKit 固定 4px、Firefox 始终 thin，透明轨道。thumb 默认透明，容器 hover 或子项 focus-visible 时使用主题语义色显示；点击遗留 focus 不应持续显示。只切换颜色，不切换厚度/overflow/display，避免 tab 内容上下抖动或滑块 hover 变粗。保留 overflow-x:auto 与焦点/触摸/拖动滚动，不用 overflow:hidden 或全站规则掩盖溢出。
+
+标准 scrollbar-color 规则必须限定在 `@supports not selector(::-webkit-scrollbar)`，WebKit 分支保持 scrollbar-width:auto/scrollbar-color:auto，防止高优先级 hover 标准属性让 Chromium 退回原生轨道。WebKit thumb 用容器的 `--tab-scrollbar-thumb` 变量同步 hover/focus-visible 颜色；浏览器回归同时验默认隐藏、悬停可见、移开再隐藏，三状态与滑块 hover 的轨道高度及 label 坐标均稳定。
+
+回归测试验目录无选中、跨根文件单选、树可见时 tab 切换不 reveal、重复收展/页面恢复/移动端返回、后续分页目标、右键操作完整、终端 ended 关闭零 mutation。浏览器检查展开目录移开鼠标后透明，两类 tab 溢出可滚动且轨道 4px；不能只验初始样式而忽略 hover 后的布局/颜色。合成接口验收不能宣称真实 PTY 或真机通过。

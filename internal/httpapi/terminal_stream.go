@@ -19,6 +19,7 @@ type terminalCommand struct {
 	Cols       int    `json:"cols"`
 	Rows       int    `json:"rows"`
 	RequestID  string `json:"request_id"`
+	Kind       string `json:"kind"`
 }
 
 func (a *api) terminalStream(c *gin.Context) {
@@ -114,7 +115,7 @@ func (a *api) terminalStream(c *gin.Context) {
 				return
 			}
 			var command terminalCommand
-			command, err = decodeTerminalCommand(data)
+			command, err = decodeTerminalCommand(data, protocol)
 			if err != nil {
 				_ = conn.Close(websocket.StatusPolicyViolation, "invalid_control")
 				return
@@ -128,6 +129,8 @@ func (a *api) terminalStream(c *gin.Context) {
 				err = viewer.Terminate(ctx, command.Generation)
 			case "cancel_termination":
 				err = viewer.CancelTermination(ctx, command.RequestID)
+			case "device_attributes":
+				err = viewer.DeviceAttributes(ctx, command.Kind)
 			}
 		}
 		if err == nil {
@@ -158,7 +161,7 @@ func writeTerminalFrame(ctx context.Context, conn *websocket.Conn, frame termina
 	return conn.Write(writeCtx, frame.Type, frame.Data) == nil
 }
 
-func decodeTerminalCommand(data []byte) (terminalCommand, error) {
+func decodeTerminalCommand(data []byte, protocol int) (terminalCommand, error) {
 	var command terminalCommand
 	reader := json.NewDecoder(bytes.NewReader(data))
 	if err := checkValue(reader, 0); err != nil {
@@ -178,6 +181,11 @@ func decodeTerminalCommand(data []byte) (terminalCommand, error) {
 		allowed["generation"], allowed["cols"], allowed["rows"] = true, true, true
 	case "cancel_termination":
 		allowed["request_id"] = true
+	case "device_attributes":
+		if protocol != 3 || (command.Kind != "primary" && command.Kind != "secondary") {
+			return command, terminal.ErrInvalidRequest
+		}
+		allowed["kind"] = true
 	default:
 		return command, terminal.ErrInvalidRequest
 	}

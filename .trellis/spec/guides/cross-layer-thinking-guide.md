@@ -10,3 +10,5 @@
 - systemd cgroup 的实测证据是否存在？不能以 mock 或 tmux 后台化推断 restart 通过。
 - 失败/取消/重连后，fd/goroutine/socket/model/draft 是否释放或正确保留？
 - 哪个 integration/E2E 能观察到这个边界错误？新契约在 owner spec 更新，不能只写聊天。
+- 终端字符网格由谁拥有？逐段核对输入 owner、每个输出 attach、renderer 与迟加入端的尺寸；只检查 resize ACK 或浏览器容器宽度不能证明 PTY 同步。异常线条/句点先比对真实 PTY bytes，不能用 CSS/正文过滤掩盖错配；契约和实测归 [终端运行时](../backend/terminal-runtime-contract.md)。
+- 连续浏览器手势可能锁定原始 target，隐藏 DOM 不代表不再收到事件。验证小数位移、主轴噪声、加载中惯性与完成后惯性，不能仅用单次大滚轮和状态断言推断流畅/不白屏；边界归 [前端终端运行时](../frontend/terminal-runtime-contract.md)。

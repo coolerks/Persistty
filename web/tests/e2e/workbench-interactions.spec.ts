@@ -1,0 +1,114 @@
+import { expect, test } from "@playwright/test";
+
+test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
+
+test("工作台右键、树选择与重展开定位、已结束终端关闭和细滚动条", async ({ page }, testInfo) => {
+  const errors: string[] = []; const mutations: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  const terminals = [...Array.from({ length: 16 }, (_, i) => ({ id: `ended-${i}`, project_id: "interaction", display_name: `结束会话${i}`, working_directory: "/fixture", state: "terminated" })), { id: "unknown", project_id: "interaction", display_name: "未知状态", working_directory: "/fixture", state: "unavailable" }];
+  const entry = (name: string, kind = "file") => ({ name, kind, identity: name, size: 1, mtime: "2026-09-30T00:00:00Z" });
+  await page.routeWebSocket(/\/api\/v1\/events/, () => {});
+  await page.route("**/api/v1/**", async route => {
+    const request = route.request(); const url = new URL(request.url());
+    if (request.method() !== "GET") mutations.push(url.pathname);
+    let data: unknown;
+    if (url.pathname === "/api/v1/terminals") data = { items: terminals };
+    else if (url.pathname.endsWith("/entries")) {
+      const path = url.searchParams.get("path"); const other = url.pathname.includes("/folders/other/");
+      const items = other ? [entry("other.ts")] : !path ? [entry("src", "directory"), ...Array.from({ length: 18 }, (_, i) => entry(`file-${i}.ts`))] : path === "src" ? [entry("nested", "directory")] : url.searchParams.get("cursor") ? [entry("target.ts")] : [entry("first.ts")];
+      data = { items, next_cursor: path === "src/nested" && !url.searchParams.get("cursor") ? "next" : "", project_version: 1 };
+    } else if (url.pathname.endsWith("/content")) data = { kind: "text", content: "const answer = 42;\n", version: { mtime: "2026-09-30T00:00:00Z", size: 19, etag: "fixture", identity: "fixture" } };
+    else throw new Error(`未预期的请求 ${url.pathname}`);
+    await route.fulfill({ json: { data, request_id: "fixture" } });
+  });
+  await page.goto("/tests/fixtures/workbench-interactions.html");
+  const tree = page.getByRole("complementary", { name: "资源管理器" });
+  const file = (name: string) => tree.getByRole("treeitem", { name, exact: true });
+  await file("src").click();
+  await expect(file("src")).toHaveAttribute("aria-expanded", "true");
+  await page.mouse.move(0, 0);
+  await expect.poll(() => file("src").evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+  await expect(file("src")).not.toHaveAttribute("aria-selected", "true");
+  await file("nested").click(); await file("first.ts").click();
+  await page.getByRole("button", { name: "加载更多", exact: true }).click(); await file("target.ts").click();
+  await file("file-0.ts").click();
+  await expect(file("file-0.ts")).toHaveAttribute("aria-selected", "true");
+  const before = await tree.locator(".explorer-scroll").evaluate(element => element.scrollTop);
+  await page.getByRole("tab", { name: "target.ts", exact: true }).click();
+  await expect(file("file-0.ts")).toHaveAttribute("aria-selected", "true");
+  expect(await tree.locator(".explorer-scroll").evaluate(element => element.scrollTop)).toBe(before);
+  await file("src").click();
+  await expect(file("first.ts")).toHaveCount(0);
+  await page.getByRole("button", { name: "资源管理器", exact: true }).click();
+  await page.getByRole("button", { name: "切换资源管理器", exact: true }).click();
+  await expect(file("target.ts")).toHaveAttribute("aria-selected", "true");
+  await expect(file("src")).toHaveAttribute("aria-expanded", "true");
+  await expect(file("nested")).toHaveAttribute("aria-expanded", "true");
+  await expect(tree.getByRole("button", { name: /^操作 / })).toHaveCount(0);
+  await file("first.ts").click({ button: "right" });
+  for (const name of ["打开", "复制路径", "复制相对路径", "重命名", "复制", "剪切", "下载文件", "永久删除"]) await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  // Open many files to exercise the actual native tab overflow.
+  for (let i = 0; i < 12; i++) await file(`file-${i}.ts`).click();
+  for (const selector of [".editor-tabs", ".terminal-tabs"]) {
+    const tabs = page.locator(selector);
+    expect(await tabs.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+    await page.locator("h1").click(); await page.mouse.move(0, 0);
+    const geometry = () => tabs.evaluate(element => {
+      const label = element.querySelector('[role="tab"]');
+      return { clientHeight: element.clientHeight, height: element.getBoundingClientRect().height, labelTop: label?.getBoundingClientRect().top, labelHeight: label?.getBoundingClientRect().height, trackHeight: getComputedStyle(element, "::-webkit-scrollbar").height, scrollbarColor: getComputedStyle(element).scrollbarColor };
+    });
+    const before = await geometry();
+    expect(before.trackHeight).toBe("4px"); expect(before.scrollbarColor).toBe("auto");
+    expect(await tabs.evaluate(element => getComputedStyle(element, "::-webkit-scrollbar-thumb").backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+    await tabs.hover();
+    expect(await geometry()).toEqual(before);
+    await expect.poll(() => tabs.evaluate(element => ({ hovered: element.matches(":hover"), color: getComputedStyle(element, "::-webkit-scrollbar-thumb").backgroundColor }))).toEqual({ hovered: true, color: expect.not.stringMatching(/^rgba\(0, 0, 0, 0\)$/) });
+    expect(await geometry()).toEqual(before);
+    const bounds = await tabs.boundingBox(); if (!bounds) throw new Error("tab 容器不可见");
+    await page.mouse.move(bounds.x + 30, bounds.y + bounds.height - 2);
+    expect(await geometry()).toEqual(before);
+    await tabs.screenshot({ path: testInfo.outputPath(`${selector.slice(1)}-hover.png`) });
+    await tabs.evaluate(element => { element.scrollLeft = element.scrollWidth; });
+    expect(await tabs.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+    await tabs.evaluate(element => { element.scrollLeft = 0; });
+    await page.mouse.move(0, 0);
+    await expect.poll(() => tabs.evaluate(element => getComputedStyle(element, "::-webkit-scrollbar-thumb").backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+    expect(await geometry()).toEqual(before);
+  }
+  await page.screenshot({ path: testInfo.outputPath("tabs-light.png") });
+  await page.evaluate(() => document.documentElement.classList.add("dark"));
+  await expect(file("file-11.ts")).toHaveCSS("background-color", "rgb(50, 58, 56)");
+  await expect(file("file-11.ts")).toHaveCSS("color", "rgb(228, 229, 232)");
+  await page.screenshot({ path: testInfo.outputPath("tabs-dark.png") });
+  await page.getByRole("button", { name: "关闭终端 结束会话0", exact: true }).click();
+  await expect(page.locator('[data-terminal-id="ended-0"]')).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.locator('[data-terminal-id="ended-1"]').click({ button: "right" });
+  await page.getByRole("menuitem", { name: "移到上方标签", exact: true }).click();
+  await expect(page.locator('.editor-tabs [data-terminal-id="ended-1"]')).toBeVisible();
+  await page.getByRole("button", { name: "关闭终端 结束会话1", exact: true }).click();
+  await expect(page.locator('[data-terminal-id="ended-1"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "刷新终端", exact: true }).click();
+  await expect(page.locator('[data-terminal-id="ended-0"]')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('[data-terminal-id="ended-2"]')).toBeVisible();
+  await expect(page.locator('[data-terminal-id="ended-0"], [data-terminal-id="ended-1"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "关闭终端 未知状态", exact: true })).toBeDisabled();
+  await page.locator('[data-terminal-id="ended-2"]').click({ button: "right" });
+  await page.getByRole("menuitem", { name: "关闭其他", exact: true }).click();
+  await expect(page.locator("[data-terminal-id]")).toHaveCount(2);
+  await page.locator('[data-terminal-id="ended-2"]').click({ button: "right" });
+  await page.getByRole("menuitem", { name: "全部关闭", exact: true }).click();
+  await expect(page.locator("[data-terminal-id]")).toHaveCount(1);
+  // Restored collapsed sidebar must locate the persisted active file on opening.
+  await page.getByRole("button", { name: "资源管理器", exact: true }).click();
+  await page.reload(); await page.getByRole("button", { name: "资源管理器", exact: true }).click();
+  await expect(file("file-11.ts")).toHaveAttribute("aria-selected", "true");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "编辑器", exact: true }).click();
+  await page.getByRole("tab", { name: "first.ts", exact: true }).click();
+  await page.getByRole("button", { name: "文件", exact: true }).click();
+  await expect(file("first.ts")).toHaveAttribute("aria-selected", "true");
+  expect(mutations).toEqual([]); expect(errors).toEqual([]);
+});

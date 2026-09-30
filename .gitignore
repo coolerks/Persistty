@@ -63,3 +63,6 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+# 锁定依赖生成的语言和图标资源（npm run prepare:assets 重建）
+/web/src/generated/
+/web/public/material-icons/

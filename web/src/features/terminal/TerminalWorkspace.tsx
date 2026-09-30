@@ -14,19 +14,21 @@ import type { Project, Terminal } from "@/lib/api/decoder";
 import { TerminalSession } from "./TerminalRuntime";
 import { TerminalTab } from "./TerminalTab";
 import { useTerminalStateChanges } from "./runtime-context";
+import { terminalVisible, useTerminalView } from "./terminal-view";
 
 export function TerminalWorkspace({ project, initialId, onHide, onMoveToTop, onMoveToBottom, upperIds = [], focusRequest }: {
   project?: Project; initialId?: string | undefined; onHide?(): void; onMoveToTop?(terminal: Terminal): void;
   onMoveToBottom?(id: string): void; upperIds?: string[]; focusRequest?: { id: string } | null;
 }) {
   const auth = useAuth();
+  const dismissed = useTerminalView(state => state.dismissed);
   const { resource, refresh } = useResource(api.terminals);
   const [selectedId, setSelectedId] = useState<string | null>(initialId ?? null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   useTerminalStateChanges(refresh);
   useEffect(() => { if (focusRequest) setSelectedId(focusRequest.id); }, [focusRequest]);
-  const items = resource.status === "ready" ? resource.data.filter(item => (!project || item.project_id === project.id) && !upperIds.includes(item.id)) : [];
+  const items = resource.status === "ready" ? resource.data.filter(item => (!project || item.project_id === project.id) && !upperIds.includes(item.id) && terminalVisible(item, dismissed)) : [];
   const missingInitial = Boolean(initialId && selectedId === initialId && !items.some(item => item.id === initialId));
   const selected = missingInitial ? undefined : items.find(item => item.id === selectedId) ?? items.find(item => item.state === "running") ?? items[0];
   const dropTarget = useDropTarget(onMoveToBottom ? ["application/x-persistty-upper-terminal"] : [], event => {

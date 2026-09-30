@@ -27,3 +27,10 @@ SQLite 保存可恢复的工作区界面偏好：编辑器标签路径与顺序�
 editor dirty 是 buffer 与 base snapshot 的差异。workspace_id+path 为 draft key，draft 包含 base version 和时间，server snapshot 与 draft 分离；切 workspace 不丢 dirty 状态。IndexedDB 写失败显示“草稿未保存在本地”，不伪造恢复保证。
 
 错误：`store.set({running:true})` 作为 reconnect 依据。正确：本地 connection=disconnected，重新 GET observation。测试 selector/actions/恢复次序/服务失败 rollback/draft 命名空间，断言不会触发隐式 file save/terminal close。
+
+
+## 临时文件语言覆盖（2026-09-30）
+
+`web/src/features/workspaces/workspace-view.ts` 新增 `languageModes: Record<projectId, Record<fileKey, languageId>>` 与 `setLanguage(projectId, file, mode: string | undefined)`。fileKey 为 folderId + NUL + path；只接受完整已注册 ID，undefined 恢复自动，未知值拒绝。手动模式跨同文件左右分组共享、不同项目/文件隔离，不进入 persist.partialize；刷新页面恢复自动，未新增 API/SQLite/localStorage 字段。
+
+关闭一个分组仍有同文件视图时保留；最后视图关闭、remove 后清理；relocate（含父目录与跨文件夹）迁移键；move/unsplit 保留。覆盖仅为 UI 语言提示，不代表文件真实类型、资源授权或正文状态。正确：读服务器快照后传最终 language 给既有 model；错误：选择语言写回文件，或将全部 store 状态持久化使临时覆盖跨刷新残留。workspace-view 单测验项目隔离、分组、关闭/删除/重命名与不持久化，真实工作台验同文件分组同步。

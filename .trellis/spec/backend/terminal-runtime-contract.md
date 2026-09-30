@@ -9,6 +9,7 @@ W03 [PRD](../../tasks/archive/2026-09/09-29-terminal-runtime/prd.md)、[设计](
 - HTTP：`GET/POST /api/v1/terminals`、`GET /api/v1/terminals/{id}`、`GET /api/v1/terminals/{id}/history`。
 - 工作台 UI 调整新增：`PATCH /api/v1/terminals/{id}`、`POST /api/v1/terminals/termination-batches`、`GET /api/v1/terminals/termination-batches/{id}`；不新增迁移。以下新增契约覆盖旧的单目标内部实现，v2 对外形状仍保留。
 - WS：`GET /api/v1/terminals/{id}/stream`；v2 帧样例见 [共享 fixture](../../../tests/contracts/terminal-runtime.json)。
+- v3 自动设备属性应答：`{type:"device_attributes",kind:"primary"|"secondary"}` → `Viewer.DeviceAttributes(ctx,kind string) error`，只回答当前连接的只读 attach，不是键盘输入。
 - DB：复用既有 `terminals` 表，由 repository 保存稳定 ID/target/cwd；W03 不需要新增迁移，不改写历史迁移。
 - CLI：固定 argv 调用 `tmux -N -S <socket>`，精确 target `=persistty_<id>:0.0`；禁止用户控制参数或补偿 kill。
 
@@ -33,7 +34,9 @@ SQLite 只保存终端稳定 ID、不可猜的 `persistty_<随机ID>` tmux sessi
 
 服务端第一帧为 JSON `ready`：`{type:"ready",protocol:2,terminal_id,viewer_id,role:"controller"|"observer",generation,cols,rows,pending_termination:null|{request_id,deadline}}`。无人控制时首个有效查看端自动取得控制；额外查看端为 observer。后续服务端二进制帧是**原始 PTY 输出 bytes**。客户端二进制输入帧是 8 字节大端无符号 `generation` 前缀加 1..65536 字节原始输入；每帧在串行控制裁决里核对连接身份、当前 generation、认证与 controller 权限，旧帧不写 PTY。不得缓存重放结果不确定的输入。
 
-客户端文本 JSON：`{type:"takeover",generation}`、`{type:"resize",generation,cols,rows}`、`{type:"terminate",generation}`、`{type:"cancel_termination",request_id}`。仅 controller 可 resize/发起终止；observer 可显式接管，任一鉴权 viewer 可取消尚未到期的终止。接管递增 generation 并使旧端立即失权；服务端按连接发送 `{type:"control",role,generation}`，resize 回 `{type:"resized",cols,rows}`。未知字段/type、越界、超帧按 1008/1009；错误以 `{type:"error",code,message}` 脱敏报告。升级后认证到期/登出关闭 1008，断开不杀任务。
+客户端文本 JSON：`{type:"takeover",generation}`、`{type:"resize",generation,cols,rows}`、`{type:"terminate",generation}`、`{type:"cancel_termination",request_id}`。仅 controller 可 resize/发起终止；observer 可显式接管，任一鉴权 viewer 可取消尚未到期的终止。接管递增 generation 并使旧端立即失权；服务端按连接发送 `{type:"control",role,generation}`，resize 向所有尺寸同步成功的 viewer 发送 `{type:"resized",cols,rows}`（v2/v3 形状不变）。未知字段/type、越界、超帧按 1008/1009；错误以 `{type:"error",code,message}` 脱敏报告。升级后认证到期/登出关闭 1008，断开不杀任务。
+
+输入 owner、所有 read-only,ignore-size 输出 attach、浏览器 live renderer 必须使用同一 cols/rows。controller Resize 在 hub 锁内复验控制权/代次，先更新 owner PTY，成功后更新 hub 尺寸和各 viewer PTY，再发 resized；单个输出 PTY 失败仅取消该 viewer，不让其他端/任务终止。迟加入 viewer 在同一锁内按当前 hub 尺寸 attach（不是固定 80x24），ready 返回相同网格。observer 不能改变 pane；客户端跟随广播网格并在本地裁剪/留空。输出读线程经相同锁排队，不能将本次重绘先于对应 resized 入队。仅更新输入 attach 会让 tmux 在更大的输出 PTY 绘制边界 `─` 与 `·` 填充；禁止用正文过滤、fill-character 改配置或断开其他用户掩盖错配。
 
 终止通知：`{type:"termination_pending",request_id,deadline}`、`{type:"termination_cancelled",request_id}`、`{type:"termination_executed",request_id,state}`。截止由服务端 UTC 时钟掌握；同 terminal 同时最多一个请求。仅 controller 的有效 generation 可发起，所有当前和新连接看到相同 deadline；任何有效 viewer 在截止前取消，取消成功后该 request ID 永不再执行。发起者断开/认证失效、控制转移或 Web 重启取消 pending。截止时在同一协调器串行裁决，复验发起者认证和精确 tmux target 后 kill-session，仅处理目标；未知结果查询 tmux，不自动重试输入/终止。
 
@@ -55,6 +58,14 @@ POST/GET data 同为 `{request_id,deadline,members:[{terminal_id,display_name}],
 
 stream 缺省/`?protocol=2` 保留 exact v2；显式 `?protocol=3` 才启用新帧，重复/空/其他 protocol 返回 400。v3 ready protocol=3、pending 额外 members；termination_pending 额外 members，termination_executed 额外 results，state 仍为该连接目标结果；metadata 为 `{type:"metadata",terminal_id,display_name}`。v2 不接收额外字段/metadata，仍能用原 cancel_termination 撤销整个 v3 批次。二进制输入/输出及 generation 不变。字段完整示例由共享 fixture 锁定。
 
+### DA1/DA2 应答归属（2026-09-30）
+
+只读 viewer attach 发出的 CSI c / CSI > c 查询由该 viewer 的前端 parser 接收；不能把 xterm 默认 onData 应答当键盘输入写到另一个 owner attach，否则 attach 握手时序变化可能让 shell 收到 `1;2c` / `0;276;0c`。
+
+v3 新增严格文本帧 `{type:"device_attributes",kind:"primary"|"secondary"}`，共享 fixture 的 `device_attributes_primary_v3` / `device_attributes_secondary_v3` 锁定形状。无 generation、target 或 payload 字段；v2、未知 kind、null、重复/额外字段拒绝 1008。控制 JSON 仍至多 4 KiB，原二进制 input/controller/generation 校验保持。
+
+服务端在 `Viewer.DeviceAttributes` 复验认证、protocol=3、未关闭 hub、存活 context 与 `h.viewers[v.ID] == v`，仅向 `v.attach.file` 写固定 `ESC[?1;2c` 或 `ESC[>0;276;0c`（锁定 xterm 6.0.0 的 DA1/DA2 原值）。observer 可应答自己的 read-only attach；不修改控制权、不写 owner、不接受任意字节/命令、无缓存重放，写 deadline 2 秒。失败不回退 owner 输入。仅处理已确认 DA1/DA2，不把该能力扩为任意终端响应代理。
+
 ## 4. 验证与错误矩阵
 
 | 条件 | 结果与副作用 |
@@ -65,6 +76,9 @@ stream 缺省/`?protocol=2` 保留 exact v2；显式 `?protocol=3` 才启用新�
 | tmux server 缺失或命令故障 | 503，不隐式启动，不假装空列表 |
 | 已结束终端请求 attach | 409，不复活 target |
 | observer 输入/resize 或旧 generation | `control_denied`/`stale_generation`，零 PTY 写入 |
+| v3 DA1/DA2 自动应答 | 固定字节只进当前 viewer read-only attach，零 owner/pane 输入，不改变 controller |
+| DA 非法 kind/原始 payload/额外字段/v2 | 1008，不写 PTY |
+| DA 认证撤销/连接取消/已关闭 hub | 拒绝，不重放、不回退键盘通道 |
 | 重复终止/取消已结束请求 | `termination_pending`/`termination_missing`，无重复 kill |
 | 未知控制字段/type、无效尺寸 | 1008；超帧 1009，不执行动作 |
 | 输出队列满/写超时 | 1013/断开，只回收自身 attach，pane 继续 |
@@ -83,6 +97,12 @@ stream 缺省/`?protocol=2` 保留 exact v2；显式 `?protocol=3` 才启用新�
 
 新增名称并发/CAS/空号/镜像失败测试、共享 v2/v3 fixture、批次 A/B/C 与独立 D/E 撤销、校验失败零 timer/kill、锁外 kill 与无重试、HTTP 写保护与严格解码，均须运行 race。浏览器新增接管零重放、跨端改名同 DOM/零 WS、上下目标隔离和 v2 observer 整批取消。最新证据与未验证边界见 [UI 调整验收](../../tasks/09-30-workbench-ui-layout/check-report.md)，不能将单测记为所有真实设备验收。
 
+设备应答回归：HTTP decoder 用共享 fixture 验 v3 可达/v2 拒绝、null/重复/任意 payload 拒绝；`device_attributes_test.go` 用独立 pipes 验 controller/observer 各自应答与 owner 零多余输入、失效/非法状态零写。`device_attributes_integration_test.go` 自建私有 tmux socket/raw-input Python pane，真实观察两端 DA 查询并应答，pane 仅收到显式键盘字节；缺 tmux/Python 显式 skip，不能计为真实验收。测试仅清理自身 server/session/root，运行 race。该本机证据不代替 Debian/systemd 持久性验收。
+
 ## 7. 错误与正确示例
 
 错误：Web 创建默认 tmux server；历史 capture 后直接 append raw attach；关闭 WS 调 `kill-session`；失败后自动重发输入。正确：外部独立 server + `-N`、只读 attach 重绘当前画面、独立整体替换历史、断开只 detach，终止只在服务器有效 deadline 到期后精确裁决。
+
+错误：只读 attach 的 DA 应答经二进制 Input 写到 owner。正确：公开 parser 截获查询 → 固定 kind 文本帧 → 当前 viewer 的只读 attach；普通输入和粘贴保持原样，不用正则删除正文中的数字/ANSI。
+
+尺寸同步补充门禁：`device_attributes_integration_test.go` 的自有真实 tmux/PTY fixture 验 140x12→100x30→160x10 各 attach ioctl 网格与真实 pane 相等、pane PID 保持、迟加入 observer 继承当前网格、observer resize 拒绝、全端收到 resized、pane 输入仍仅显式 x。浏览器观察端跟随 ready/resized 且容器缩放不改网格。该本机集成不代替 Debian/systemd 或真实触控板手感验收。

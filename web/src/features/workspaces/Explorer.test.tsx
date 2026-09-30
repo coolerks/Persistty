@@ -31,7 +31,7 @@ it("新建文件调用受保护操作；删除预览取消不删除", async () =
   await user.type(screen.getByRole("textbox", { name: "名称" }), "new.txt");
   await user.click(screen.getByRole("button", { name: "确定" }));
   await waitFor(() => expect(fetch.mock.calls.some(([url, options]) => url.endsWith("/file-operations") && JSON.parse(String(options.body)).target_path === "new.txt")).toBe(true));
-  await user.click(await screen.findByRole("button", { name: "操作 note.txt" }));
+  await user.pointer({ target: await screen.findByRole("treeitem", { name: "note.txt" }), keys: "[MouseRight]" });
   await user.click(await screen.findByRole("menuitem", { name: "永久删除" }));
   expect(await screen.findByRole("dialog", { name: "永久删除" })).toHaveTextContent("note.txt");
   await user.click(screen.getByRole("button", { name: "取消" }));
@@ -71,7 +71,7 @@ it("重命名冲突保留输入弹窗和错误，不误报成功", async () => {
   mount();
   const user = userEvent.setup();
   await screen.findByRole("treeitem", { name: "note.txt" });
-  await user.click(screen.getByRole("button", { name: "操作 note.txt" }));
+  await user.pointer({ target: screen.getByRole("treeitem", { name: "note.txt" }), keys: "[MouseRight]" });
   await user.click(await screen.findByRole("menuitem", { name: "重命名" }));
   await user.clear(screen.getByRole("textbox", { name: "名称" }));
   await user.type(screen.getByRole("textbox", { name: "名称" }), "other.txt");
@@ -107,4 +107,64 @@ it("文件可拖入项目根目录移动", async () => {
   fireEvent.drop(title, { dataTransfer: { types: ["application/x-persistty-entry"], getData: () => JSON.stringify({ folderId: "folder1", path: "docs/note.txt", kind: "file", identity: entry.identity }) } });
   await waitFor(() => expect(operate).toHaveBeenCalled());
   expect(operate.mock.calls[0]?.[1]).toMatchObject({ kind: "move", source_path: "docs/note.txt", target_path: "note.txt" });
+});
+
+const selectionProject: Project = { id: "p", name: "项目", version: 1, main_folder_id: "f", folders: [{ id: "f", path: "/one" }, { id: "g", path: "/two" }] };
+const selectionEntry = (name: string, kind: FileEntry["kind"] = "file"): FileEntry => ({ name, kind, size: 0, mtime: "", identity: name });
+const auth = { state: { status: "anonymous" as const }, login: vi.fn(), logout: vi.fn(), expire: vi.fn(), retry: vi.fn() };
+function selectionEntries() {
+  vi.stubGlobal("WebSocket", class { close() { /* test socket */ } });
+  vi.spyOn(api, "entries").mockImplementation(async (_p, folder, _v, path, cursor) => {
+    if (folder === "g") return { items: [selectionEntry("other.ts")], next_cursor: "", project_version: 1 };
+    if (!path) return { items: [selectionEntry("src", "directory"), selectionEntry("a.ts"), selectionEntry("b.ts")], next_cursor: "", project_version: 1 };
+    if (!cursor) return { items: [selectionEntry("first.ts")], next_cursor: "next", project_version: 1 };
+    return { items: [selectionEntry("nested.ts")], next_cursor: "", project_version: 1 };
+  });
+}
+const selectionFixture = (reveal?: { file: { folderId: string; path: string } | null }) => <AuthContext.Provider value={auth}><Explorer project={selectionProject} onFile={vi.fn()} {...(reveal ? { reveal } : {})} /></AuthContext.Provider>;
+
+it("目录只展开，文件单选跨根；未收到 reveal 时更新不会移动选中项", async () => {
+  selectionEntries();
+  const user = userEvent.setup(); const view = render(selectionFixture());
+  const src = await screen.findByRole("treeitem", { name: "src" });
+  await user.click(src);
+  expect(src).toHaveAttribute("aria-expanded", "true"); expect(src).not.toHaveAttribute("aria-selected"); expect(src).not.toHaveClass("tree-entry-selected");
+  await user.click(screen.getByRole("treeitem", { name: "a.ts" }));
+  view.rerender(selectionFixture());
+  expect(screen.getByRole("treeitem", { name: "a.ts" })).toHaveAttribute("aria-selected", "true");
+  expect(src).toHaveAttribute("aria-expanded", "true");
+  await user.click(screen.getByRole("treeitem", { name: "other.ts" }));
+  expect(screen.getByRole("treeitem", { name: "a.ts" })).toHaveAttribute("aria-selected", "false");
+  expect(screen.getByRole("treeitem", { name: "other.ts" })).toHaveAttribute("aria-selected", "true");
+});
+
+it("重新展开的 reveal 跨分页展开祖先、定位文件；同路径可重复定位", async () => {
+  selectionEntries();
+  const user = userEvent.setup(); const view = render(selectionFixture());
+  await screen.findByRole("treeitem", { name: "src" });
+  const target = { folderId: "f", path: "src/nested.ts" };
+  view.rerender(selectionFixture({ file: target }));
+  const file = await screen.findByRole("treeitem", { name: "nested.ts" });
+  await waitFor(() => expect(file).toHaveAttribute("aria-selected", "true"));
+  expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+  expect(api.entries).toHaveBeenCalledWith("p", "f", 1, "src", "next", expect.any(AbortSignal));
+  expect(screen.queryByRole("button", { name: "加载更多" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("treeitem", { name: "src" }));
+  expect(screen.queryByRole("treeitem", { name: "nested.ts" })).not.toBeInTheDocument();
+  view.rerender(selectionFixture({ file: target }));
+  expect(await screen.findByRole("treeitem", { name: "nested.ts" })).toHaveAttribute("aria-selected", "true");
+  view.rerender(selectionFixture({ file: { folderId: "g", path: "other.ts" } }));
+  await waitFor(() => expect(screen.getByRole("treeitem", { name: "other.ts" })).toHaveAttribute("aria-selected", "true"));
+  expect(screen.getByRole("treeitem", { name: "nested.ts" })).toHaveAttribute("aria-selected", "false");
+});
+
+it("条目无三点按钮，右键保留全部文件操作及 Escape 返回", async () => {
+  selectionEntries();
+  const user = userEvent.setup(); render(selectionFixture());
+  const file = await screen.findByRole("treeitem", { name: "a.ts" });
+  expect(screen.queryByRole("button", { name: /^操作 / })).not.toBeInTheDocument();
+  await user.pointer({ target: file, keys: "[MouseRight]" });
+  for (const name of ["打开", "复制路径", "复制相对路径", "重命名", "复制", "剪切", "下载文件", "永久删除"]) expect(await screen.findByRole("menuitem", { name })).toBeVisible();
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
 });

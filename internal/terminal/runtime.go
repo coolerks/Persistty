@@ -112,9 +112,11 @@ func (r *Runtime) ConnectProtocol(ctx context.Context, terminal storage.Terminal
 		r.hubs[terminal.ID] = h
 		go h.drainOwner()
 	}
-	attach, err := r.tmux.Attach(terminal.TmuxSessionName, true, cols, rows)
+	h.mu.Lock()
+	// Every output attach renders the same grid as the writable owner. A viewer
+	// cannot independently change the pane size, even on a larger display.
+	attach, err := r.tmux.Attach(terminal.TmuxSessionName, true, h.cols, h.rows)
 	if err != nil {
-		h.mu.Lock()
 		if len(h.viewers) == 0 {
 			delete(r.hubs, terminal.ID)
 			h.closed = true
@@ -127,7 +129,6 @@ func (r *Runtime) ConnectProtocol(ctx context.Context, terminal storage.Terminal
 	vctx, cancel := context.WithCancel(ctx)
 	v := &Viewer{ID: viewerID, Token: token, attach: attach, hub: h,
 		queue: make(chan Frame, 32), ctx: vctx, cancel: cancel, protocolVersion: protocol}
-	h.mu.Lock()
 	if h.closed {
 		h.mu.Unlock()
 		r.mu.Unlock()
@@ -295,6 +296,37 @@ func (v *Viewer) Input(ctx context.Context, payload []byte) error {
 	return err
 }
 
+// DeviceAttributes answers only this viewer's read-only attach capability query.
+// Fixed replies cannot carry keyboard input or target the writable owner PTY.
+func (v *Viewer) DeviceAttributes(ctx context.Context, kind string) error {
+	var reply string
+	switch kind {
+	case "primary":
+		reply = "\x1b[?1;2c"
+	case "secondary":
+		reply = "\x1b[>0;276;0c"
+	default:
+		return ErrInvalidRequest
+	}
+	if err := v.authorized(ctx); err != nil {
+		return err
+	}
+	h := v.hub
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if v.protocol() != 3 || h.closed || v.ctx.Err() != nil || h.viewers[v.ID] != v {
+		return ErrControlDenied
+	}
+	if err := v.attach.file.SetWriteDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		return err
+	}
+	n, err := v.attach.file.Write([]byte(reply))
+	if err == nil && n != len(reply) {
+		return io.ErrShortWrite
+	}
+	return err
+}
+
 func (v *Viewer) Resize(ctx context.Context, generation uint64, cols, rows int) error {
 	if !validSize(cols, rows) {
 		return ErrInvalidRequest
@@ -312,7 +344,13 @@ func (v *Viewer) Resize(ctx context.Context, generation uint64, cols, rows int) 
 		return err
 	}
 	h.cols, h.rows = cols, rows
-	h.eventLocked(v, map[string]any{"type": "resized", "cols": cols, "rows": rows})
+	for _, viewer := range h.viewers {
+		if err := viewer.attach.Resize(cols, rows); err != nil {
+			viewer.cancel()
+			continue
+		}
+		h.eventLocked(viewer, map[string]any{"type": "resized", "cols": cols, "rows": rows})
+	}
 	return nil
 }
 

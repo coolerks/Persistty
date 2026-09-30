@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Folder, House } from "lucide-react";
+import { ArrowUp, House } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { api, errorMessage } from "@/lib/api/client";
 import type { DirectoryListing } from "@/lib/api/decoder";
+import { FileTypeIcon } from "./FileTypeIcon";
 
 export function DirectoryPicker({ open, onOpenChange, onSelect }: { open: boolean; onOpenChange(open: boolean): void; onSelect(path: string): void }) {
   const [path, setPath] = useState("");
@@ -49,7 +50,7 @@ export function DirectoryPicker({ open, onOpenChange, onSelect }: { open: boolea
       <span className="min-w-0 truncate font-mono">{listing?.path ?? ""}</span>
     </div>
     <ul aria-label="服务器目录" className="max-h-72 min-h-36 overflow-y-auto">
-      {listing?.items.map(name => <li key={name}><Button variant="ghost" className="flex h-9 w-full justify-start gap-2 truncate font-normal" onClick={() => void browse(listing.path === "/" ? `/${name}` : `${listing.path}/${name}`)}><Folder className="size-4 shrink-0" /><span className="truncate">{name}</span></Button></li>)}
+      {listing?.items.map(name => <li key={name}><Button variant="ghost" className="flex h-9 w-full justify-start gap-2 truncate font-normal" onClick={() => void browse(listing.path === "/" ? `/${name}` : `${listing.path}/${name}`)}><FileTypeIcon path={name} kind="directory" /><span className="truncate">{name}</span></Button></li>)}
       {listing?.items.length === 0 && <li className="py-4 text-center text-sm text-muted-foreground">此目录下没有子文件夹</li>}
     </ul>
     <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>取消</Button><Button disabled={!listing || pending || path !== listing.path} onClick={() => { if (listing) { onSelect(listing.path); onOpenChange(false); } }}>选择此文件夹</Button></DialogFooter>

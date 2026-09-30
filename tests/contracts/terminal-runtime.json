@@ -94,5 +94,7 @@
     "type": "termination_executed", "request_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "state": "terminated",
     "results": [ { "terminal_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "state": "terminated" }, { "terminal_id": "cccccccccccccccccccccccccccccccc", "state": "unavailable" } ]
   },
-  "metadata_v3": { "type": "metadata", "terminal_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "display_name": "构建" }
+  "metadata_v3": { "type": "metadata", "terminal_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "display_name": "构建" },
+  "device_attributes_primary_v3": { "type": "device_attributes", "kind": "primary" },
+  "device_attributes_secondary_v3": { "type": "device_attributes", "kind": "secondary" }
 }
