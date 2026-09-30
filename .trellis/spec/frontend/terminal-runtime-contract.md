@@ -23,6 +23,8 @@ scope 新动作：`takeover(terminal)`、`inputIntent(id)`、`close(terminals)`�
 - xterm onData 同时含用户输入与自动设备应答。live 实例用公开 parser.registerCsiHandler 对 `{final:"c"}` / `{prefix:">",final:"c"}` 消费 DA1/DA2，首参数为 0 时调用 `TerminalSocket.sendDeviceAttributes("primary"|"secondary")`，阻止默认 onData 应答误入 owner shell。参数大于 0 与原实现一样消费但不回答，分帧序列由原 parser 处理。handler 随 live 实例释放，不因 role 变化重建。
 - `sendDeviceAttributes` 发送后端批准的 v3 固定枚举文本帧，允许 observer 回答自己的 read-only attach；必须已 ready、未 dispose、OPEN 且 bufferedAmount 不超过 1 MiB，失败不缓存/重放或回退 sendInput。键盘/粘贴/鼠标仍复验当前 controller/generation，粘贴与应答相同的字节也保持原输入；不能基于字符串 regex 猜输入来源。
 - 可见、正尺寸且当前 controller 才 fit/发送 resize。observer live xterm 使用 ready/resized 的服务端字符网格，不按自己容器 fit，不发送 resize；较小容器裁剪、较大容器留空，不能让只读 PTY、pane 与 renderer 尺寸各异而出现 tmux 边界线/句点填充。接管后才 fit 自己尺寸；历史独立实例仍按本地容器 fit。输入必须当前 ready/controller/generation；离线立刻取消 ready，socket dispose 后晚到帧无效。输入不缓存、不重放。
+- FitAddon 0.11.0 只扣除 `.xterm` 自身内边距，不扣外层宿主内边距；实时/历史宿主不放 padding，`5px 8px` 放在 height:100% 的 `.xterm` 上。controller 和历史的 screen/最后一行须在宿主内边距边界内，不能以 overflow:clip 掩盖算错的行列。observer 的服务端网格裁剪规则保持独立。
+- xterm 6.0.0 只给 `.xterm-scrollable-element` 设置主题背景，绝对定位的 `.xterm-viewport` 默认黑色；宿主 owner CSS 显式将 viewport 背景设为 `var(--background)`。整数网格未铺满剩余空间或留白/内边距时不能露黑边。正常 ANSI 下划线、横线正文保留，不能全局禁用 text-decoration 或过滤输出。
 - 失败后探测认证，1008/401/403 停止；其余最多 5 次指数退避（500..8000 ms 加 jitter），耗尽显示手动重试。控制被他端接管后不自动夺回。
 - running 的上方标签 X/会话 trash 请求终止；下方面板 X 仅收起。明确 terminated 的标签关闭仅调整本浏览器视图，详见下文；unavailable 不当作已结束。Dialog 使用应用 body portal，不受终端 DOM 隐藏影响；显示服务器截止，新端从 ready 接收同 request/deadline。取消/失败保留入口，执行后重新查真实状态。
 - 手机 Ctrl/Alt 使用官方 shadcn Toggle 的 pressed 状态，其他按键用 Button，发送真实控制字节。错误用 Alert，空/结束状态用 Empty，确认用 Dialog，选择用 Select；遵守官方查找记录，禁止手写适用基础组件替代品和直接引入 Radix。
@@ -76,6 +78,8 @@ UI 调整新增 provider 部分接管失败零 POST、共享 v3 fixture、改名
 已结束关闭回归由 `terminal-view.test.ts`、`TerminalRuntime.test.tsx` 与 `workbench-interactions.spec.ts` 验证：上下标签 X/关闭其他/全部、持久偏好重载、running/unavailable 保护、混合批次取消零 POST。合成接口工作台测试只验 UI 状态流，不代替真实 PTY、tmux、倒计时执行和 Debian 持久性验收。
 
 历史/滚轮回归由 `terminal-scrolling.test.ts` 验 pixel/line/page、小数与主轴换算，`terminal-scrolling.spec.ts` 用真实 xterm/WS decoder 与合成 HTTP/WS 分别验 controller/observer：LF/CRLF/ANSI/中文对齐、原 live target 的连续惯性、40 次 0.5px 位移不过度放大、纯横向/带纵向噪声横向、慢 HTTP 期间保留画面/单请求/零输入、历史不重建、底部噪声与返回 live、Ctrl 缩放、单 WS、TUI 鼠标及 Shift 强制历史。`terminal-device-attributes.spec.ts` 同时验 observer ready/resized 网格固定，隔离真实 tmux 录制中的边界线/句点经同步重绘消失；录制解析与当次真实后端 PTY 尺寸测试配套，不能用录制代替运行时或 Debian 验收。
+
+`terminal-geometry.spec.ts` 在三个桌面视口与浅/深主题下，用真实 xterm/FitAddon、隔离 HTTP/WS 验 controller 最后一行/光标和历史底部行完整容纳、viewport 与 scrollable 背景一致、正常 ANSI 下划线保留、单 WS/零输入。不能仅检查文字存在或可见来判定没有局部裁剪；须比较 screen 边界与宿主内边距边界。
 
 设备应答由 WS 单测验 observer 可发固定枚举且无键盘权限、未 ready/离线/背压零发送；`terminal-device-attributes.spec.ts` 在真实 xterm 中分别验 controller/observer 的省略/0/非零参数、分帧/重复/晚到 DA 查询仅发固定文本帧，真实键盘/方向键及合成 paste 事件保留原字节；配合后端 pipe/真实隔离 tmux 测试验证 attach 归属，不把合成 WS 浏览器证据称为真实后端集成。
 

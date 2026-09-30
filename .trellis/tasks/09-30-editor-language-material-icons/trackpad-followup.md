@@ -20,7 +20,7 @@
 - 前端 lint/typecheck/test/build 实际通过：20 文件、110 条单测，构建成功。原 jsdom canvas 提示与已有大 chunk 提示保留；没有通过安装无关依赖或提高警告阈值消除提示。
 - 同一隔离 5175 Vite 上 `terminal-scrolling.spec.ts` 两角色、`terminal-device-attributes.spec.ts` 两角色、`workbench-interactions.spec.ts` 共 5 用例通过。新增真实网格录制后重跑设备应答两例通过，并再跑 lint/typecheck。保留 ANSI/LF/中文、TUI/Shift/Ctrl、历史加载期间零输入、同 live DOM/单 WS/单请求、标签/树/已结束关闭回归。
 - 后端 gofmt、go test ./...、go vet ./...、go test -race ./... 实际通过，无 tmux 依赖跳过。`TestDeviceAttributesRealTmux -count=1 -v` 在 macOS tmux 3.7c 的独立 socket/config/raw pane 上通过：三次尺寸同步所有 PTY、真实 pane 同尺寸/PID 不变、迟加入 observer 继承网格、禁止 observer resize、全 viewer 收广播、pane 只收到显式 x，精确清理所有自有客户端/server/root。
-- 黑线/句点实证：独立固定 cat pane 的 owner 从 80x24 缩放成 140x12，故意保留只读输出为 80x24，真实输出新增 80 个 `─` 和 880 个 `·`；将只读 PTY 同步 140x12 后重绘输出两者为 0。录制保存到 `web/tests/fixtures/terminal-grid-recording.json`（只有自有合成 pane，无用户输入/正文），浏览器真实 xterm 回放复现横线/句点并在 resized+重绘后消失。黑线是 tmux 边界字符，未删除正文或调整 fill-character 掩盖问题。[tmux 官方 FAQ](https://github.com/tmux/tmux/wiki/FAQ#why-do-i-see-dots-around-a-session-when-i-attach-to-it) 解释了窗口尺寸与句点的关系；本轮结论以真实录制和 PTY 查询为主。
+- 黑线/句点实证：独立固定 cat pane 的 owner 从 80x24 缩放成 140x12，故意保留只读输出为 80x24，真实输出新增 80 个 `─` 和 880 个 `·`；将只读 PTY 同步 140x12 后重绘输出两者为 0。录制保存到 `web/tests/fixtures/terminal-grid-recording.json`（只有自有合成 pane，无用户输入/正文），浏览器真实 xterm 回放复现横线/句点并在 resized+重绘后消失。本录制的横线是 tmux 边界字符，未删除正文或调整 fill-character 掩盖问题；后续 CSS 黑色底层与末行裁剪证据见[终端几何补充](terminal-geometry-followup.md)。[tmux 官方 FAQ](https://github.com/tmux/tmux/wiki/FAQ#why-do-i-see-dots-around-a-session-when-i-attach-to-it) 解释了窗口尺寸与句点的关系；本轮结论以真实录制和 PTY 查询为主。
 - owner Resize 在 hub 锁内先更新输入 PTY，再更新所有输出 PTY并通知，读输出经同锁排队；单个输出 PTY 失败只取消该 viewer。Connect 持相同锁按当前 hub cols/rows 创建只读 attach。观察端 live 使用 ready/resized 网格，容器变小裁剪、变大留白，接管后才 fit；历史仍本地 fit。
 - 证据边界：Chromium 原生滚轮与合成小数事件覆盖逻辑/渲染，不能声称所有真实触控板或 Safari 手感已验收；macOS 私有 tmux 测试不代替 Debian/systemd 持久性验收。更新运行中的版本需要重启 Web 服务并刷新浏览器，不终止既有 tmux 会话，不自动重跑命令。
 
@@ -54,7 +54,7 @@
 
 - 搜索并核对其他尺寸/角色消费者，更新 lifecycle 中 observer fit 的旧描述；原历史报告保留阶段证据，并链接本次替代方案。
 - 实时 PTY 与独立历史继续分离；不把 TUI alternate 当普通 shell 是否可滚动的判断，也不修改 readonly attach 的 ignore-size 以让观察端影响进程。
-- 异常画面先检查真实输出、PTY 网格与 DOM，再判 CSS；黑线和句点相同来源，不追加两个正文过滤修补。
+- 异常画面先检查真实输出、PTY 网格与 DOM，再判 CSS；本录制的横线和句点相同来源，其他黑线还须核对底层背景与渲染边界，不追加正文过滤修补。
 - 编译/单测无法发现浏览器的手势锁定或 tmux 填充；相应需求验收必须有真实库、真实 PTY 和连续事件证据。
 
 ### 5. 知识记录

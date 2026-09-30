@@ -36,3 +36,5 @@ PRD、父子设计与实施清单、来源核对已完成。已增加桌面“�
 后续用户直接授权的交互缺陷在同一父任务记录：[树/关闭交互](interaction-followup.md)、[历史/滚轮与 tab 滚动条](scrolling-followup.md)、[设备属性应答误入 shell](device-attributes-followup.md)。最后一项涉及终端前后端 v3 固定枚举帧，变更边界、验收与运行时限制由对应补充文档及 owner 规范共同维护。
 
 最新触控板不跟手/横向白屏与黑线/句点反馈继续实施，见[触控板与字符网格补充](trackpad-followup.md)：精细原生滚动、连续手势模式稳定、加载画面保留，及 controller/只读输出 attach/observer renderer 网格一致。沿用既有 resized 字段并广播给所有同步成功端，不新增观察端进程 resize 权限、不提交或归档。
+
+随后黑线/末行遮挡反馈的 DOM 定位与修正见[终端几何补充](terminal-geometry-followup.md)：FitAddon 内边距计量与底层 viewport 主题背景，包含原页面检查及三个视口的浏览器回归。

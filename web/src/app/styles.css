@@ -184,8 +184,11 @@
 .terminal-connection svg { width: 12px; height: 12px; }
 .terminal-connection.connected { color: var(--primary); }
 .terminal-role { color: var(--muted-foreground); white-space: nowrap; }
-.terminal-live, .terminal-history-surface { flex: 1; min-width: 0; min-height: 0; overflow: clip; overscroll-behavior: none; padding: 5px 8px; }
-.terminal-live .xterm, .terminal-history-surface .xterm { height: 100%; }
+.terminal-live, .terminal-history-surface { flex: 1; min-width: 0; min-height: 0; overflow: clip; overscroll-behavior: none; }
+/* FitAddon subtracts xterm's padding, not its parent's padding. */
+.terminal-live .xterm, .terminal-history-surface .xterm { height: 100%; padding: 5px 8px; }
+/* xterm 6 themes its scrollable element, but the backing viewport defaults to black. */
+.terminal-live .xterm-viewport, .terminal-history-surface .xterm-viewport { background-color: var(--background); }
 .terminal-history { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; }
 .terminal-history-heading { height: 25px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 8px; border-bottom: 1px solid var(--border); color: var(--muted-foreground); font-size: 11px; }
 .terminal-history-heading svg { width: 13px; height: 13px; }

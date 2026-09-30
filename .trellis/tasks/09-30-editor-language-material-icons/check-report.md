@@ -72,3 +72,5 @@ jsdom canvas getContext 未实现提示仍存在，真实着色由 Chromium 验�
 ## 清理与当前状态
 
 本轮专属 5175/18981 测试端口已关闭，随机 fixture 根目录、临时数据库/配置/合成文件及 tmp/editor-assets-setup 已精确清理；用户的服务/文件/终端未处理。保留代码、规划和报告供审阅。未经用户要求不提交、不归档。
+
+最新末行遮挡与黑色底边修正及本轮验证见[终端几何补充](terminal-geometry-followup.md)，其几何/背景结论补充此前 tmux 字符网格录制的覆盖边界。
