@@ -52,3 +52,27 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: 完成 W03 持久终端与多端控制
+<!-- trellis-session: v=2 fp=7eb9b0a3d01856f8 -->
+
+**Date**: 2026-09-30
+**Task**: 完成 W03 持久终端与多端控制
+**Branch**: `main`
+
+### Summary
+
+W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控制权、全端可取消倒计时、手机快捷键与安全链接。真实 Debian 恢复/产品探针 40 项及完整 9 条浏览器 E2E 通过，Go test/vet/race、前端 lint/typecheck/49 单测/build 通过；连接信息仅来自忽略的 .env，隔离资源精确清理。用户批准三批提交及归档，不推送。W05 编辑与完整布局、W08 正式部署仍未完成。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0a07afd` | feat: 实现 W03 持久终端后端与 Debian 验收探针 |
+| `b48ab4d` | feat: 接入 xterm 工作台与手机终端控制 |
+| `6e07bb6` | docs: 固化 W03 终端契约与完整验收记录 |
+
+### Status
+
+[OK] **Completed**
