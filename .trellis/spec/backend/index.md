@@ -13,6 +13,7 @@ Persistty是Debian单用户浏览器终端与轻量文件工作台。W01 已有�
 | [日志](logging-guidelines.md) | slog、脱敏、审计 |
 | [远端验证](remote-validation.md) | 私有 .env 连接、SSH/SCP 与证据去敏 |
 | [命令与取消](process-guidelines.md) | context、git/rg/tmux 适配器 |
+| [本机开发启动](local-development.md) | Mac/Linux 一键启动、自有进程清理与 tmux 保留 |
 | [Terminal 生命周期](terminal-lifecycle.md) | tmux、PTY、systemd Spike |
 | [W03 终端运行时契约](terminal-runtime-contract.md) | 终端 HTTP/WS、历史/控制/终止与验收门禁 |
 | [Go 桥接实验](bridge-validation.md) | 独立模块、真实 WS/PTY、D06 门禁 |

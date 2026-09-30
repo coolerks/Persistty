@@ -8,6 +8,25 @@ W01/W02/W04 已完成归档，W03 已通过真实 Debian/systemd 和桌面/手�
 
 需要 Go 1.26 工具链和 Node.js 24，依赖版本锁定在 go.mod/go.sum 与 web/package-lock.json。前端使用 npm，不混用其他包管理器。
 
+已有 `.cache/dev/config.yaml` 和前端依赖时，可使用一键开发入口，同时启动独立 tmux、后端和 Vite。Mac 上安装 tmux 后，默认 `/usr/bin/tmux` 不存在时自动从 PATH 查找 Homebrew 路径；无需把 Persistty YAML 写入 `~/.tmux.conf`：
+
+```bash
+./scripts/dev.sh start --shell /bin/zsh
+./scripts/dev.sh stop
+./scripts/dev.sh restart
+```
+
+`start` 后台运行，成功后打印工作台地址，重复执行不会启动第二套服务；`stop` 只停止本启动器的前后端及子进程，**不停止 tmux 或其中的任务**。`restart` 重启前后端，默认沿用上次启动参数，也可追加选项覆盖；同样保留 tmux 和终端任务。启动日志位于已忽略的 `.cache/dev/launcher.log`，权限0600。
+
+默认读取原配置的后端地址和前端端口，保留原密码与数据库；只在已忽略 `.cache/dev/run-*` 写入0600运行配置，不覆盖原文件。每次启动构建最新后端，复用同私有 tmux socket。tmux 使用项目 [配置](deploy/tmux.example.conf)，不会读取或修改 `~/.tmux.conf`。端口已占用时拒绝启动，不自动结束任何现有服务；先停止旧启动命令，或指定其他端口：
+
+```bash
+./scripts/dev.sh start --shell /bin/zsh --listen 127.0.0.1:8081 --port 5175
+./scripts/dev.sh --help
+```
+
+Linux 可省略 `--shell`，沿用配置默认 `/bin/sh`。该入口只支持 `development` 模式，不替代 Debian 正式 systemd/Nginx 部署。首次准备配置和依赖、或需要分别启动服务时仍可按下方操作。
+
 ```bash
 go build -o persistty ./cmd/persistty
 npm --prefix web ci
