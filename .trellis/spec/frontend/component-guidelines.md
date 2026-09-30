@@ -34,6 +34,10 @@ export function CustomSaveButton({ pending, onSave }: SaveButtonProps) {
 
 官方组件与安装方式须在实施时核实；不在当前规范阶段安装依赖。组件来源约定不代替产品确认流程、资源生命周期或后端安全契约。
 
+当前 Tabs 是官方 CLI base-nova 生成源码。已锁定的 Base UI 输出 `data-orientation="horizontal|vertical"`，生成样式若使用 `data-horizontal/data-vertical` 必须按实际属性修正选择器，记录差异并验窄屏；不替换交互原语。TabsContent 必须归对应 Tabs root，外部动作按钮是 Trigger 同级，不能嵌入按钮。
+
+固定工作台裁剪区应有就近定位边界：长列表的 sr-only/绝对定位元素可能越出静态祖先并撑大 document，不能仅验 shell.height。实测 document.scrollHeight/clientHeight、scrollWidth/innerWidth，同时证明树/编辑器/历史内部可滚动，不用全站 body overflow:hidden 掩盖。
+
 ## 业务交互与验收
 
 U67..U73覆盖下文旧IDE示例：不新增command palette/AI/扩展入口；上下两主区域内部仅左右分组，手机单内容；下方面板X只收起，单会话trash和上方terminal标签X均请求统一终止倒计时，仅controller发起、任一观察端可取消。文件标签X关闭视图保护草稿。移动终端不销毁runtime；边缘拖出展开、按钮/键盘替代入口必备。旧单端确认Dialog不能替代全端倒计时，旧upload Keep Both不是当前用户确认的冲突策略。

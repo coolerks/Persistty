@@ -1,3 +1,4 @@
+import { menuAction, controlled } from "./terminal-actions";
 import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -8,7 +9,7 @@ async function createTerminal(page: Page) {
   ]);
   const created = await response.json() as { data: { id: string } };
   const runtime = page.locator(`.terminal-runtime[data-terminal-id="${created.data.id}"]`);
-  await expect(runtime.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(runtime);
   return runtime;
 }
 
@@ -44,7 +45,7 @@ test("三个产品终端跨 Web SIGKILL 保持计数、HTTP 与 TUI", async ({ p
   const result = JSON.parse(output) as { checks: Record<string, boolean>; pane_count: number };
   expect(result.pane_count).toBe(3);
   expect(Object.values(result.checks).every(Boolean)).toBe(true);
-  await expect(tui.getByText("控制中", { exact: true })).toBeVisible({ timeout: 20000 });
+  await controlled(tui, 20000);
   await expect(tui.locator(".xterm-rows")).toContainText("W03_DETERMINISTIC_TUI");
   await tui.getByRole("textbox", { name: "Terminal input" }).click();
   await page.keyboard.type("k");
@@ -60,17 +61,17 @@ test("三个产品终端跨 Web SIGKILL 保持计数、HTTP 与 TUI", async ({ p
   await page.context().setOffline(true);
   // CDP offline blocks requests but may retain loopback WS and omit this event.
   await page.evaluate(() => window.dispatchEvent(new Event("offline")));
-  await expect(tui.getByText("控制中", { exact: true })).toHaveCount(0);
+  await expect(tui).toHaveAttribute("data-role", "observer");
   await page.context().setOffline(false);
-  await expect(tui.getByText("已连接", { exact: true })).toBeVisible({ timeout: 20000 });
-  if (await tui.getByRole("button", { name: "接管", exact: true }).isVisible()) await tui.getByRole("button", { name: "接管", exact: true }).click();
-  await expect(tui.getByText("控制中", { exact: true })).toBeVisible();
+  await expect(tui).toHaveAttribute("data-connection", "connected", { timeout: 20000 });
+  if (await tui.getAttribute("data-role") !== "controller") await menuAction(page, tui, "接管");
+  await controlled(tui);
   await page.getByRole("button", { name: "退出登录" }).click();
   await page.getByRole("textbox", { name: "访问密码" }).fill(process.env.PERSISTTY_E2E_PASSWORD!);
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page.getByRole("button", { name: "退出登录" })).toBeVisible();
   await page.goto(`/terminals/${id}`);
-  await expect(tui.getByText("控制中", { exact: true })).toBeVisible({ timeout: 20000 });
+  await controlled(tui, 20000);
   await page.close();
   const reopened = await page.context().newPage();
   await reopened.goto(`/terminals/${id}`);
@@ -80,7 +81,7 @@ test("三个产品终端跨 Web SIGKILL 保持计数、HTTP 与 TUI", async ({ p
   })) as { checks: Record<string, boolean>; pane_count: number };
   expect(normal.pane_count).toBe(3);
   expect(Object.values(normal.checks).every(Boolean)).toBe(true);
-  await expect(reopened.getByText("控制中", { exact: true })).toBeVisible({ timeout: 20000 });
+  await controlled(reopened.locator(".terminal-runtime:visible"), 20000);
   await reopened.getByRole("textbox", { name: "Terminal input" }).click();
   await reopened.keyboard.type("z");
   await expect(reopened.locator(".xterm-rows")).toContainText("KEY: 7a");

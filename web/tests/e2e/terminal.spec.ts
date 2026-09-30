@@ -1,3 +1,4 @@
+import { menuAction, controlled } from "./terminal-actions";
 import { expect, test, type Page } from "@playwright/test";
 
 async function openProject(page: Page) {
@@ -18,7 +19,7 @@ test("桌面终端与历史快照", async ({ page }) => {
   ]);
   const created = await createdResponse.json() as { data: { id: string } };
   const runtime = page.locator(`.terminal-runtime[data-terminal-id="${created.data.id}"]`);
-  await expect(runtime.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(runtime);
   const input = runtime.getByRole("textbox", { name: "Terminal input" });
   await input.click();
   await page.keyboard.type("pwd");
@@ -26,10 +27,10 @@ test("桌面终端与历史快照", async ({ page }) => {
   await expect(runtime.locator(".terminal-live .xterm-screen")).toBeVisible();
   await expect(runtime.locator(".terminal-live .xterm-rows")).toContainText("pwd");
   await page.screenshot({ path: "test-results/w03-desktop.png" });
-  await runtime.getByRole("button", { name: "查看终端历史" }).click();
+  await menuAction(page, runtime, "查看终端历史");
   await expect(page.getByText("普通历史快照")).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await runtime.getByRole("button", { name: "返回实时终端" }).click();
+  await menuAction(page, runtime, "返回实时终端");
 });
 
 test("手机终端快捷键和窄屏布局", async ({ page }) => {
@@ -46,7 +47,7 @@ test("手机终端快捷键和窄屏布局", async ({ page }) => {
     page.getByRole("button", { name: "新建终端" }).click(),
   ]);
   id = ((await response.json()) as { data: { id: string } }).data.id;
-  await expect(page.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(page.locator(".terminal-runtime:visible"));
   const shortcuts = page.getByLabel("手机终端快捷键");
   await expect(shortcuts).toBeVisible();
   for (const name of ["Ctrl", "Alt", "Esc", "Tab", "上箭头", "下箭头", "左箭头", "右箭头", "^C", "^L", "^S", "^Z", "/"]) {
@@ -80,7 +81,7 @@ test("终端粘贴和 Ctrl 点击原样打开链接", async ({ page }) => {
   ]);
   const id = ((await response.json()) as { data: { id: string } }).data.id;
   const runtime = page.locator(`.terminal-runtime[data-terminal-id="${id}"]`);
-  await expect(runtime.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(runtime);
   const input = runtime.getByRole("textbox", { name: "Terminal input" });
   await input.click();
   await input.evaluate(element => {
@@ -115,34 +116,33 @@ test("双端接管、取消终止并在闭页后恢复", async ({ page }) => {
   ]);
   const created = await createdResponse.json() as { data: { id: string } };
   const runtime = page.locator(`.terminal-runtime[data-terminal-id="${created.data.id}"]`);
-  await expect(runtime.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(runtime);
   const url = `/terminals/${created.data.id}`;
   const second = await page.context().newPage();
   await second.goto(url);
-  await expect(second.getByText("只读观察", { exact: true })).toBeVisible();
-  await second.getByRole("button", { name: "接管" }).click();
-  await expect(second.getByText("控制中", { exact: true })).toBeVisible();
-  await expect(runtime.getByText("只读观察", { exact: true })).toBeVisible();
+  await expect(second.locator(".terminal-runtime")).toHaveAttribute("data-role", "observer");
+  await menuAction(second, second.locator(".terminal-runtime"), "接管");
+  await controlled(second.locator(".terminal-runtime:visible"));
+  await expect(runtime).toHaveAttribute("data-role", "observer");
 
-  await second.getByRole("button", { name: "终止当前终端" }).click();
-  await second.getByRole("button", { name: "开始倒计时" }).click();
-  await expect(page.getByRole("dialog", { name: "终止倒计时" })).toBeVisible();
+  await menuAction(second, second.locator(".terminal-runtime"), "关闭当前");
+  await second.getByRole("button", { name: "接管并关闭" }).click();
+  await expect(page.getByRole("dialog", { name: "终端终止状态" })).toBeVisible();
   const third = await page.context().newPage();
   await third.goto(url);
-  await expect(third.getByRole("dialog", { name: "终止倒计时" })).toBeVisible();
+  await expect(third.getByRole("dialog", { name: "终端终止状态" })).toBeVisible();
   await page.getByRole("button", { name: "取消终止" }).click();
-  await expect(page.getByRole("dialog", { name: "终止倒计时" })).toHaveCount(0);
-  await expect(second.getByRole("dialog", { name: "终止倒计时" })).toHaveCount(0);
-  await expect(third.getByRole("dialog", { name: "终止倒计时" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "终端终止状态" })).toHaveCount(0);
+  await expect(second.getByRole("dialog", { name: "终端终止状态" })).toHaveCount(0);
+  await expect(third.getByRole("dialog", { name: "终端终止状态" })).toHaveCount(0);
   await third.close();
-  await expect(page.getByRole("button", { name: "终端 运行中" }).last()).toBeVisible();
+  await expect(runtime).toHaveAttribute("data-connection", "connected");
 
   await second.close();
   await page.close();
   const reopened = await page.context().newPage();
   await reopened.goto(url);
-  await expect(reopened.getByRole("button", { name: "终端 运行中" }).last()).toBeVisible();
-  await expect(reopened.getByText("已连接", { exact: true })).toBeVisible();
+  await controlled(reopened.locator(".terminal-runtime"));
 });
 
 test("终端在上下宿主移动并保留控制权", async ({ page }) => {
@@ -157,30 +157,28 @@ test("终端在上下宿主移动并保留控制权", async ({ page }) => {
   const created = await createdResponse.json() as { data: { id: string } };
   const lower = page.locator(`.terminal-pane .terminal-runtime[data-terminal-id="${created.data.id}"]`);
   const upper = page.locator(`.editor-upper-terminal .terminal-runtime[data-terminal-id="${created.data.id}"]`);
-  await expect(lower.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(lower);
   const connected = connections;
-  await page.getByRole("button", { name: "移到上方标签" }).click();
-  await expect(page.getByRole("button", { name: "移回下方终端面板" })).toBeVisible();
-  await expect(upper.getByText("控制中", { exact: true })).toBeVisible();
+  await menuAction(page, lower, "移到上方标签");
+  await controlled(upper);
 
-  await page.getByRole("button", { name: "关闭终端 终端" }).click();
+  await menuAction(page, upper, "关闭当前");
   await expect(page.getByRole("dialog", { name: "终止终端？" })).toBeVisible();
-  await page.getByRole("button", { name: "开始倒计时" }).click();
-  await expect(page.getByRole("dialog", { name: "终止倒计时" })).toBeVisible();
+  await page.getByRole("button", { name: "接管并关闭" }).click();
+  await expect(page.getByRole("dialog", { name: "终端终止状态" })).toBeVisible();
   await page.getByRole("button", { name: "取消终止" }).click();
-  await expect(page.getByRole("dialog", { name: "终止倒计时" })).toHaveCount(0);
-  await page.getByRole("button", { name: "移回下方终端面板" }).click();
-  await expect(page.getByRole("button", { name: "移到上方标签" })).toBeVisible();
-  await expect(lower.getByText("控制中", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "终端终止状态" })).toHaveCount(0);
+  await menuAction(page, upper, "移回下方终端面板");
+  await controlled(lower);
   await page.getByRole("button", { name: "刷新终端", exact: true }).click();
-  await expect(lower.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(lower);
   await page.getByRole("button", { name: "收起终端面板" }).click();
   await page.getByRole("button", { name: "终端面板", exact: true }).click();
-  await expect(lower.getByText("控制中", { exact: true })).toBeVisible();
-  await page.locator('.terminal-tab[aria-current="page"]').dragTo(page.getByRole("region", { name: "左侧编辑器" }));
-  await expect(upper.getByText("控制中", { exact: true })).toBeVisible();
-  await page.getByRole("tab", { name: "终端" }).dragTo(page.getByRole("region", { name: "终端面板" }));
-  await expect(lower.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(lower);
+  await page.locator(`.terminal-tab[data-terminal-id="${created.data.id}"]`).dragTo(page.getByRole("region", { name: "左侧编辑器" }));
+  await controlled(upper);
+  await page.locator(`.terminal-tab[data-terminal-id="${created.data.id}"]`).dragTo(page.getByRole("region", { name: "终端面板" }));
+  await controlled(lower);
   const response = await page.request.get("/api/v1/terminals");
   const list = await response.json() as { data: { items: Array<{ id: string; state: string }> } };
   expect(list.data.items.filter(item => item.id === created.data.id)).toHaveLength(1);
@@ -197,13 +195,14 @@ test("倒计时到期后显示已结束且其他会话继续", async ({ page }) 
   ]);
   const id = ((await response.json()) as { data: { id: string } }).data.id;
   const runtime = page.locator(`.terminal-runtime[data-terminal-id="${id}"]`);
-  await expect(runtime.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(runtime);
   const before = ((await (await page.request.get("/api/v1/terminals")).json()) as { data: { items: Array<{ id: string; state: string }> } }).data.items;
-  await page.getByRole("button", { name: "关闭当前终端", exact: true }).click();
-  await page.getByRole("button", { name: "开始倒计时" }).click();
-  await expect(page.getByRole("dialog", { name: "终止倒计时" })).toBeVisible();
+  await menuAction(page, runtime, "关闭当前");
+  await page.getByRole("button", { name: "接管并关闭" }).click();
+  await expect(page.getByRole("dialog", { name: "终端终止状态" })).toBeVisible();
   await expect(page.getByText("会话已结束；不会自动重新执行命令。", { exact: true })).toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole("dialog", { name: "终止倒计时" })).toHaveCount(0);
+  await page.getByRole("button", { name: "关闭结果" }).click();
+  await expect(page.getByRole("dialog", { name: "终端终止状态" })).toHaveCount(0);
   const after = ((await (await page.request.get("/api/v1/terminals")).json()) as { data: { items: Array<{ id: string; state: string }> } }).data.items;
   expect(after.find(item => item.id === id)?.state).toBe("terminated");
   for (const item of before.filter(item => item.id !== id && item.state === "running")) expect(after.find(other => other.id === item.id)?.state).toBe("running");
@@ -219,7 +218,7 @@ test("手机外链确认和深色终端", async ({ page }) => {
   ]);
   const id = ((await response.json()) as { data: { id: string } }).data.id;
   const runtime = page.locator(`.terminal-runtime[data-terminal-id="${id}"]`);
-  await expect(runtime.getByText("控制中", { exact: true })).toBeVisible();
+  await controlled(runtime);
   await page.getByRole("combobox", { name: "主题" }).click();
   await page.getByRole("option", { name: "深色", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);

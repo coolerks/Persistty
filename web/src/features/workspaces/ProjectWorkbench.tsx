@@ -1,8 +1,10 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { Link } from "react-router";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import { Link, useOutletContext } from "react-router";
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { Files, FolderKanban, PanelBottom, PanelLeft, PanelRight, TerminalSquare, X, RefreshCw, FileText, Download } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useDropTarget } from "@/lib/use-drop-target";
 import { api, ApiError, fileDownloadURL } from "@/lib/api/client";
 import { useResource } from "@/lib/api/use-resource";
 import { decodeTerminal, type Project, type Terminal } from "@/lib/api/decoder";
@@ -12,6 +14,8 @@ import { fileKey, useWorkspaceView } from "./workspace-view";
 import type { OpenFile } from "./workspace-view";
 import { TerminalWorkspace } from "@/features/terminal/TerminalWorkspace";
 import { TerminalSession, TerminalRuntimeProvider } from "@/features/terminal/TerminalRuntime";
+import { TerminalTab } from "@/features/terminal/TerminalTab";
+import { useTerminalRuntime } from "@/features/terminal/runtime-context";
 
 const DesktopEditor = lazy(() => import("./DesktopEditor"));
 
@@ -27,6 +31,7 @@ function useMobile(): boolean {
 }
 
 export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit(): void }) {
+  const shell = useOutletContext<{ headerActions: ReactNode } | undefined>();
   const mobile = useMobile();
   const view = useWorkspaceView(state => state.projects[project.id]);
   const open = useWorkspaceView(state => state.open);
@@ -62,7 +67,7 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
     </Group> : <EditorGroup project={project} group={mobile ? focused : 0} mobile={mobile} upperTerminals={upperTerminals} activeUpperId={activeUpperId} closeUpperId={closeUpperId} onActivateUpper={setActiveUpperId} onCloseUpper={setCloseUpperId} onMoveToTop={moveToTop} onMoveToBottom={moveToBottom} />}
   </div>;
   return <TerminalRuntimeProvider key={project.id}><main className="workbench" aria-label={`${project.name} 工作台`}>
-    <div className="workbench-title"><h1 className="workbench-title-name">{project.name}</h1><Button size="icon" variant="ghost" aria-label="编辑项目" title="编辑项目" onClick={onEdit}><FolderKanban /></Button></div>
+    <div className="workbench-title"><h1 className="workbench-title-name">{project.name}</h1><Button size="icon-sm" variant="ghost" aria-label="编辑项目" title="编辑项目" onClick={onEdit}><FolderKanban /></Button><span className="terminal-heading-spacer" /><div className="workbench-title-actions">{shell?.headerActions}</div></div>
     {mobile ? <>
       <nav className="mobile-workbench-nav" aria-label="工作区视图">
         <Button variant={mobileView === "files" ? "secondary" : "ghost"} onClick={() => setMobileView("files")}><Files />文件</Button>
@@ -95,6 +100,8 @@ function EditorGroup({ project, group, mobile = false, upperTerminals = [], acti
   onActivateUpper?(id: string | null): void; onCloseUpper?(id: string | null): void;
   onMoveToTop?(terminal: Terminal): void; onMoveToBottom?(id: string): void;
 }) {
+  const { scope } = useTerminalRuntime();
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const view = useWorkspaceView(state => state.projects[project.id]);
   const activate = useWorkspaceView(state => state.activate);
   const close = useWorkspaceView(state => state.close);
@@ -103,12 +110,19 @@ function EditorGroup({ project, group, mobile = false, upperTerminals = [], acti
   const unsplit = useWorkspaceView(state => state.unsplit);
   const files = view?.groups[group] ?? [];
   const active = files.find(file => fileKey(file) === view?.active[group]);
-  const visibleUpper = group === 0 && !mobile ? upperTerminals : [];
+  const visibleUpper = group === 0 && !mobile ? upperTerminals.map(item => scope.entry(item.id)?.terminal ?? item) : [];
   const activeTerminal = visibleUpper.find(item => item.id === activeUpperId);
+  const activeValue = activeTerminal?.id ?? (active ? fileKey(active) : "empty");
+  async function refreshTerminals() {
+    setRefreshError(null);
+    try { const items = await api.terminals(new AbortController().signal); for (const item of items) if (scope.entry(item.id)) scope.ensure(item); }
+    catch (reason) { setRefreshError(reason instanceof Error ? reason.message : "无法读取终端状态。"); }
+  }
   function dragStart(event: React.DragEvent, file: OpenFile) { event.dataTransfer.setData("application/x-persistty-tab", JSON.stringify({ file, group })); event.dataTransfer.effectAllowed = "move"; }
-  function drop(event: React.DragEvent) {
+  function drop(event: DragEvent) {
+    if (!event.dataTransfer) return;
     if (event.dataTransfer.types.includes("application/x-persistty-lower-terminal")) {
-      event.preventDefault();
+      event.preventDefault(); event.stopPropagation();
       try {
         const terminal = decodeTerminal(JSON.parse(event.dataTransfer.getData("application/x-persistty-lower-terminal")));
         if (terminal.project_id === project.id && group === 0) onMoveToTop?.(terminal);
@@ -116,7 +130,7 @@ function EditorGroup({ project, group, mobile = false, upperTerminals = [], acti
       return;
     }
     if (!event.dataTransfer.types.includes("application/x-persistty-tab")) return;
-    event.preventDefault();
+    event.preventDefault(); event.stopPropagation();
     try {
       const value: unknown = JSON.parse(event.dataTransfer.getData("application/x-persistty-tab"));
       if (!value || typeof value !== "object" || !("file" in value) || !("group" in value)) return;
@@ -125,21 +139,24 @@ function EditorGroup({ project, group, mobile = false, upperTerminals = [], acti
       if (source !== group) move(project.id, { folderId: file.folderId, path: file.path }, group);
     } catch { /* Unrelated drag data. */ }
   }
-  return <section className="editor-group" aria-label={mobile ? "编辑器" : group === 0 ? "左侧编辑器" : "右侧编辑器"} onDragOver={event => { if (!mobile && (event.dataTransfer.types.includes("application/x-persistty-tab") || event.dataTransfer.types.includes("application/x-persistty-lower-terminal"))) event.preventDefault(); }} onDrop={mobile ? undefined : drop}>
-    <div className="editor-tabs" role="tablist" aria-label="文件标签">
+  const dropTarget = useDropTarget(mobile ? [] : ["application/x-persistty-tab", "application/x-persistty-lower-terminal"], drop);
+  return <section ref={dropTarget} className="editor-group" aria-label={mobile ? "编辑器" : group === 0 ? "左侧编辑器" : "右侧编辑器"}>
+    <Tabs value={activeValue} onValueChange={value => {
+      const terminal = visibleUpper.find(item => item.id === value);
+      if (terminal) onActivateUpper?.(terminal.id);
+      else { const file = files.find(item => fileKey(item) === value); if (file) { onActivateUpper?.(null); activate(project.id, file, group); } }
+    }} className="editor-tab-layout"><TabsList variant="line" className="editor-tabs" aria-label="文件标签">
       {files.map(file => <div key={fileKey(file)} className={`editor-tab ${active && fileKey(active) === fileKey(file) ? "active" : ""}`} draggable onDragStart={event => dragStart(event, file)}>
-        <Button variant="ghost" role="tab" aria-selected={!activeTerminal && active ? fileKey(active) === fileKey(file) : false} className="editor-tab-label" onClick={() => { onActivateUpper?.(null); activate(project.id, file, group); }}><FileText className="size-4 shrink-0" /><span className="truncate">{file.path.split("/").at(-1)}</span></Button>
+        <TabsTrigger value={fileKey(file)} className="editor-tab-label" onClick={() => { onActivateUpper?.(null); activate(project.id, file, group); }}><FileText data-icon="inline-start" /><span className="truncate">{file.path.split("/").at(-1)}</span></TabsTrigger>
         <Button size="icon" variant="ghost" className="editor-tab-close" aria-label={`关闭 ${file.path}`} title="关闭文件标签" onClick={() => close(project.id, file, group)}><X /></Button>
       </div>)}
-      {visibleUpper.map(item => <div key={item.id} className={`editor-tab ${activeTerminal?.id === item.id ? "active" : ""}`} draggable onDragStart={event => { event.dataTransfer.setData("application/x-persistty-upper-terminal", JSON.stringify({ id: item.id })); event.dataTransfer.effectAllowed = "move"; }}>
-        <Button variant="ghost" role="tab" aria-selected={activeTerminal?.id === item.id} className="editor-tab-label" onClick={() => onActivateUpper?.(item.id)}><TerminalSquare className="size-4 shrink-0" /><span className="truncate">{item.display_name}</span></Button>
-        <Button size="icon" variant="ghost" className="editor-tab-close" aria-label={`关闭终端 ${item.display_name}`} title="终止终端" onClick={() => { onActivateUpper?.(item.id); onCloseUpper?.(item.id); }}><X /></Button>
-      </div>)}
+      {visibleUpper.map(item => <TerminalTab key={item.id} terminal={item} region={visibleUpper} active={activeTerminal?.id === item.id} position="top" onActivate={() => onActivateUpper?.(item.id)} onRefresh={() => void refreshTerminals()} onMove={item => onMoveToBottom?.(item.id)} />)}
       <span className="editor-tab-spacer" />
       {!mobile && active && !view?.split && <Button size="icon" variant="ghost" aria-label="向右拆分编辑器" title="向右拆分编辑器" onClick={() => split(project.id, active)}><PanelRight /></Button>}
       {!mobile && view?.split && group === 1 && <Button size="icon" variant="ghost" aria-label="合并编辑器" title="合并编辑器" onClick={() => unsplit(project.id)}><PanelRight /></Button>}
-    </div>
-    {activeTerminal ? <div className="editor-upper-terminal"><div className="terminal-session-bar"><span className="truncate">{activeTerminal.working_directory}</span><Button size="icon-sm" variant="ghost" aria-label="移回下方终端面板" title="移回下方终端面板" onClick={() => onMoveToBottom?.(activeTerminal.id)}><PanelBottom /></Button></div><TerminalSession key={activeTerminal.id} terminal={activeTerminal} closeRequested={closeUpperId === activeTerminal.id} onCloseRequestHandled={() => onCloseUpper?.(null)} /></div> : active ? <FileEditor key={fileKey(active)} project={project} file={active} /> : <div className="editor-empty"><Files className="size-9" /><span>从资源管理器打开文件</span></div>}
+    </TabsList>
+    {refreshError && <p role="alert" className="terminal-inline-error">{refreshError}</p>}
+    <TabsContent value={activeValue} className="editor-tab-content">{activeTerminal ? <div className="editor-upper-terminal"><TerminalSession key={activeTerminal.id} terminal={activeTerminal} closeRequested={closeUpperId === activeTerminal.id} onCloseRequestHandled={() => onCloseUpper?.(null)} /></div> : active ? <FileEditor key={fileKey(active)} project={project} file={active} /> : <div className="editor-empty"><Files className="size-9" /><span>从资源管理器打开文件</span></div>}</TabsContent></Tabs>
   </section>;
 }
 

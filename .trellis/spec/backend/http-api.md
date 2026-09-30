@@ -7,6 +7,7 @@ W01 的完整签名与请求/响应见[基础协议](foundation-contract.md)，�
 ## 2. 签名
 - POST /auth/login；POST /auth/logout；GET /auth/session。
 - GET/POST /terminals；GET /terminals/{id}/history；应用级终止经已鉴权终端 WS 的服务器倒计时执行，不使用旧的立即 `POST /close` 候选。
+- 工作台调整新增 PATCH /terminals/{id} 与 POST/GET /terminals/termination-batches（GET 带批次 ID），请求/结果/鉴权/错误细节以 [终端运行时](terminal-runtime-contract.md) 为准；POST 批次仍经控制权与服务器统一倒计时，不是立即 close。
 - W04 文件入口见 [W04 契约](workspace-files-contract.md)：按 `project_id/folder_id/project_version/relative_path` 定位，不存在旧 `workspace_id` 文件 API。
 - GET /terminals/{id}/stream 是 WS upgrade；GET /events 是受认证 watcher WS。
 全部路径相对于 /api/v1；其他 Explorer/search/upload/git/settings 端点在对应任务设计中补齐，不自由增加任意执行命令 API。

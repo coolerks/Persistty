@@ -138,7 +138,10 @@ func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Eng
 	protected.DELETE("/archives/:id", a.cancelArchive)
 	protected.GET("/terminals", a.listTerminals)
 	protected.POST("/terminals", a.createTerminal)
+	protected.POST("/terminals/termination-batches", a.terminateBatch)
+	protected.GET("/terminals/termination-batches/:id", a.getTerminationBatch)
 	protected.GET("/terminals/:id", a.getTerminal)
+	protected.PATCH("/terminals/:id", a.renameTerminal)
 	protected.GET("/terminals/:id/history", a.terminalHistory)
 	protected.GET("/terminals/:id/stream", a.terminalStream)
 	r.NoRoute(func(c *gin.Context) {
@@ -277,6 +280,12 @@ func (a *api) error(c *gin.Context, err error) {
 		a.fail(c, 409, "conflict", "项目配置已改变，请刷新后重试。")
 	case errors.Is(err, terminal.ErrInvalidRequest):
 		a.fail(c, 400, "invalid_request", "终端参数无效。")
+	case errors.Is(err, terminal.ErrControlDenied):
+		a.fail(c, 409, "control_denied", "目标终端尚未由当前端接管。")
+	case errors.Is(err, terminal.ErrStaleGeneration):
+		a.fail(c, 409, "stale_generation", "终端控制权已变化。")
+	case errors.Is(err, terminal.ErrTerminationPending):
+		a.fail(c, 409, "termination_pending", "目标终端已有终止倒计时。")
 	case errors.Is(err, terminal.ErrUnavailable):
 		a.fail(c, 503, "unavailable", "终端服务暂时不可用。")
 	case errors.Is(err, terminal.ErrHistoryTooLarge):

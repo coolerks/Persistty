@@ -31,6 +31,8 @@ type Runtime struct {
 	termination time.Duration
 	mu          sync.Mutex
 	hubs        map[string]*hub
+	controlMu   sync.Mutex
+	batches     map[string]*pendingTermination
 }
 
 type hub struct {
@@ -48,33 +50,43 @@ type hub struct {
 }
 
 type Viewer struct {
-	ID     string
-	Token  string
-	attach *attachClient
-	hub    *hub
-	queue  chan Frame
-	ctx    context.Context
-	cancel context.CancelFunc
-	once   sync.Once
+	ID              string
+	Token           string
+	attach          *attachClient
+	hub             *hub
+	queue           chan Frame
+	ctx             context.Context
+	cancel          context.CancelFunc
+	once            sync.Once
+	protocolVersion int
 }
 
 type pendingTermination struct {
-	ID         string      `json:"request_id"`
-	Deadline   time.Time   `json:"deadline"`
-	Initiator  string      `json:"-"`
-	Token      string      `json:"-"`
-	Generation uint64      `json:"-"`
-	Timer      *time.Timer `json:"-"`
+	ID           string             `json:"request_id"`
+	Deadline     time.Time          `json:"deadline"`
+	Members      []BatchMember      `json:"members"`
+	State        string             `json:"-"`
+	Results      []BatchResult      `json:"-"`
+	Participants []batchParticipant `json:"-"`
+	Timer        *time.Timer        `json:"-"`
+	Finished     time.Time          `json:"-"`
 }
 
 func NewRuntime(tmux *Tmux, termination time.Duration, validate func(context.Context, string) error) *Runtime {
 	if termination <= 0 {
 		termination = 10 * time.Second
 	}
-	return &Runtime{tmux: tmux, validate: validate, termination: termination, hubs: make(map[string]*hub)}
+	return &Runtime{tmux: tmux, validate: validate, termination: termination, hubs: make(map[string]*hub), batches: make(map[string]*pendingTermination)}
 }
 
 func (r *Runtime) Connect(ctx context.Context, terminal storage.Terminal, token string, cols, rows int) (*Viewer, error) {
+	return r.ConnectProtocol(ctx, terminal, token, cols, rows, 2)
+}
+
+func (r *Runtime) ConnectProtocol(ctx context.Context, terminal storage.Terminal, token string, cols, rows, protocol int) (*Viewer, error) {
+	if protocol != 2 && protocol != 3 {
+		return nil, ErrInvalidRequest
+	}
 	if !validSize(cols, rows) {
 		return nil, ErrInvalidRequest
 	}
@@ -114,7 +126,7 @@ func (r *Runtime) Connect(ctx context.Context, terminal storage.Terminal, token 
 	}
 	vctx, cancel := context.WithCancel(ctx)
 	v := &Viewer{ID: viewerID, Token: token, attach: attach, hub: h,
-		queue: make(chan Frame, 32), ctx: vctx, cancel: cancel}
+		queue: make(chan Frame, 32), ctx: vctx, cancel: cancel, protocolVersion: protocol}
 	h.mu.Lock()
 	if h.closed {
 		h.mu.Unlock()
@@ -143,13 +155,16 @@ func randomID() (string, error) {
 
 func (h *hub) drainOwner() {
 	_, _ = io.Copy(io.Discard, h.owner.file)
+	h.runtime.controlMu.Lock()
+	defer h.runtime.controlMu.Unlock()
 	h.mu.Lock()
 	h.closed = true
-	h.cancelPendingLocked()
+	pending := h.pending
 	for _, viewer := range h.viewers {
 		viewer.cancel()
 	}
 	h.mu.Unlock()
+	h.runtime.cancelBatchLocked(pending)
 }
 
 func (v *Viewer) readOutput() {
@@ -201,27 +216,41 @@ func (v *Viewer) Ready() []byte {
 	if h.controller == v.ID {
 		role = "controller"
 	}
-	var pending *pendingTermination
+	var pending any
 	if h.pending != nil {
-		copy := *h.pending
-		pending = &copy
+		pending = h.pending.wire(v.protocol())
 	}
 	data, _ := json.Marshal(struct {
-		Type               string              `json:"type"`
-		Protocol           int                 `json:"protocol"`
-		TerminalID         string              `json:"terminal_id"`
-		ViewerID           string              `json:"viewer_id"`
-		Role               string              `json:"role"`
-		Generation         uint64              `json:"generation"`
-		Cols               int                 `json:"cols"`
-		Rows               int                 `json:"rows"`
-		PendingTermination *pendingTermination `json:"pending_termination"`
-	}{"ready", 2, h.terminal.ID, v.ID, role, h.generation, h.cols, h.rows, pending})
+		Type               string `json:"type"`
+		Protocol           int    `json:"protocol"`
+		TerminalID         string `json:"terminal_id"`
+		ViewerID           string `json:"viewer_id"`
+		Role               string `json:"role"`
+		Generation         uint64 `json:"generation"`
+		Cols               int    `json:"cols"`
+		Rows               int    `json:"rows"`
+		PendingTermination any    `json:"pending_termination"`
+	}{"ready", v.protocol(), h.terminal.ID, v.ID, role, h.generation, h.cols, h.rows, pending})
 	return data
 }
 
 func (v *Viewer) Frames() <-chan Frame  { return v.queue }
 func (v *Viewer) Done() <-chan struct{} { return v.ctx.Done() }
+
+func (r *Runtime) UpdateMetadata(item storage.Terminal) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if h := r.hubs[item.ID]; h != nil {
+		h.mu.Lock()
+		h.terminal = item
+		for _, viewer := range h.viewers {
+			if viewer.protocol() == 3 {
+				h.eventLocked(viewer, map[string]any{"type": "metadata", "terminal_id": item.ID, "display_name": item.DisplayName})
+			}
+		}
+		h.mu.Unlock()
+	}
+}
 
 func (v *Viewer) ReportError(code, message string) {
 	v.hub.mu.Lock()
@@ -292,21 +321,30 @@ func (v *Viewer) Takeover(ctx context.Context, generation uint64) error {
 		return err
 	}
 	h := v.hub
+	r := h.runtime
+	r.controlMu.Lock()
+	defer r.controlMu.Unlock()
 	h.mu.Lock()
-	defer h.mu.Unlock()
-	if h.viewers[v.ID] != v {
+	if h.closed || v.ctx.Err() != nil || h.viewers[v.ID] != v {
+		h.mu.Unlock()
 		return ErrControlDenied
 	}
 	if h.generation != generation {
+		h.mu.Unlock()
 		return ErrStaleGeneration
 	}
 	if h.controller == v.ID {
+		h.mu.Unlock()
 		return nil
 	}
-	h.cancelPendingLocked()
+	pending := h.pending
+	h.mu.Unlock()
+	r.cancelBatchLocked(pending)
+	h.mu.Lock()
 	h.generation++
 	h.controller = v.ID
 	h.broadcastControlLocked()
+	h.mu.Unlock()
 	return nil
 }
 
@@ -324,27 +362,40 @@ func (v *Viewer) Close() {
 	v.once.Do(func() {
 		v.cancel()
 		h := v.hub
+		r := h.runtime
+		r.controlMu.Lock()
 		h.mu.Lock()
+		pending := h.pending
+		terminalID := h.terminal.ID
+		initiator := false
+		if pending != nil {
+			for _, member := range pending.Participants {
+				if member.viewer == v {
+					initiator = true
+				}
+			}
+		}
 		delete(h.viewers, v.ID)
 		if h.controller == v.ID {
 			h.controller = ""
 			h.generation++
-			h.cancelPendingLocked()
 			h.broadcastControlLocked()
 		}
 		empty := len(h.viewers) == 0
 		if empty {
 			h.closed = true
-			h.cancelPendingLocked()
 		}
 		h.mu.Unlock()
+		if initiator || empty {
+			r.cancelBatchLocked(pending)
+		}
+		r.controlMu.Unlock()
 		v.attach.Close()
 		if empty {
 			h.owner.Close()
-			r := h.runtime
 			r.mu.Lock()
-			if r.hubs[h.terminal.ID] == h {
-				delete(r.hubs, h.terminal.ID)
+			if r.hubs[terminalID] == h {
+				delete(r.hubs, terminalID)
 			}
 			r.mu.Unlock()
 		}

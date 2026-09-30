@@ -20,6 +20,14 @@ describe("W03 终端 WS 协议", () => {
     expect(() => decodeTerminalEvent({ ...fixture.ready, unexpected: true })).toThrow(ProtocolError);
     expect(() => decodeTerminalEvent({ type: "control", generation: 4 })).toThrow(ProtocolError);
   });
+  it("v3 使用统一成员与结果，v2 不接受新增字段", () => {
+    expect(decodeTerminalEvent(fixture.ready_v3, 3)).toMatchObject({ protocol: 3, pending_termination: { members: fixture.pending_v3.members } });
+    expect(decodeTerminalEvent(fixture.pending_v3, 3)).toMatchObject({ members: fixture.pending_v3.members });
+    expect(decodeTerminalEvent(fixture.executed_v3, 3)).toMatchObject({ results: fixture.executed_v3.results });
+    expect(decodeTerminalEvent(fixture.metadata_v3, 3)).toMatchObject({ display_name: "构建" });
+    expect(() => decodeTerminalEvent(fixture.metadata_v3)).toThrow(ProtocolError);
+    expect(() => decodeTerminalEvent({ ...fixture.pending_v3, members: [...fixture.pending_v3.members, fixture.pending_v3.members[0]] }, 3)).toThrow(ProtocolError);
+  });
   it("离线立即拒绝输入，dispose 后忽略迟到帧且不重放", () => {
     class FakeSocket {
       static OPEN = 1;
@@ -38,7 +46,7 @@ describe("W03 终端 WS 协议", () => {
     const closed = vi.fn();
     const socket = new TerminalSocket(fixture.ready.terminal_id, { event, closed, output: vi.fn() });
     const transport = FakeSocket.instances[0]!;
-    transport!.onmessage!({ data: JSON.stringify(fixture.ready) });
+    transport!.onmessage!({ data: JSON.stringify({ ...fixture.ready, protocol: 3 }) });
     expect(socket.sendInput(new Uint8Array([3]))).toBe(true);
     window.dispatchEvent(new Event("offline"));
     expect(transport!.close).toHaveBeenCalledWith(1000, "view_closed");

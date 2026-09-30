@@ -35,6 +35,10 @@ export type UploadState = { id: string; status: "pending" | "completed" | "skipp
 export type ArchiveRecord = { id: string; project_id: string; folder_id: string; project_version: number; relative_path: string; created_at: string; expires_at: string; status: "pending" | "ready" | "failed" | "cancelled"; size: number; error_code: string };
 export type Terminal = { id: string; display_name: string; project_id: string | null; working_directory: string; state: "running" | "terminated" | "unavailable" };
 export type TerminalHistory = { content_base64: string; history_size: number; returned_lines: number; alternate_on: boolean; cols: number; rows: number; truncated: boolean };
+export type BatchTarget = { terminal_id: string; viewer_id: string; generation: number };
+export type BatchMember = { terminal_id: string; display_name: string };
+export type BatchResult = { terminal_id: string; state: Terminal["state"] };
+export type TerminationBatch = { request_id: string; deadline: string; members: BatchMember[]; state: "pending" | "executing" | "cancelled" | "completed"; results: BatchResult[] };
 
 export function decodeEnvelope<T>(value: unknown, decode: (data: unknown) => T): T {
   const object = exact(value, ["data", "request_id"]);
@@ -144,6 +148,33 @@ export function decodeTerminal(value: unknown): Terminal {
   if (!working_directory.startsWith("/")) fail();
   return { id: id(object.id), display_name: text(object.display_name, 256), project_id: object.project_id === null ? null : id(object.project_id), working_directory, state: object.state };
 }
+export function decodeBatchMembers(value: unknown): BatchMember[] {
+  const members = array(value, value => {
+    const item = exact(value, ["terminal_id", "display_name"]);
+    return { terminal_id: id(item.terminal_id), display_name: text(item.display_name, 200) };
+  }, 200);
+  if (members.length === 0 || new Set(members.map(item => item.terminal_id)).size !== members.length) fail();
+  return members;
+}
+export function decodeBatchResults(value: unknown): BatchResult[] {
+  const results = array<BatchResult>(value, value => {
+    const item = exact(value, ["terminal_id", "state"]);
+    if (item.state !== "running" && item.state !== "terminated" && item.state !== "unavailable") fail();
+    return { terminal_id: id(item.terminal_id), state: item.state };
+  }, 200);
+  if (new Set(results.map(item => item.terminal_id)).size !== results.length) fail();
+  return results;
+}
+export function decodeTerminationBatch(value: unknown): TerminationBatch {
+  const item = exact(value, ["request_id", "deadline", "members", "state", "results"]);
+  if (item.state !== "pending" && item.state !== "executing" && item.state !== "cancelled" && item.state !== "completed") fail();
+  const deadline = text(item.deadline, 64);
+  if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/.test(deadline) || !Number.isFinite(Date.parse(deadline))) fail();
+  const members = decodeBatchMembers(item.members);
+  const results = decodeBatchResults(item.results);
+  if (item.state === "completed" ? results.length !== members.length || results.some(result => !members.some(member => member.terminal_id === result.terminal_id)) : results.length !== 0) fail();
+  return { request_id: id(item.request_id), deadline, members, state: item.state, results };
+}
 export function decodeTerminalHistory(value: unknown): TerminalHistory {
   const object = exact(value, ["content_base64", "history_size", "returned_lines", "alternate_on", "cols", "rows", "truncated"]);
   if (typeof object.content_base64 !== "string" || object.content_base64.length > 12_000_000 ||
@@ -169,6 +200,8 @@ export function decodeList<T extends { id: string }>(decode: (item: unknown) => 
 }
 export function decodeError(value: unknown) {
   const object = exact(value, ["error", "request_id"]);
-  const error = exact(object.error, ["code", "message"]);
-  return { code: text(error.code, 128), message: text(error.message), requestId: text(object.request_id, 128) };
+  const hasDetails = typeof object.error === "object" && object.error !== null && Object.hasOwn(object.error, "details");
+  const error = exact(object.error, hasDetails ? ["code", "message", "details"] : ["code", "message"]);
+  const terminalId = hasDetails ? id(exact(error.details, ["terminal_id"]).terminal_id) : null;
+  return { code: text(error.code, 128), message: text(error.message), requestId: text(object.request_id, 128), terminalId };
 }

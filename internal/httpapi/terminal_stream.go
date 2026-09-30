@@ -30,6 +30,16 @@ func (a *api) terminalStream(c *gin.Context) {
 		a.fail(c, 400, "invalid_request", "终端 ID 无效。")
 		return
 	}
+	protocol := 2
+	if values, exists := c.Request.URL.Query()["protocol"]; exists {
+		if len(values) != 1 || (values[0] != "2" && values[0] != "3") {
+			a.fail(c, 400, "invalid_request", "终端协议版本无效。")
+			return
+		}
+		if values[0] == "3" {
+			protocol = 3
+		}
+	}
 	item, err := a.terminals.Get(c.Request.Context(), c.Param("id"))
 	if err != nil {
 		a.error(c, err)
@@ -49,7 +59,7 @@ func (a *api) terminalStream(c *gin.Context) {
 	conn.SetReadLimit(65544)
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
-	viewer, err := a.runtime.Connect(ctx, item, c.MustGet("token").(string), 80, 24)
+	viewer, err := a.runtime.ConnectProtocol(ctx, item, c.MustGet("token").(string), 80, 24, protocol)
 	if err != nil {
 		_ = conn.Close(websocket.StatusInternalError, "terminal_unavailable")
 		return

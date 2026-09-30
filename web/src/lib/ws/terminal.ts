@@ -1,14 +1,15 @@
-import { ProtocolError } from "@/lib/api/decoder";
+import { decodeBatchMembers, decodeBatchResults, ProtocolError, type BatchMember, type BatchResult } from "@/lib/api/decoder";
 
 export type TerminalRole = "controller" | "observer";
-export type PendingTermination = { request_id: string; deadline: string };
+export type PendingTermination = { request_id: string; deadline: string; members?: BatchMember[] };
 export type TerminalEvent =
-  | { type: "ready"; protocol: 2; terminal_id: string; viewer_id: string; role: TerminalRole; generation: number; cols: number; rows: number; pending_termination: PendingTermination | null }
+  | { type: "ready"; protocol: 2 | 3; terminal_id: string; viewer_id: string; role: TerminalRole; generation: number; cols: number; rows: number; pending_termination: PendingTermination | null }
   | { type: "control"; role: TerminalRole; generation: number }
   | { type: "resized"; cols: number; rows: number }
-  | { type: "termination_pending"; request_id: string; deadline: string }
+  | ({ type: "termination_pending" } & PendingTermination)
   | { type: "termination_cancelled"; request_id: string }
-  | { type: "termination_executed"; request_id: string; state: "running" | "terminated" | "unavailable" }
+  | { type: "termination_executed"; request_id: string; state: "running" | "terminated" | "unavailable"; results?: BatchResult[] }
+  | { type: "metadata"; terminal_id: string; display_name: string }
   | { type: "error"; code: string; message: string };
 
 function fail(): never { throw new ProtocolError(); }
@@ -34,22 +35,22 @@ function deadline(value: unknown): string {
   const text = label(value);
   return /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/.test(text) && Number.isFinite(Date.parse(text)) ? text : fail();
 }
-function pending(value: unknown): PendingTermination | null {
+function pending(value: unknown, protocol: 2 | 3): PendingTermination | null {
   if (value === null) return null;
   const item = record(value);
-  exact(item, ["request_id", "deadline"]);
-  return { request_id: label(item.request_id), deadline: deadline(item.deadline) };
+  exact(item, protocol === 3 ? ["request_id", "deadline", "members"] : ["request_id", "deadline"]);
+  return { request_id: label(item.request_id), deadline: deadline(item.deadline), ...(protocol === 3 ? { members: decodeBatchMembers(item.members) } : {}) };
 }
 
-export function decodeTerminalEvent(value: unknown): TerminalEvent {
+export function decodeTerminalEvent(value: unknown, protocol: 2 | 3 = 2): TerminalEvent {
   const item = record(value);
   switch (item.type) {
     case "ready": {
       exact(item, ["type", "protocol", "terminal_id", "viewer_id", "role", "generation", "cols", "rows", "pending_termination"]);
-      if (item.protocol !== 2) fail();
-      return { type: "ready", protocol: 2, terminal_id: label(item.terminal_id), viewer_id: label(item.viewer_id),
+      if (item.protocol !== protocol) fail();
+      return { type: "ready", protocol, terminal_id: label(item.terminal_id), viewer_id: label(item.viewer_id),
         role: role(item.role), generation: generation(item.generation), cols: dimension(item.cols), rows: dimension(item.rows),
-        pending_termination: pending(item.pending_termination) };
+        pending_termination: pending(item.pending_termination, protocol) };
     }
     case "control":
       exact(item, ["type", "role", "generation"]);
@@ -58,15 +59,19 @@ export function decodeTerminalEvent(value: unknown): TerminalEvent {
       exact(item, ["type", "cols", "rows"]);
       return { type: "resized", cols: dimension(item.cols), rows: dimension(item.rows) };
     case "termination_pending":
-      exact(item, ["type", "request_id", "deadline"]);
-      return { type: "termination_pending", request_id: label(item.request_id), deadline: deadline(item.deadline) };
+      exact(item, protocol === 3 ? ["type", "request_id", "deadline", "members"] : ["type", "request_id", "deadline"]);
+      return { type: "termination_pending", request_id: label(item.request_id), deadline: deadline(item.deadline), ...(protocol === 3 ? { members: decodeBatchMembers(item.members) } : {}) };
     case "termination_cancelled":
       exact(item, ["type", "request_id"]);
       return { type: "termination_cancelled", request_id: label(item.request_id) };
     case "termination_executed":
-      exact(item, ["type", "request_id", "state"]);
+      exact(item, protocol === 3 ? ["type", "request_id", "state", "results"] : ["type", "request_id", "state"]);
       if (item.state !== "running" && item.state !== "terminated" && item.state !== "unavailable") fail();
-      return { type: "termination_executed", request_id: label(item.request_id), state: item.state };
+      return { type: "termination_executed", request_id: label(item.request_id), state: item.state, ...(protocol === 3 ? { results: decodeBatchResults(item.results) } : {}) };
+    case "metadata":
+      if (protocol !== 3) fail();
+      exact(item, ["type", "terminal_id", "display_name"]);
+      return { type: "metadata", terminal_id: label(item.terminal_id), display_name: label(item.display_name) };
     case "error":
       exact(item, ["type", "code", "message"]);
       return { type: "error", code: label(item.code), message: label(item.message) };
@@ -95,7 +100,7 @@ export class TerminalSocket {
 
   constructor(id: string, private readonly handlers: Handlers) {
     const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
-    this.socket = new WebSocket(`${scheme}//${window.location.host}/api/v1/terminals/${encodeURIComponent(id)}/stream`);
+    this.socket = new WebSocket(`${scheme}//${window.location.host}/api/v1/terminals/${encodeURIComponent(id)}/stream?protocol=3`);
     window.addEventListener("offline", this.offline);
     this.socket.binaryType = "arraybuffer";
     this.socket.onmessage = event => {
@@ -103,7 +108,7 @@ export class TerminalSocket {
       try {
         if (typeof event.data === "string") {
           const value: unknown = JSON.parse(event.data);
-          const message = decodeTerminalEvent(value);
+          const message = decodeTerminalEvent(value, 3);
           if (!this.ready && message.type !== "ready") fail();
           if (message.type === "ready") {
             if (this.ready || message.terminal_id !== id) fail();

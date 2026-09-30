@@ -95,3 +95,26 @@ func validTerminalID(id string) bool {
 	}
 	return true
 }
+
+func (a *api) renameTerminal(c *gin.Context) {
+	if !validTerminalID(c.Param("id")) {
+		a.fail(c, 400, "invalid_request", "终端 ID 无效。")
+		return
+	}
+	var input terminal.RenameRequest
+	if err := decodeJSON(c.Writer, c.Request, &input, "expected_display_name", "display_name"); err != nil {
+		if errors.Is(err, errBodyLarge) {
+			a.fail(c, 413, "too_large", "请求体过大。")
+		} else {
+			a.fail(c, 400, "invalid_request", "请求格式无效。")
+		}
+		return
+	}
+	item, err := a.terminals.Rename(c.Request.Context(), c.Param("id"), input)
+	if err != nil {
+		a.error(c, err)
+		return
+	}
+	a.runtime.UpdateMetadata(item)
+	a.success(c, item)
+}

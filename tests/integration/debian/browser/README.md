@@ -26,6 +26,14 @@ PERSISTTY_E2E_BASE_URL=http://127.0.0.1:5174 PERSISTTY_E2E_PASSWORD=isolated-tes
 
 完整九条验收必须使用新建的空实例：首条建立恰好三个计数/HTTP/TUI 会话，随后跨 SIGKILL/正常 Web 重启检验 pane 身份与负载。其他测试覆盖输入一次性、三端倒计时、新端加入、精确终止、宿主移动零新 WS、手机按键/链接/主题和非空截图。截图和 Playwright 输出在已忽略 `web/test-results/`；不提交含私有信息的报告。最新 2026-09-30 完整九条全部通过。
 
+工作台 UI 调整新增五条验收。强制重启测试先单独在新空实例运行（指定 `PERSISTTY_E2E_FORCE=1`，测试文件 `tests/e2e/force-restart.spec.ts`）；随后使用同实例生成一次专属长树 fixture：
+
+```sh
+python3 -B tests/integration/debian/run_remote.py browser-layout-fixture --root ROOT
+```
+
+它只在匹配自有 root 的 project 中以排他创建方式写入 120 个合成文本文件及一个 extra 目录，不接受任意用户路径、不覆盖既有文件。再运行完整 `npm run test:e2e`，保持上述 BASE_URL/PASSWORD/PROJECT/REMOTE_ROOT 但不设置 FORCE，强制重启项按设计跳过，其他 13 条运行；这不是跳过持久性验收，独立强制重启结果必须一起记录。新增 UI 用例遵守页面真实登录冷却，禁止关认证限流以加快测试。整轮需在 15 分钟实例寿命内完成，超时后 tmux unavailable 是测试环境失效，需新建实例复验，不能计为产品通过。
+
 ## 精确清理与限制
 
 ```sh

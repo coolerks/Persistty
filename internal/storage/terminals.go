@@ -51,3 +51,22 @@ func (s *Store) InsertTerminal(ctx context.Context, terminal Terminal) error {
 	}
 	return tx.Commit()
 }
+
+func (s *Store) RenameTerminal(ctx context.Context, id, expected, name string) (Terminal, error) {
+	result, err := s.db.ExecContext(ctx, "UPDATE terminals SET display_name=? WHERE id=? AND display_name=?", name, id, expected)
+	if err != nil {
+		return Terminal{}, err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return Terminal{}, err
+	}
+	item, err := s.Terminal(ctx, id)
+	if err != nil {
+		return Terminal{}, err
+	}
+	if count == 0 && item.DisplayName != name {
+		return Terminal{}, ErrConflict
+	}
+	return item, nil
+}

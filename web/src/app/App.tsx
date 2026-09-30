@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from "react-router";
+import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useOutletContext } from "react-router";
 import { TerminalSquare, Folder, LogOut } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,8 +16,9 @@ import { Failure, Loading } from "@/components/Feedback";
 function Authenticated() {
   const { state } = useAuth();
   const location = useLocation();
+  const shell = useOutletContext<unknown>();
   if (state.status !== "authenticated") return <Navigate to={`/login?return=${encodeURIComponent(location.pathname)}`} replace />;
-  return <Outlet />;
+  return <Outlet context={shell} />;
 }
 
 function Shell() {
@@ -37,17 +38,20 @@ function Shell() {
     finally { request.current = null; if (!controller.signal.aborted) setPending(false); }
   }
   return <div className={`app-shell ${workspaceRoute ? "app-shell-workspace" : ""}`}>
-    <header className="app-header">
+    {!workspaceRoute && <header className="app-header">
       <Link to="/projects" className="brand"><TerminalSquare aria-hidden="true" />Persistty</Link>
       <div className="flex items-center gap-2"><ThemeSelect />
         {auth.state.status === "authenticated" && <Tooltip><TooltipTrigger render={<Button variant="ghost" size="icon" aria-label="退出登录" disabled={pending} onClick={() => { void logout(); }} />}><LogOut /></TooltipTrigger><TooltipContent>退出登录</TooltipContent></Tooltip>}
       </div>
-    </header>
+    </header>}
     {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {auth.state.status === "authenticated" && !workspaceRoute && <nav aria-label="主导航" className="main-nav">
       <NavLink to="/projects"><Folder aria-hidden="true" />项目</NavLink><NavLink to="/terminals"><TerminalSquare aria-hidden="true" />终端</NavLink>
     </nav>}
-    {auth.state.status === "loading" ? <main className="page-main"><Loading /></main> : auth.state.status === "error" ? <main className="page-main"><Failure error={auth.state.error} retry={auth.retry} /></main> : <Outlet />}
+    {auth.state.status === "loading" ? <main className="page-main"><Loading /></main> : auth.state.status === "error" ? <main className="page-main"><Failure error={auth.state.error} retry={auth.retry} /></main> : <Outlet context={{ headerActions: <>
+      <Link className={buttonVariants({ variant: "ghost", size: "icon-sm" })} to="/projects" aria-label="Persistty 项目面板" title="Persistty 项目面板"><Folder /></Link><ThemeSelect />
+      <Button variant="ghost" size="icon-sm" aria-label="退出登录" title="退出登录" disabled={pending} onClick={() => void logout()}><LogOut /></Button>
+    </> }} />}
     {!workspaceRoute && <footer className="app-footer">{auth.state.status === "authenticated" ? "已登录" : "Persistty"}</footer>}
   </div>;
 }

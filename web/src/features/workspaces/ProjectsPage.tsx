@@ -66,7 +66,7 @@ function ProjectPage({ projectId }: { projectId: string }) {
   const [load] = useState(() => (signal: AbortSignal) => api.project(projectId, signal));
   const { resource, refresh } = useResource(load);
   const [editing, setEditing] = useState(false);
-  if (resource.status === "loading") return <main className="page-main"><Loading /></main>;
+  if (resource.status === "loading") return <main className="page-main"><Link className={buttonVariants({ variant: "ghost" })} to="/projects">Persistty</Link><Loading /></main>;
   if (resource.status === "error") return <main className="page-main">{resource.error instanceof ApiError && resource.error.status === 404 ?
     <Empty><EmptyHeader><EmptyMedia variant="icon"><Folder /></EmptyMedia><EmptyTitle>项目不存在</EmptyTitle><EmptyDescription>此项目已移除或地址无效。</EmptyDescription></EmptyHeader><div className="flex flex-wrap justify-center gap-2"><Link className={buttonVariants({ variant: "outline" })} to="/projects">项目面板</Link><Link className={buttonVariants()} to="/terminals">终端</Link></div></Empty> : <Failure error={resource.error} retry={refresh} />}</main>;
   return <><ProjectWorkbench project={resource.data} onEdit={() => setEditing(true)} />

@@ -1,12 +1,12 @@
 import { decodeArchive, decodeDeletePreview, decodeDirectory, decodeEnvelope, decodeError, decodeFileContent, decodeFileListing, decodeFileMetadata, decodeImportResult, decodeList, decodeOperationResult, decodeProject, decodeSession, decodeTerminal, decodeTerminalHistory, decodeUploadState, ProtocolError } from "./decoder";
-import type { FileVersion } from "./decoder";
+import { decodeTerminationBatch, type BatchTarget, type FileVersion } from "./decoder";
 
 export type FileOperation = { kind: "create_file" | "create_directory" | "rename" | "copy" | "move" | "delete"; project_version: number; source_folder_id?: string; source_path?: string; target_folder_id?: string; target_path?: string; expected_version?: FileVersion; expected_identity?: string; delete_token?: string };
 export type UploadInput = { project_id: string; folder_id: string; project_version: number; path: string; batch_id: string; size: number; sha256: string; expected_version?: FileVersion };
 
 export class ApiError extends Error {
   constructor(public readonly status: number, public readonly code: string, message: string,
-    public readonly requestId: string, public readonly retryAfter: number | null) {
+    public readonly requestId: string, public readonly retryAfter: number | null, public readonly terminalId: string | null = null) {
     super(message); this.name = "ApiError";
   }
 }
@@ -19,7 +19,7 @@ async function request<T>(path: string, decode: (value: unknown) => T, options: 
     const retry = response.headers.get("Retry-After");
     const seconds = retry === null ? NaN : /^\d+$/.test(retry) ? Number(retry) : Math.max(0, (Date.parse(retry) - Date.now()) / 1000);
     const retryAfter = Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
-    throw new ApiError(response.status, error.code, error.message, error.requestId, retryAfter);
+    throw new ApiError(response.status, error.code, error.message, error.requestId, retryAfter, error.terminalId);
   }
   if (response.status === 204) return decode(undefined);
   const value: unknown = await response.json().catch(() => { throw new ProtocolError(); });
@@ -69,6 +69,11 @@ export const api = {
   createTerminal: (input: { project_id: string; project_version: number; folder_id?: string; display_name?: string; cols?: number; rows?: number }, csrf: string, signal: AbortSignal) => request("/terminals", decodeTerminal,
     { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify(input), signal }),
   terminalHistory: (id: string, signal: AbortSignal) => request(`/terminals/${encodeURIComponent(id)}/history`, decodeTerminalHistory, { signal }),
+  renameTerminal: (id: string, expected: string, name: string, csrf: string, signal: AbortSignal) => request(`/terminals/${encodeURIComponent(id)}`, decodeTerminal,
+    { method: "PATCH", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify({ expected_display_name: expected, display_name: name }), signal }),
+  terminateBatch: (members: BatchTarget[], csrf: string, signal: AbortSignal) => request("/terminals/termination-batches", decodeTerminationBatch,
+    { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify({ members }), signal }),
+  terminationBatch: (id: string, signal: AbortSignal) => request(`/terminals/termination-batches/${encodeURIComponent(id)}`, decodeTerminationBatch, { signal }),
 };
 
 export function fileDownloadURL(projectId: string, folderId: string, version: number, path: string): string {

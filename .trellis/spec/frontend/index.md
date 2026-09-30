@@ -12,7 +12,7 @@ W01 已有 React/Vite 登录、项目路由、严格 API 解码和三主题；�
 | [类型](type-safety.md) | strict TS、DTO decoding |
 | [API/WS](clients.md) | 请求、重连、错误 |
 | [编辑器/终端生命周期](editor-terminal-lifecycle.md) | Monaco/xterm/IndexedDB |
-| [W03 前端终端契约](terminal-runtime-contract.md) | 稳定 runtime、宿主移动、控制/重连与浏览器验收 |
+| [W03 前端终端契约](terminal-runtime-contract.md) | 稳定 runtime、标签动作、观察端输入确认、批次 Dialog 与浏览器验收 |
 | [主题与资源](theme-assets.md) | 统一主题、字体、图标许可 |
 | [质量](quality-guidelines.md) | lint/typecheck/test/build/E2E |
 

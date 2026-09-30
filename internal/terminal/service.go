@@ -26,9 +26,9 @@ type CreateRequest struct {
 }
 
 type Service struct {
-	Store       *storage.Store
-	Tmux        *Tmux
-	reconcileMu sync.Mutex
+	Store      *storage.Store
+	Tmux       *Tmux
+	metadataMu sync.Mutex
 }
 
 func (s *Service) Create(ctx context.Context, request CreateRequest) (storage.Terminal, error) {
@@ -37,10 +37,7 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (storage.Te
 		return storage.Terminal{}, ErrInvalidRequest
 	}
 	name := request.DisplayName
-	if name == "" {
-		name = "终端"
-	}
-	if !utf8.ValidString(name) || len(name) > 200 || strings.TrimSpace(name) != name || strings.ContainsAny(name, "\x00\r\n") {
+	if name != "" && !validDisplayName(name) {
 		return storage.Terminal{}, ErrInvalidRequest
 	}
 	project, err := s.Store.Project(ctx, request.ProjectID)
@@ -49,6 +46,14 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (storage.Te
 	}
 	if project.Version != request.ProjectVersion {
 		return storage.Terminal{}, storage.ErrConflict
+	}
+	s.metadataMu.Lock()
+	defer s.metadataMu.Unlock()
+	if name == "" {
+		name, err = s.availableName(ctx, project.ID)
+		if err != nil {
+			return storage.Terminal{}, err
+		}
 	}
 	folderID := request.FolderID
 	if folderID == "" {
@@ -85,6 +90,8 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (storage.Te
 }
 
 func (s *Service) List(ctx context.Context) ([]storage.Terminal, error) {
+	s.metadataMu.Lock()
+	defer s.metadataMu.Unlock()
 	names, err := s.Tmux.SessionNames(ctx)
 	if err != nil {
 		return nil, err
@@ -139,6 +146,8 @@ func (s *Service) History(ctx context.Context, id string) (History, error) {
 }
 
 func (s *Service) Reconcile(ctx context.Context) error {
+	s.metadataMu.Lock()
+	defer s.metadataMu.Unlock()
 	names, err := s.Tmux.SessionNames(ctx)
 	if err != nil {
 		return err
@@ -147,8 +156,6 @@ func (s *Service) Reconcile(ctx context.Context) error {
 }
 
 func (s *Service) reconcileNames(ctx context.Context, names map[string]bool) error {
-	s.reconcileMu.Lock()
-	defer s.reconcileMu.Unlock()
 	for name := range names {
 		id := strings.TrimPrefix(name, "persistty_")
 		if len(id) != 32 {
@@ -157,7 +164,12 @@ func (s *Service) reconcileNames(ctx context.Context, names map[string]bool) err
 		if _, err := hex.DecodeString(id); err != nil {
 			continue
 		}
-		if _, err := s.Store.TerminalBySession(ctx, name); err == nil {
+		if item, err := s.Store.TerminalBySession(ctx, name); err == nil {
+			// SQLite is authoritative; a failed mirror write never destroys a session.
+			mirror, mirrorErr := s.Tmux.DisplayName(ctx, name)
+			if mirrorErr != nil || mirror != item.DisplayName {
+				_ = s.Tmux.SetDisplayName(ctx, name, item.DisplayName)
+			}
 			continue
 		} else if !errors.Is(err, storage.ErrNotFound) {
 			return err

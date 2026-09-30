@@ -250,6 +250,16 @@ def run_browser_cleanup(remote, root):
     return result
 
 
+def run_browser_layout(remote, root):
+    if not re.fullmatch(r"/tmp/persistty-browser-[A-Za-z0-9]{8}", root):
+        raise TransportError("Debian browser fixture 目录身份非法")
+    result = json.loads(remote.ssh(
+        f"python3 -B {shlex.quote(root + '/probe.py')} layout-fixture {shlex.quote(root)}"))
+    if result.get("failed_stage"):
+        raise TransportError("Debian 布局 fixture 失败阶段 " + result["failed_stage"])
+    return result
+
+
 def run_browser_restart(remote, root, force=False):
     if not re.fullmatch(r"/tmp/persistty-browser-[A-Za-z0-9]{8}", root):
         raise TransportError("Debian browser 重启目录身份非法")
@@ -297,7 +307,7 @@ def run_helper_capabilities(remote):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=("terminal", "files", "bridge", "history", "snapshot", "recovery", "browser-start", "browser-restart", "browser-force-restart", "browser-cleanup", "cli", "helper"))
+    parser.add_argument("kind", choices=("terminal", "files", "bridge", "history", "snapshot", "recovery", "browser-start", "browser-restart", "browser-force-restart", "browser-cleanup", "browser-layout-fixture", "cli", "helper"))
     parser.add_argument("--probe", type=Path, default=Path("/tmp/persistty-files-probe"))
     parser.add_argument("--test", type=Path, default=Path("/tmp/persistty-files-test"))
     parser.add_argument("--binary", type=Path, default=Path("/tmp/bridge-probe"))
@@ -320,6 +330,8 @@ def main():
             result = run_browser_start(remote, args.binary.resolve())
         elif args.kind == "browser-cleanup":
             result = run_browser_cleanup(remote, args.root)
+        elif args.kind == "browser-layout-fixture":
+            result = run_browser_layout(remote, args.root)
         elif args.kind == "browser-restart":
             result = run_browser_restart(remote, args.root)
         elif args.kind == "browser-force-restart":

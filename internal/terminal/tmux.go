@@ -171,6 +171,29 @@ func (t *Tmux) Kill(ctx context.Context, name string) error {
 	return err
 }
 
+func (t *Tmux) DisplayName(ctx context.Context, name string) (string, error) {
+	if !validName(name) {
+		return "", ErrInvalidRequest
+	}
+	out, err := t.Run(ctx, 1024, "show-environment", "-t", "="+name, "PERSISTTY_DISPLAY_NAME")
+	if err != nil {
+		return "", ErrUnavailable
+	}
+	line := strings.TrimSuffix(string(out), "\n")
+	if !strings.HasPrefix(line, "PERSISTTY_DISPLAY_NAME=") {
+		return "", ErrUnavailable
+	}
+	return strings.TrimPrefix(line, "PERSISTTY_DISPLAY_NAME="), nil
+}
+
+func (t *Tmux) SetDisplayName(ctx context.Context, name, displayName string) error {
+	if !validName(name) || !validDisplayName(displayName) {
+		return ErrInvalidRequest
+	}
+	_, err := t.Run(ctx, 1024, "set-environment", "-t", "="+name, "PERSISTTY_DISPLAY_NAME", displayName)
+	return err
+}
+
 func (t *Tmux) CaptureHistory(ctx context.Context, name string) (History, error) {
 	var h History
 	if !validName(name) {

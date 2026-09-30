@@ -29,6 +29,20 @@ def save(state):
     Path(state["root"], "state.json").write_text(json.dumps(state) + "\n")
 
 
+def layout_fixture(root):
+    global stage
+    stage = "layout_fixture"
+    state = json.loads((root / "state.json").read_text())
+    assert state["root"] == str(root)
+    project = root / "project"
+    assert project.is_dir() and not project.is_symlink()
+    (root / "extra").mkdir(mode=0o700)
+    for index in range(120):
+        with (project / f"ui-fixture-{index:03d}.txt").open("x") as file:
+            file.write("isolated layout fixture\n")
+    return {"layout_fixture_ready": True, "fixture_files": 120, "folder_count": 2}
+
+
 def start(root):
     global stage
     stage = "start_browser"
@@ -161,9 +175,9 @@ if __name__ == "__main__":
     action, path = sys.argv[1:]
     root = Path(path)
     assert re.fullmatch(r"/tmp/persistty-browser-[A-Za-z0-9]{8}", str(root))
-    assert action in ("start", "restart", "force-restart", "cleanup")
+    assert action in ("start", "restart", "force-restart", "layout-fixture", "cleanup")
     try:
-        result = start(root) if action == "start" else restart(root, action == "force-restart") if action in ("restart", "force-restart") else cleanup(root)
+        result = start(root) if action == "start" else restart(root, action == "force-restart") if action in ("restart", "force-restart") else layout_fixture(root) if action == "layout-fixture" else cleanup(root)
     except Exception as error:
         result = {"failed_stage": stage, "error_kind": type(error).__name__}
     print(json.dumps(result))

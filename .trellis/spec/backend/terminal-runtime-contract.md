@@ -7,6 +7,7 @@ W03 [PRD](../../tasks/archive/2026-09/09-29-terminal-runtime/prd.md)、[设计](
 ## 2. 签名
 
 - HTTP：`GET/POST /api/v1/terminals`、`GET /api/v1/terminals/{id}`、`GET /api/v1/terminals/{id}/history`。
+- 工作台 UI 调整新增：`PATCH /api/v1/terminals/{id}`、`POST /api/v1/terminals/termination-batches`、`GET /api/v1/terminals/termination-batches/{id}`；不新增迁移。以下新增契约覆盖旧的单目标内部实现，v2 对外形状仍保留。
 - WS：`GET /api/v1/terminals/{id}/stream`；v2 帧样例见 [共享 fixture](../../../tests/contracts/terminal-runtime.json)。
 - DB：复用既有 `terminals` 表，由 repository 保存稳定 ID/target/cwd；W03 不需要新增迁移，不改写历史迁移。
 - CLI：固定 argv 调用 `tmux -N -S <socket>`，精确 target `=persistty_<id>:0.0`；禁止用户控制参数或补偿 kill。
@@ -36,6 +37,24 @@ SQLite 只保存终端稳定 ID、不可猜的 `persistty_<随机ID>` tmux sessi
 
 终止通知：`{type:"termination_pending",request_id,deadline}`、`{type:"termination_cancelled",request_id}`、`{type:"termination_executed",request_id,state}`。截止由服务端 UTC 时钟掌握；同 terminal 同时最多一个请求。仅 controller 的有效 generation 可发起，所有当前和新连接看到相同 deadline；任何有效 viewer 在截止前取消，取消成功后该 request ID 永不再执行。发起者断开/认证失效、控制转移或 Web 重启取消 pending。截止时在同一协调器串行裁决，复验发起者认证和精确 tmux target 后 kill-session，仅处理目标；未知结果查询 tmux，不自动重试输入/终止。
 
+### 显示名称
+
+创建省略 display_name 时，service 的 metadataMu 串行协调可靠 tmux 查询、受管理 session 对账、名称分配、创建与入库。每项目依次选择最小空号“终端”“终端1”“终端2”，上下区域共用；所有存续自定义同名也占号。隐藏、移动、倒计时不释放；真实已结束或改名后可复用，但不复用稳定 ID。查询失败不冒充空名单。手工重名仍允许，部署边界仍为单 Web 实例。
+
+PATCH body 严格为 `{expected_display_name,display_name}`，上限 8 KiB；两字段均为非空 UTF-8、无首尾空白、无 NUL/CR/LF、至多 200 字节。需要 Cookie/Origin/CSRF 和合法稳定 ID。SQL 参数化 CAS，返回 terminal DTO；旧名不符且当前也非请求新名为 409，同新名可幂等返回。此旧名 CAS 不检测 ABA，不是完整元数据版本机制。名称不要求 controller，不改变 PID/cwd/target。SQLite 为权威，固定 argv 更新 tmux `PERSISTTY_DISPLAY_NAME` 镜像失败不回滚或 kill，后续对账修复。
+
+### 统一批次与 v3
+
+POST body 严格为 `{members:[{terminal_id,viewer_id,generation}]}`，64 KiB、1..200 个唯一 terminal ID，viewer/terminal 为 32 位小写 hex，generation 为 1..2^53-1 的整数。Cookie/Origin/CSRF 必需；逐目标复验真实 session、存活 viewer、HTTP token 与 viewer token 相同、controller/generation、无 pending。全部通过才登记一个 timer/deadline；失败零新 timer/kill。上下范围由前端列明并冻结，后端绝不展开“全部”。
+
+POST/GET data 同为 `{request_id,deadline,members:[{terminal_id,display_name}],state,results:[{terminal_id,state}]}`。batch state 为 pending/cancelled/executing/completed；未完成 results=[]，完成覆盖全部成员，逐项 running/terminated/unavailable。成员名称为创建批次时的快照；手工重名不改变身份。GET 需 Cookie；结果保留最多 256 条、结束后最长 5 分钟，满额只淘汰已结束项，否则拒绝新请求。重启后 GET 404，不重放 pending。失败 envelope 可含且仅含领域 details `{terminal_id}`，不含路径/输入/内部 stderr。
+
+旧 WS terminate 复用单成员批次。同一成员最多属于一个 pending/executing 批次。任一有效查看端截止前 cancel，控制转移、发起连接断开/失效、hub 关闭均撤销受影响整批；独立批次不受影响。控制/批次协调锁先于 hub 锁，多 hub 按稳定 ID 排序；读取 map 可在协调器外先冻结参与者，但必须释放 hub 锁后再进入协调器，禁止 hub → coordinator。认证与 tmux I/O 不持有批次锁。
+
+截止重新复验所有成员后串行声明 executing；之后不承诺撤销/回滚。锁外最多 4 worker、整体 8 秒 context，每目标最多一次精确 kill，随后查询真实状态，未知标 unavailable，不重试 kill。完成后解除成员占用并广播逐项结果，不能宣称多个 kill 原子成功。
+
+stream 缺省/`?protocol=2` 保留 exact v2；显式 `?protocol=3` 才启用新帧，重复/空/其他 protocol 返回 400。v3 ready protocol=3、pending 额外 members；termination_pending 额外 members，termination_executed 额外 results，state 仍为该连接目标结果；metadata 为 `{type:"metadata",terminal_id,display_name}`。v2 不接收额外字段/metadata，仍能用原 cancel_termination 撤销整个 v3 批次。二进制输入/输出及 generation 不变。字段完整示例由共享 fixture 锁定。
+
 ## 4. 验证与错误矩阵
 
 | 条件 | 结果与副作用 |
@@ -49,6 +68,10 @@ SQLite 只保存终端稳定 ID、不可猜的 `persistty_<随机ID>` tmux sessi
 | 重复终止/取消已结束请求 | `termination_pending`/`termination_missing`，无重复 kill |
 | 未知控制字段/type、无效尺寸 | 1008；超帧 1009，不执行动作 |
 | 输出队列满/写超时 | 1013/断开，只回收自身 attach，pane 继续 |
+| PATCH 旧名冲突/无效名称 | 409/400，不覆盖新元数据；镜像失败不杀进程 |
+| batch 伪 viewer、旧 generation、已有 pending | 409 control_denied/stale_generation/termination_pending，details 指明目标，整批零新 timer |
+| batch 成员已结束/不可观测 | 409 conflict/503 unavailable；不跳过失败成员 |
+| batch result 不存在/重启后已丢弃 | 404，不自动重发终止 |
 
 ## 5. 正常 / 基础 / 错误用例
 
@@ -57,6 +80,8 @@ SQLite 只保存终端稳定 ID、不可猜的 `persistty_<随机ID>` tmux sessi
 ## 6. 所需测试
 
 共享 JSON/WS fixture 与 Go/TS decoder 测试需覆盖三端控制、旧 generation 二进制帧、观察端 resize、背压、重连、Web restart、倒计时取消竞态、项目解绑。真实 Debian/systemd 必须证明原 pane PID/start/cgroup 保持、TUI/普通历史分离、split UTF-8/OSC、resize、慢端回收及只清理自身资源。已通过的 40 项探针检查与 9 条 Playwright 路径见验收记录，mock 不能替代此门禁。
+
+新增名称并发/CAS/空号/镜像失败测试、共享 v2/v3 fixture、批次 A/B/C 与独立 D/E 撤销、校验失败零 timer/kill、锁外 kill 与无重试、HTTP 写保护与严格解码，均须运行 race。浏览器新增接管零重放、跨端改名同 DOM/零 WS、上下目标隔离和 v2 observer 整批取消。最新证据与未验证边界见 [UI 调整验收](../../tasks/09-30-workbench-ui-layout/check-report.md)，不能将单测记为所有真实设备验收。
 
 ## 7. 错误与正确示例
 
