@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../../../../tests/contracts/foundation.json";
 import workspaceFixture from "../../../../tests/contracts/workspace-files.json";
-import { decodeArchive, decodeDeletePreview, decodeEnvelope, decodeError, decodeFileContent, decodeFileListing, decodeFileMetadata, decodeList, decodeOperationResult, decodeProject, decodeSession, decodeTerminal, decodeUploadState, ProtocolError } from "./decoder";
+import terminalFixture from "../../../../tests/contracts/terminal-runtime.json";
+import { decodeArchive, decodeDeletePreview, decodeEnvelope, decodeError, decodeFileContent, decodeFileListing, decodeFileMetadata, decodeList, decodeOperationResult, decodeProject, decodeSession, decodeTerminal, decodeTerminalHistory, decodeUploadState, ProtocolError } from "./decoder";
 
 describe("Go/TypeScript 共同 API fixture", () => {
   it("读取全部成功和错误形状", () => {
@@ -20,12 +21,25 @@ describe("Go/TypeScript 共同 API fixture", () => {
     expect(() => decodeProject(value)).toThrow(ProtocolError);
   });
   it("拒绝未知状态、无UTC时间、越界列表和缺失信封", () => {
-    expect(() => decodeTerminal({ ...fixture.terminals.data.items[0], state: "running" })).toThrow(ProtocolError);
+    expect(() => decodeTerminal({ ...fixture.terminals.data.items[0], state: "unknown" })).toThrow(ProtocolError);
     expect(() => decodeSession({ ...fixture.session.data, expires_at: "2026-10-04" })).toThrow(ProtocolError);
     expect(() => decodeSession({ ...fixture.session.data, expires_at: "2026-02-31T12:00:00Z" })).toThrow(ProtocolError);
     expect(() => decodeList(decodeProject)({ items: Array.from({ length: 201 }, () => fixture.project.data) })).toThrow(ProtocolError);
     expect(() => decodeList(decodeProject)({ items: [fixture.project.data, fixture.project.data] })).toThrow(ProtocolError);
     expect(() => decodeEnvelope({ data: fixture.project.data }, decodeProject)).toThrow(ProtocolError);
+  });
+});
+
+describe("W03 终端契约", () => {
+  it("解码真实状态、解绑终端和有界历史", () => {
+    expect(decodeEnvelope(terminalFixture.terminal, decodeTerminal).state).toBe("running");
+    expect(decodeEnvelope(terminalFixture.unlinked_terminal, decodeTerminal).project_id).toBeNull();
+    expect(decodeEnvelope(terminalFixture.history, decodeTerminalHistory).cols).toBe(100);
+  });
+  it("拒绝未知状态和无效历史", () => {
+    expect(() => decodeTerminal({ ...terminalFixture.terminal.data, state: "paused" })).toThrow(ProtocolError);
+    expect(() => decodeTerminalHistory({ ...terminalFixture.history.data, content_base64: "@@@" })).toThrow(ProtocolError);
+    expect(() => decodeTerminalHistory({ ...terminalFixture.history.data, rows: 0 })).toThrow(ProtocolError);
   });
 });
 

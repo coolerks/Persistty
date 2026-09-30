@@ -33,7 +33,8 @@ export type DeletePreview = { path: string; kind: "file" | "directory"; count: n
 export type ImportResult = { state: "uploaded" | "skipped"; version: FileVersion };
 export type UploadState = { id: string; status: "pending" | "completed" | "skipped"; size: number; chunk_bytes: number; received: number[]; expires_at: string; result: ImportResult | null };
 export type ArchiveRecord = { id: string; project_id: string; folder_id: string; project_version: number; relative_path: string; created_at: string; expires_at: string; status: "pending" | "ready" | "failed" | "cancelled"; size: number; error_code: string };
-export type Terminal = { id: string; display_name: string; project_id: string | null; working_directory: string; state: "unavailable" };
+export type Terminal = { id: string; display_name: string; project_id: string | null; working_directory: string; state: "running" | "terminated" | "unavailable" };
+export type TerminalHistory = { content_base64: string; history_size: number; returned_lines: number; alternate_on: boolean; cols: number; rows: number; truncated: boolean };
 
 export function decodeEnvelope<T>(value: unknown, decode: (data: unknown) => T): T {
   const object = exact(value, ["data", "request_id"]);
@@ -138,10 +139,21 @@ export function decodeArchive(value: unknown): ArchiveRecord {
 }
 export function decodeTerminal(value: unknown): Terminal {
   const object = exact(value, ["id", "display_name", "project_id", "working_directory", "state"]);
-  if (object.state !== "unavailable") fail();
+  if (object.state !== "running" && object.state !== "terminated" && object.state !== "unavailable") fail();
   const working_directory = text(object.working_directory);
   if (!working_directory.startsWith("/")) fail();
-  return { id: id(object.id), display_name: text(object.display_name, 256), project_id: object.project_id === null ? null : id(object.project_id), working_directory, state: "unavailable" };
+  return { id: id(object.id), display_name: text(object.display_name, 256), project_id: object.project_id === null ? null : id(object.project_id), working_directory, state: object.state };
+}
+export function decodeTerminalHistory(value: unknown): TerminalHistory {
+  const object = exact(value, ["content_base64", "history_size", "returned_lines", "alternate_on", "cols", "rows", "truncated"]);
+  if (typeof object.content_base64 !== "string" || object.content_base64.length > 12_000_000 ||
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(object.content_base64) ||
+    typeof object.alternate_on !== "boolean" || typeof object.truncated !== "boolean") fail();
+  const cols = integer(object.cols, 1);
+  const rows = integer(object.rows, 1);
+  if (cols > 1000 || rows > 1000) fail();
+  return { content_base64: object.content_base64, history_size: integer(object.history_size),
+    returned_lines: integer(object.returned_lines), alternate_on: object.alternate_on, cols, rows, truncated: object.truncated };
 }
 function array<T>(value: unknown, decode: (item: unknown) => T, max: number): T[] {
   if (!Array.isArray(value) || value.length > max) fail();

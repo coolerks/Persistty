@@ -1,4 +1,4 @@
-import { decodeArchive, decodeDeletePreview, decodeDirectory, decodeEnvelope, decodeError, decodeFileContent, decodeFileListing, decodeFileMetadata, decodeImportResult, decodeList, decodeOperationResult, decodeProject, decodeSession, decodeTerminal, decodeUploadState, ProtocolError } from "./decoder";
+import { decodeArchive, decodeDeletePreview, decodeDirectory, decodeEnvelope, decodeError, decodeFileContent, decodeFileListing, decodeFileMetadata, decodeImportResult, decodeList, decodeOperationResult, decodeProject, decodeSession, decodeTerminal, decodeTerminalHistory, decodeUploadState, ProtocolError } from "./decoder";
 import type { FileVersion } from "./decoder";
 
 export type FileOperation = { kind: "create_file" | "create_directory" | "rename" | "copy" | "move" | "delete"; project_version: number; source_folder_id?: string; source_path?: string; target_folder_id?: string; target_path?: string; expected_version?: FileVersion; expected_identity?: string; delete_token?: string };
@@ -65,6 +65,10 @@ export const api = {
   deleteProject: (project: { id: string; version: number }, csrf: string, signal: AbortSignal) => request(`/projects/${encodeURIComponent(project.id)}`, () => undefined,
     { method: "DELETE", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify({ expected_version: project.version }), signal }),
   terminals: (signal: AbortSignal) => request("/terminals", decodeList(decodeTerminal), { signal }),
+  terminal: (id: string, signal: AbortSignal) => request(`/terminals/${encodeURIComponent(id)}`, decodeTerminal, { signal }),
+  createTerminal: (input: { project_id: string; project_version: number; folder_id?: string; display_name?: string; cols?: number; rows?: number }, csrf: string, signal: AbortSignal) => request("/terminals", decodeTerminal,
+    { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify(input), signal }),
+  terminalHistory: (id: string, signal: AbortSignal) => request(`/terminals/${encodeURIComponent(id)}/history`, decodeTerminalHistory, { signal }),
 };
 
 export function fileDownloadURL(projectId: string, folderId: string, version: number, path: string): string {
