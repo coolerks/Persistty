@@ -10,7 +10,7 @@
 
 W02 已证明 raw attach 能恢复当前画面，但普通历史不足；capture 后再 attach 会漏间隙行；公开 xterm serialize 在 parser pending、scroll region、charset 与真实 TUI 截点不等价。因此不把任一方案直接当生产协议。
 
-隔离 tmux 3.5a 实验及脱敏证据见 [恢复实验](../../../tests/integration/debian/recovery/README.md) 与 [结果](../../../tests/integration/debian/recovery/evidence.json)。控制模式同一流的 `capture-pane`/`%output` 在 400 条连续编号中无重漏，`capture-pane -P` 可以补 pending CSI/OSC，却不能补拆开的 UTF-8 前缀。**因此禁止以控制模式画面快照加原始 `%output` 实施正式恢复**；这不是 T02 的合格方案。
+隔离 tmux 3.5a 实验及脱敏证据见 [恢复实验](../../../../../tests/integration/debian/recovery/README.md) 与 [结果](../../../../../tests/integration/debian/recovery/evidence.json)。控制模式同一流的 `capture-pane`/`%output` 在 400 条连续编号中无重漏，`capture-pane -P` 可以补 pending CSI/OSC，却不能补拆开的 UTF-8 前缀。**因此禁止以控制模式画面快照加原始 `%output` 实施正式恢复**；这不是 T02 的合格方案。
 
 候选方案改为两种不相拼接的视图：当前画面只使用普通 tmux PTY attach 输出，由 tmux 重绘解析状态；活动 xterm 的 scrollback 为 0。普通历史以 `capture-pane -p -e -S - -E -1` 从 tmux 的有界历史读取，在同一终端界面的虚拟滚动视图中**整体替换快照**，绝不追加进活动 xterm。用户回到实时画面直接看持续更新的 attach。该视图切换不能中断 pane、重发输入或制造第二个 session。历史上限在创建 session 时配置；tmux 3.5a 无 `capture-pane -L`，只能使用支持的 `-S/-E` 与 `#{history_size}`。实验中 120 行上限的最后历史编号 371 与实时画面首编号 372 连续，alternate screen 时普通历史仍可读，观察 owner 重建后 TUI 和原 PID/cgroup 不变，xterm headless 5.5.0 单元格检查通过。只读观察 attach 的 `ignore-size` 不改变 pane；可写控制 attach 缩放到 80×24 后 curses 正确重绘并能恢复 100×30。
 

@@ -16,4 +16,4 @@ runner 只读取仓库根已忽略的 `.env`，在目标机创建 `0700` 的私�
 
 正式产品探针需先将 `./tests/integration/debian/recovery/runtimego` 编译为文件名严格为 `runtime-probe` 的 Linux 二进制，再执行 `python3 -B tests/integration/debian/run_remote.py recovery --binary /private/tmp/runtime-probe`。runner 通过文件名选择产品探针；换名会退回纯机制实验。产品检查覆盖创建与元数据故障恢复、项目解绑、精确终止、有效 pane history-limit、HTTP Cookie/CSRF/历史、两端 WS 接管、旧代输入拒绝、终止广播与观察端取消、登出撤销，以及缺 tmux server 不隐式重启。2026-09-30 最近一次机制/产品探针合计 40 项全部为 true，私有 unit/scope 与目录已清理。
 
-另有 [隔离浏览器 E2E](../browser/README.md)，2026-09-30 完整九条通过：三种计数/HTTP/确定性 TUI 负载跨正常/SIGKILL Web 重启保留 PID/start/cgroup、端口和任务输出，关页/离线/登出后继续交互；桌面/手机真实画面、历史、方向/鼠标/控制字节/粘贴、链接、接管、三端倒计时、精确终止及宿主移动零新 WS 全部通过。T01..T07 证据见 [W03 验收](../../../../.trellis/tasks/09-29-terminal-runtime/check-report.md)。`evidence.json` 保留 09-29 机制阶段尚未集成的原始观察，不代表最新产品状态。
+另有 [隔离浏览器 E2E](../browser/README.md)，2026-09-30 完整九条通过：三种计数/HTTP/确定性 TUI 负载跨正常/SIGKILL Web 重启保留 PID/start/cgroup、端口和任务输出，关页/离线/登出后继续交互；桌面/手机真实画面、历史、方向/鼠标/控制字节/粘贴、链接、接管、三端倒计时、精确终止及宿主移动零新 WS 全部通过。T01..T07 证据见 [W03 验收](../../../../.trellis/tasks/archive/2026-09/09-29-terminal-runtime/check-report.md)。`evidence.json` 保留 09-29 机制阶段尚未集成的原始观察，不代表最新产品状态。

@@ -32,7 +32,7 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /private/tmp/runtime-probe ./t
 python3 -B tests/integration/debian/run_remote.py recovery --binary /private/tmp/runtime-probe
 ```
 
-真实恢复/产品探针 40 项全部为 true，units/scopes/root 清理为 true。浏览器完整 9 条在新隔离实例顺序运行，43.9 秒全部通过；步骤见 [浏览器 README](../../../tests/integration/debian/browser/README.md)。浏览器 cleanup 再验证 units inactive、pane processes gone、root removed；本轮 SSH tunnel 与 Vite 联调进程也已停止。连接参数仅来自已忽略 `.env`，记录无 SSH 用户/IP/端口、密码、Cookie/token、输入或真实文件正文。
+真实恢复/产品探针 40 项全部为 true，units/scopes/root 清理为 true。浏览器完整 9 条在新隔离实例顺序运行，43.9 秒全部通过；步骤见 [浏览器 README](../../../../../tests/integration/debian/browser/README.md)。浏览器 cleanup 再验证 units inactive、pane processes gone、root removed；本轮 SSH tunnel 与 Vite 联调进程也已停止。连接参数仅来自已忽略 `.env`，记录无 SSH 用户/IP/端口、密码、Cookie/token、输入或真实文件正文。
 
 ## 修复与复用检查
 
@@ -43,6 +43,6 @@ python3 -B tests/integration/debian/run_remote.py recovery --binary /private/tmp
 
 ## 限制与非阻断提示
 
-原始 [2026-09-29 机制证据](../../../tests/integration/debian/recovery/evidence.json) 保留当时 `integrated_web_t02_accepted:false`，不改历史；最新产品通过记录见本报告。控制模式 snapshot/raw 拼接的 UTF-8 反例仍成立，不采用该模型。
+原始 [2026-09-29 机制证据](../../../../../tests/integration/debian/recovery/evidence.json) 保留当时 `integrated_web_t02_accepted:false`，不改历史；最新产品通过记录见本报告。控制模式 snapshot/raw 拼接的 UTF-8 反例仍成立，不采用该模型。
 
 Go 沙箱内首次 test 因 loopback bind 被拒，已在允许监听的执行环境用 `-count=1` 重跑完整 test/race；未跳过测试。49 条前端单测通过但 jsdom 提示 canvas getContext 未实现，真实渲染由 Chromium 验证；构建成功但仍有 Monaco/主包超过 500 kB 警告，未隐藏提示或改阈值。移动测试为 Chromium 窄屏，不冒充真手机键盘/设备全矩阵。普通 tmux 不保证主机重启恢复，管理员停 tmux 会终止任务。隔离探针有 900 秒 TTL，只用于验收，不作为长期正常使用部署。

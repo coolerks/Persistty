@@ -2,7 +2,7 @@
 
 ## 目标与依据
 
-在 W01 的认证/路由与 W04 的项目/folder 契约之上，交付让 AI、后端和前端长任务跨关页、断网、登出及 Web 重启继续运行的网页终端。父任务 [PRD](../09-26-requirements-research/prd.md) P02/P03/P04/P14/P15 和 [实施计划](../09-26-requirements-research/implement.md) W03 是已批准的产品边界。[W02 实验](../archive/2026-09/09-27-debian-spike/summary.md) 只证明底层可行性；D08 历史/TUI 快照未过生产门禁。W04 已归档，项目配置与终端生命周期必须分离。
+在 W01 的认证/路由与 W04 的项目/folder 契约之上，交付让 AI、后端和前端长任务跨关页、断网、登出及 Web 重启继续运行的网页终端。父任务 [PRD](../../../09-26-requirements-research/prd.md) P02/P03/P04/P14/P15 和 [实施计划](../../../09-26-requirements-research/implement.md) W03 是已批准的产品边界。[W02 实验](../09-27-debian-spike/summary.md) 只证明底层可行性；D08 历史/TUI 快照未过生产门禁。W04 已归档，项目配置与终端生命周期必须分离。
 
 ## 范围内需求
 

@@ -4,7 +4,7 @@
 U06..U73要求多观察端、单输入controller，额外观察连接不返回terminal_attached。控制权显式接管与递增generation，observer不能PTY resize。controller发起唯一服务器deadline，全查看端弹窗，任一鉴权查看端可取消；发起者失效/控制转移/Web重启取消pending。项目删除仅解绑元数据，shell可cd项目外，真实终端继续且统一入口可重连。上方terminal标签X/单会话trash为终止请求，下方整面板X只收起。移动宿主不detach/runtime dispose，history默认5000行。W03 具体接口与机制以 [运行时契约](terminal-runtime-contract.md) 为准；本页以下 W02 实验说明不是已实现状态。
 
 ## 1. 范围 / 触发
-硬性要求：浏览器关闭、UI tab 隐藏/卸载、网络或 WS 断开、重新登录、Nginx restart、Go Web Server restart 都不能终止 tmux 中任务。普通主机 reboot 不恢复进程内存；README/UI 必须明确。W03 已完成 T01..T07，逐项证据见 [W03 验收](../../tasks/09-29-terminal-runtime/check-report.md)；正式 Nginx/VPN 部署仍属于 W08，不把隔离服务通过写成正式安装验收。
+硬性要求：浏览器关闭、UI tab 隐藏/卸载、网络或 WS 断开、重新登录、Nginx restart、Go Web Server restart 都不能终止 tmux 中任务。普通主机 reboot 不恢复进程内存；README/UI 必须明确。W03 已完成 T01..T07，逐项证据见 [W03 验收](../../tasks/archive/2026-09/09-29-terminal-runtime/check-report.md)；正式 Nginx/VPN 部署仍属于 W08，不把隔离服务通过写成正式安装验收。
 
 ## 2. 签名
 W03 service 边界：创建、真实状态列表、历史快照、每连接只读 attach、服务端控制和倒计时裁决。具体 WS/HTTP 见 [运行时契约](terminal-runtime-contract.md)。

@@ -2,7 +2,7 @@
 
 ## 1. 范围与触发条件
 
-W03 [PRD](../../tasks/09-29-terminal-runtime/prd.md)、[设计](../../tasks/09-29-terminal-runtime/design.md) 与 [验收记录](../../tasks/09-29-terminal-runtime/check-report.md) 是本契约依据。2026-09-30 T01..T07 已通过；今后修改终端创建、恢复、控制、终止或部署归属时必须重验相关路径。Web 与 tmux server/pane 生命周期分离。tmux 会话 ID/精确 target 由服务端生成，客户端只提交项目/folder 身份与尺寸；不接受 shell 命令、socket 路径或任意 tmux 参数。
+W03 [PRD](../../tasks/archive/2026-09/09-29-terminal-runtime/prd.md)、[设计](../../tasks/archive/2026-09/09-29-terminal-runtime/design.md) 与 [验收记录](../../tasks/archive/2026-09/09-29-terminal-runtime/check-report.md) 是本契约依据。2026-09-30 T01..T07 已通过；今后修改终端创建、恢复、控制、终止或部署归属时必须重验相关路径。Web 与 tmux server/pane 生命周期分离。tmux 会话 ID/精确 target 由服务端生成，客户端只提交项目/folder 身份与尺寸；不接受 shell 命令、socket 路径或任意 tmux 参数。
 
 ## 2. 签名
 
