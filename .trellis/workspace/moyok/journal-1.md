@@ -76,3 +76,39 @@ W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: 归档七个已完成任务
+<!-- trellis-session: v=2 fp=89bea259b21ca7a3 -->
+
+**Date**: 2026-09-30
+**Task**: 归档七个已完成任务
+**Branch**: `main`
+
+### Summary
+
+按用户明确要求完成并归档七个任务，修复归档后的文档与 JSONL 引用。保留 W05～W08 未完成及真实手机软键盘等未验收边界。
+
+### Main Changes
+
+- 七个指定任务状态更新为 completed，归档至 .trellis/tasks/archive/2026-09；活动任务归零。
+- 补充归档范围、实际代码提交及历史状态说明，修复当前和既有归档链接。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `52e7097728bd1619d9e0a4ac98b753916f299d58` | docs: 修复任务归档引用并记录完成边界 |
+
+### Testing
+
+- [OK] 370 个本地 Markdown 链接、84 个 JSONL 目标、11 个已归档 completed 任务及 0 个活动任务校验通过；git diff --check 通过。
+- [OK] 本轮仅修改任务元数据与文档，未重跑 Go/前端或真机产品测试；inline 任务不存在的 JSONL 按 CLI 跳过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- W05 编辑/自动保存/草稿/完整布局恢复尚未建任务；W06～W08 未完成，手机软键盘等真实设备检查继续保留为后续验收事项。
