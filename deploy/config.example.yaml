@@ -16,3 +16,11 @@ transfer:
   chunk_bytes: 4194304
   upload_ttl: 24h
   archive_ttl: 1h
+terminal:
+  tmux_binary: /usr/bin/tmux
+  shell: /usr/bin/zsh
+  socket_path: /var/lib/persistty/tmux.sock
+  history_lines: 5000
+  restore_lines: 5000
+  history_bytes: 8388608
+  termination_seconds: 10

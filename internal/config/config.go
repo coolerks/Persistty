@@ -41,6 +41,15 @@ type Config struct {
 		UploadTTL       string `yaml:"upload_ttl"`
 		ArchiveTTL      string `yaml:"archive_ttl"`
 	} `yaml:"transfer"`
+	Terminal struct {
+		TmuxBinary         string `yaml:"tmux_binary"`
+		Shell              string `yaml:"shell"`
+		SocketPath         string `yaml:"socket_path"`
+		HistoryLines       int    `yaml:"history_lines"`
+		RestoreLines       int    `yaml:"restore_lines"`
+		HistoryBytes       int64  `yaml:"history_bytes"`
+		TerminationSeconds int    `yaml:"termination_seconds"`
+	} `yaml:"terminal"`
 }
 
 func Load(path string) (Config, error) {
@@ -72,6 +81,12 @@ func Load(path string) (Config, error) {
 	cfg.Transfer.ChunkBytes = 4 << 20
 	cfg.Transfer.UploadTTL = "24h"
 	cfg.Transfer.ArchiveTTL = "1h"
+	cfg.Terminal.TmuxBinary = "/usr/bin/tmux"
+	cfg.Terminal.Shell = "/bin/sh"
+	cfg.Terminal.HistoryLines = 5000
+	cfg.Terminal.RestoreLines = 5000
+	cfg.Terminal.HistoryBytes = 8 << 20
+	cfg.Terminal.TerminationSeconds = 10
 	decoder := yaml.NewDecoder(io.LimitReader(f, 65537))
 	decoder.KnownFields(true)
 	if info.Size() > 65536 {
@@ -133,6 +148,12 @@ func (c Config) ArchiveDuration() time.Duration {
 	return d
 }
 func (c Config) SecureCookie() bool { return c.Server.Mode == "tls" }
+func (c Config) TerminalSocketPath() string {
+	if c.Terminal.SocketPath != "" {
+		return c.Terminal.SocketPath
+	}
+	return filepath.Join(filepath.Dir(c.Storage.Path), "tmux.sock")
+}
 func (c Config) CookieName() string {
 	if c.SecureCookie() {
 		return "__Host-persistty_session"
@@ -216,6 +237,22 @@ func (c Config) Validate() error {
 		if e != nil || d < time.Minute || d > 24*time.Hour {
 			return errors.New("transfer.archive_ttl无效")
 		}
+	}
+	for _, path := range []string{c.Terminal.TmuxBinary, c.Terminal.Shell, c.TerminalSocketPath()} {
+		if path == "" || !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.ContainsRune(path, 0) {
+			return errors.New("terminal路径必须是规范绝对路径")
+		}
+	}
+	if c.TerminalSocketPath() == c.Storage.Path || c.TerminalSocketPath() == c.StagingPath() ||
+		c.Terminal.TmuxBinary == c.Terminal.Shell || c.Terminal.TmuxBinary == c.TerminalSocketPath() ||
+		c.Terminal.Shell == c.TerminalSocketPath() {
+		return errors.New("terminal路径不能与存储或彼此重合")
+	}
+	if c.Terminal.HistoryLines < 100 || c.Terminal.HistoryLines > 50000 ||
+		c.Terminal.RestoreLines < 100 || c.Terminal.RestoreLines > c.Terminal.HistoryLines ||
+		c.Terminal.HistoryBytes < 1<<20 || c.Terminal.HistoryBytes > 64<<20 ||
+		c.Terminal.TerminationSeconds < 1 || c.Terminal.TerminationSeconds > 120 {
+		return errors.New("terminal容量或倒计时配置无效")
 	}
 	return nil
 }

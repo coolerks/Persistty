@@ -18,6 +18,7 @@ import (
 	"persistty/internal/config"
 	"persistty/internal/files"
 	"persistty/internal/storage"
+	"persistty/internal/terminal"
 	"persistty/internal/transfer"
 	"persistty/internal/workspace"
 )
@@ -29,6 +30,8 @@ type api struct {
 	logger    *slog.Logger
 	deleteKey [32]byte
 	transfer  *transfer.Service
+	terminals *terminal.Service
+	runtime   *terminal.Runtime
 }
 type failure struct {
 	Code    string `json:"code"`
@@ -49,6 +52,17 @@ func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Eng
 		return nil, err
 	}
 	a := &api{cfg: cfg, store: store, auth: service, logger: logger}
+	a.terminals = &terminal.Service{Store: store, Tmux: &terminal.Tmux{
+		Binary: cfg.Terminal.TmuxBinary, Socket: cfg.TerminalSocketPath(), Shell: cfg.Terminal.Shell,
+		HistoryLines: cfg.Terminal.HistoryLines, RestoreLines: cfg.Terminal.RestoreLines,
+		HistoryBytes: cfg.Terminal.HistoryBytes,
+	}}
+	a.runtime = terminal.NewRuntime(a.terminals.Tmux,
+		time.Duration(cfg.Terminal.TerminationSeconds)*time.Second,
+		func(ctx context.Context, token string) error {
+			_, err := a.auth.Lookup(ctx, token)
+			return err
+		})
 	initCtx, initCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer initCancel()
 	a.transfer, err = transfer.New(initCtx, cfg, store)
@@ -122,16 +136,11 @@ func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Eng
 	protected.GET("/archives/:id", a.archiveStatus)
 	protected.GET("/archives/:id/download", a.downloadArchive)
 	protected.DELETE("/archives/:id", a.cancelArchive)
-	protected.GET("/terminals", func(c *gin.Context) {
-		items, err := store.Terminals(c.Request.Context())
-		if err != nil {
-			a.error(c, err)
-			return
-		}
-		a.success(c, struct {
-			Items []storage.Terminal `json:"items"`
-		}{items})
-	})
+	protected.GET("/terminals", a.listTerminals)
+	protected.POST("/terminals", a.createTerminal)
+	protected.GET("/terminals/:id", a.getTerminal)
+	protected.GET("/terminals/:id/history", a.terminalHistory)
+	protected.GET("/terminals/:id/stream", a.terminalStream)
 	r.NoRoute(func(c *gin.Context) {
 		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
 			a.authenticate()(c)
@@ -160,6 +169,8 @@ func (a *api) middleware() gin.HandlerFunc {
 		start := time.Now()
 		timeout := 10 * time.Second
 		if c.Request.URL.Path == "/api/v1/events" {
+			timeout = 24 * time.Hour
+		} else if strings.HasPrefix(c.Request.URL.Path, "/api/v1/terminals/") && strings.HasSuffix(c.Request.URL.Path, "/stream") {
 			timeout = 24 * time.Hour
 		} else if strings.Contains(c.Request.URL.Path, "/uploads/") || strings.Contains(c.Request.URL.Path, "/archives/") || strings.HasSuffix(c.Request.URL.Path, "/download") {
 			timeout = 5 * time.Minute
@@ -264,6 +275,12 @@ func (a *api) error(c *gin.Context, err error) {
 		a.fail(c, 413, "too_large", "资源数量超过上限。")
 	case errors.Is(err, storage.ErrConflict):
 		a.fail(c, 409, "conflict", "项目配置已改变，请刷新后重试。")
+	case errors.Is(err, terminal.ErrInvalidRequest):
+		a.fail(c, 400, "invalid_request", "终端参数无效。")
+	case errors.Is(err, terminal.ErrUnavailable):
+		a.fail(c, 503, "unavailable", "终端服务暂时不可用。")
+	case errors.Is(err, terminal.ErrHistoryTooLarge):
+		a.fail(c, 413, "too_large", "终端历史超过配置上限。")
 	case errors.Is(err, storage.ErrInvalidProject), errors.Is(err, workspace.ErrInvalidPath):
 		a.fail(c, 400, "invalid_request", "请求格式无效。")
 	case errors.Is(err, workspace.ErrUnreachable):

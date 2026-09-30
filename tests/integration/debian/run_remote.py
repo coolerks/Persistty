@@ -149,6 +149,118 @@ def run_snapshot(remote, binary):
     return run_history(remote, binary, analysis_kind="snapshot")
 
 
+def run_recovery(remote, binary=None):
+    root = remote.ssh("umask 077; mktemp -d /tmp/persistty-recovery-XXXXXXXX").strip()
+    if not re.fullmatch(r"/tmp/persistty-recovery-[A-Za-z0-9]{8}", root):
+        raise TransportError("Debian recovery 临时目录身份非法")
+    result = {}
+    try:
+        remote.scp([ROOT / "tests/integration/debian/bridge/probe.py"], root)
+        remote.ssh(f"mv -- {shlex.quote(root + '/probe.py')} {shlex.quote(root + '/bridge_support.py')}")
+        remote.scp([ROOT / "tests/integration/debian/recovery/probe.py"], root)
+        if binary is not None:
+            if not binary.is_file() or binary.name != "runtime-probe":
+                raise TransportError("Debian runtime probe 二进制缺失或名称非法")
+            remote.scp([binary], root)
+            remote.ssh(f"chmod 700 -- {shlex.quote(root + '/runtime-probe')}")
+        result = json.loads(remote.ssh(
+            f"python3 -B {shlex.quote(root + '/probe.py')} start {shlex.quote(root)}"))
+        if result.get("probe_failed"):
+            raise TransportError("Debian recovery 实验失败阶段 " + result["stage"]
+                                 + " 类别 " + result.get("error_type", "unknown"))
+        cache = ROOT / ".cache"
+        cache.mkdir(exist_ok=True)
+        fd, path = tempfile.mkstemp(prefix="recovery-", suffix=".json", dir=cache)
+        try:
+            with os.fdopen(fd, "w") as file:
+                json.dump(result.pop("records"), file)
+            process = subprocess.run(
+                ["node", str(ROOT / "tests/integration/debian/recovery/analyze.mjs"), path],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=45)
+            if process.returncode or len(process.stdout) > 65536:
+                raise TransportError("Debian recovery xterm 解析失败")
+            analyzed = json.loads(process.stdout)
+            result["xterm"] = analyzed["summary"]
+            result["checks"].update(analyzed["checks"])
+            if binary is not None:
+                product = json.loads(remote.ssh(
+                    f"LD_LIBRARY_PATH={shlex.quote(root + '/package/usr/lib/x86_64-linux-gnu')} "
+                    f"timeout 30s {shlex.quote(root + '/runtime-probe')} "
+                    f"{shlex.quote(root)} {shlex.quote(root + '/package/usr/bin/tmux')} "
+                    f"{shlex.quote(root + '/tmux.sock')}"))
+                if product.get("failed_stage") or not product.get("checks"):
+                    raise TransportError("Debian 产品探针失败阶段 " + product.get("failed_stage", "unknown"))
+                result["checks"].update({"product_" + key: value for key, value in product["checks"].items()})
+            if not all(result["checks"].values()):
+                failed = ",".join(key for key, value in result["checks"].items() if not value)
+                raise TransportError("Debian recovery 断言失败: " + failed
+                                     + " command_statuses=" + str(result["facts"].get("product_command_statuses")))
+        finally:
+            Path(path).unlink(missing_ok=True)
+    finally:
+        try:
+            result["cleanup"] = json.loads(remote.ssh(
+                f"if test -f {shlex.quote(root + '/state.json')}; then "
+                f"python3 -B {shlex.quote(root + '/probe.py')} cleanup {shlex.quote(root)}; "
+                f"else rm -f -- {shlex.quote(root + '/probe.py')} {shlex.quote(root + '/bridge_support.py')} "
+                f"{shlex.quote(root + '/runtime-probe')}; "
+                f"rmdir -- {shlex.quote(root)} && printf '{{\"unstarted_root_removed\":true}}'; fi"))
+            if result["cleanup"].get("probe_failed"):
+                raise TransportError("Debian recovery 清理失败")
+        except Exception:
+            raise TransportError("Debian recovery 清理未验证；仅核查自身实验目录 " + root) from None
+    return result
+
+
+def run_browser_start(remote, binary):
+    if not binary.is_file() or binary.name != "runtime-probe":
+        raise TransportError("Debian browser 本地二进制缺失或名称非法")
+    root = remote.ssh("umask 077; mktemp -d /tmp/persistty-browser-XXXXXXXX").strip()
+    if not re.fullmatch(r"/tmp/persistty-browser-[A-Za-z0-9]{8}", root):
+        raise TransportError("Debian browser 临时目录身份非法")
+    try:
+        remote.scp([ROOT / "tests/integration/debian/bridge/probe.py", binary], root)
+        remote.ssh(f"mv -- {shlex.quote(root + '/probe.py')} {shlex.quote(root + '/support.py')}")
+        remote.scp([ROOT / "tests/integration/debian/browser/probe.py", ROOT / "tests/integration/debian/browser/tui.py"], root)
+        remote.ssh(f"chmod 700 -- {shlex.quote(root + '/runtime-probe')}")
+        result = json.loads(remote.ssh(
+            f"python3 -B {shlex.quote(root + '/probe.py')} start {shlex.quote(root)}"))
+        if result.get("failed_stage"):
+            raise TransportError("Debian 浏览器启动探针失败阶段 " + result["failed_stage"])
+        return result
+    except Exception:
+        try:
+            cleanup_output = remote.ssh(f"if test -f {shlex.quote(root + '/state.json')}; then "
+                       f"python3 -B {shlex.quote(root + '/probe.py')} cleanup {shlex.quote(root)}; "
+                       f"else rm -rf -- {shlex.quote(root)}; fi")
+            if cleanup_output.strip() and json.loads(cleanup_output).get("failed_stage"):
+                raise TransportError("清理探针未通过")
+        except Exception:
+            raise TransportError("Debian browser 启动失败且清理未验证；仅核查本次实验目录 " + root) from None
+        raise
+
+
+def run_browser_cleanup(remote, root):
+    if not re.fullmatch(r"/tmp/persistty-browser-[A-Za-z0-9]{8}", root):
+        raise TransportError("Debian browser 清理目录身份非法")
+    result = json.loads(remote.ssh(
+        f"python3 -B {shlex.quote(root + '/probe.py')} cleanup {shlex.quote(root)}"))
+    if result.get("failed_stage"):
+        raise TransportError("Debian 浏览器清理探针失败阶段 " + result["failed_stage"])
+    return result
+
+
+def run_browser_restart(remote, root, force=False):
+    if not re.fullmatch(r"/tmp/persistty-browser-[A-Za-z0-9]{8}", root):
+        raise TransportError("Debian browser 重启目录身份非法")
+    result = json.loads(remote.ssh(
+        f"python3 -B {shlex.quote(root + '/probe.py')} {'force-restart' if force else 'restart'} {shlex.quote(root)}"))
+    if result.get("failed_stage"):
+        raise TransportError("Debian 浏览器重启探针失败阶段 " + result["failed_stage"]
+                             + "（" + result.get("error_kind", "unknown") + "）")
+    return result
+
+
 def run_cli(remote, binary):
     if not binary.is_file() or binary.name != "cli-probe":
         raise TransportError("Debian CLI 本地二进制缺失或名称非法")
@@ -185,10 +297,11 @@ def run_helper_capabilities(remote):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=("terminal", "files", "bridge", "history", "snapshot", "cli", "helper"))
+    parser.add_argument("kind", choices=("terminal", "files", "bridge", "history", "snapshot", "recovery", "browser-start", "browser-restart", "browser-force-restart", "browser-cleanup", "cli", "helper"))
     parser.add_argument("--probe", type=Path, default=Path("/tmp/persistty-files-probe"))
     parser.add_argument("--test", type=Path, default=Path("/tmp/persistty-files-test"))
     parser.add_argument("--binary", type=Path, default=Path("/tmp/bridge-probe"))
+    parser.add_argument("--root", default="")
     args = parser.parse_args()
     try:
         connection = read_config()
@@ -201,6 +314,16 @@ def main():
             result = run_history(remote, args.binary.resolve())
         elif args.kind == "snapshot":
             result = run_snapshot(remote, args.binary.resolve())
+        elif args.kind == "recovery":
+            result = run_recovery(remote, args.binary.resolve() if args.binary.name == "runtime-probe" else None)
+        elif args.kind == "browser-start":
+            result = run_browser_start(remote, args.binary.resolve())
+        elif args.kind == "browser-cleanup":
+            result = run_browser_cleanup(remote, args.root)
+        elif args.kind == "browser-restart":
+            result = run_browser_restart(remote, args.root)
+        elif args.kind == "browser-force-restart":
+            result = run_browser_restart(remote, args.root, force=True)
         elif args.kind == "cli":
             result = run_cli(remote, args.binary.resolve())
         elif args.kind == "helper":
@@ -213,8 +336,9 @@ def main():
     except (ConfigError, TransportError) as error:
         print(str(error), file=sys.stderr)
         return 1
-    except Exception:
-        print("Debian 实验结果解析或执行失败；仅核查本次实验资源", file=sys.stderr)
+    except Exception as error:
+        print("Debian 实验结果解析或执行失败（" + type(error).__name__
+              + "）；仅核查本次实验资源", file=sys.stderr)
         return 1
     return 0
 

@@ -46,6 +46,7 @@ type Project struct {
 }
 type Terminal struct {
 	ID               string  `json:"id"`
+	TmuxSessionName  string  `json:"-"`
 	DisplayName      string  `json:"display_name"`
 	ProjectID        *string `json:"project_id"`
 	WorkingDirectory string  `json:"working_directory"`
@@ -359,7 +360,7 @@ func projectFolders(ctx context.Context, tx *sql.Tx, id string) ([]Folder, error
 	return folders, rows.Err()
 }
 func (s *Store) Terminals(ctx context.Context) ([]Terminal, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id,display_name,project_id,working_directory FROM terminals ORDER BY created_at,id LIMIT 201")
+	rows, err := s.db.QueryContext(ctx, "SELECT id,tmux_session_name,display_name,project_id,working_directory FROM terminals ORDER BY created_at,id LIMIT 201")
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +369,7 @@ func (s *Store) Terminals(ctx context.Context) ([]Terminal, error) {
 	for rows.Next() {
 		var t Terminal
 		t.State = "unavailable"
-		if err = rows.Scan(&t.ID, &t.DisplayName, &t.ProjectID, &t.WorkingDirectory); err != nil {
+		if err = rows.Scan(&t.ID, &t.TmuxSessionName, &t.DisplayName, &t.ProjectID, &t.WorkingDirectory); err != nil {
 			return nil, err
 		}
 		items = append(items, t)

@@ -1,0 +1,76 @@
+{
+  "terminal": {
+    "data": {
+      "id": "terminal_1",
+      "display_name": "终端 1",
+      "project_id": "project_1",
+      "working_directory": "/home/example/workspace",
+      "state": "running"
+    },
+    "request_id": "test-request"
+  },
+  "unlinked_terminal": {
+    "data": {
+      "id": "terminal_1",
+      "display_name": "终端 1",
+      "project_id": null,
+      "working_directory": "/home/example/workspace",
+      "state": "running"
+    },
+    "request_id": "test-request"
+  },
+  "history": {
+    "data": {
+      "content_base64": "aGVsbG8NCg==",
+      "history_size": 1,
+      "returned_lines": 1,
+      "alternate_on": false,
+      "cols": 100,
+      "rows": 30,
+      "truncated": false
+    },
+    "request_id": "test-request"
+  },
+  "ready": {
+    "type": "ready",
+    "protocol": 2,
+    "terminal_id": "terminal_1",
+    "viewer_id": "viewer_1",
+    "role": "controller",
+    "generation": 2,
+    "cols": 100,
+    "rows": 30,
+    "pending_termination": null
+  },
+  "observer_ready": {
+    "type": "ready",
+    "protocol": 2,
+    "terminal_id": "terminal_1",
+    "viewer_id": "viewer_2",
+    "role": "observer",
+    "generation": 2,
+    "cols": 100,
+    "rows": 30,
+    "pending_termination": {
+      "request_id": "terminate_1",
+      "deadline": "2026-09-29T12:00:10Z"
+    }
+  },
+  "takeover": { "type": "takeover", "generation": 2 },
+  "control_after_takeover": { "type": "control", "role": "controller", "generation": 3 },
+  "resize": { "type": "resize", "generation": 3, "cols": 80, "rows": 24 },
+  "terminate": { "type": "terminate", "generation": 3 },
+  "termination_pending": {
+    "type": "termination_pending",
+    "request_id": "terminate_1",
+    "deadline": "2026-09-29T12:00:10Z"
+  },
+  "cancel_termination": { "type": "cancel_termination", "request_id": "terminate_1" },
+  "termination_cancelled": { "type": "termination_cancelled", "request_id": "terminate_1" },
+  "stale_generation_error": {
+    "type": "error",
+    "code": "stale_generation",
+    "message": "控制权已变化。"
+  },
+  "input_frame_hex": "000000000000000203"
+}

@@ -1,0 +1,22 @@
+[Unit]
+Description=Persistty dedicated tmux server
+After=local-fs.target
+
+[Service]
+Type=exec
+# 与 persistty.service 使用同一现有非 root 开发账号。
+User=developer
+Group=developer
+StateDirectory=persistty
+StateDirectoryMode=0700
+WorkingDirectory=/var/lib/persistty
+ExecStart=/usr/bin/tmux -D -S /var/lib/persistty/tmux.sock -f /etc/persistty/tmux.conf
+Restart=no
+TimeoutStopSec=20s
+KillMode=control-group
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

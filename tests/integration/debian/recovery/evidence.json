@@ -1,0 +1,39 @@
+{
+  "kind": "w03_recovery_gate_observation",
+  "date": "2026-09-29",
+  "environment": {
+    "tmux": "3.5a",
+    "xterm_headless": "5.5.0",
+    "debian_connection_values_stored": false
+  },
+  "synthetic_fixture": {
+    "stream_lines": 400,
+    "history_limit": 120,
+    "snapshot_last": 42,
+    "live_first": 43,
+    "missing_or_duplicate_stream_lines": 0,
+    "history_visible_bounds": [253, 371],
+    "active_visible_bounds": [372, 400],
+    "alternate_history_lines": 110
+  },
+  "negative_control": {
+    "capture_pending_csi": true,
+    "capture_pending_osc": true,
+    "capture_pending_utf8": false,
+    "control_mode_snapshot_plus_raw_output_is_safe": false
+  },
+  "candidate_model": {
+    "ordinary_attach_restores_split_utf8": true,
+    "ordinary_attach_restores_curses_alternate": true,
+    "history_is_separate_bounded_tmux_capture": true,
+    "owner_reconnect_keeps_pane_identity": true,
+    "headless_cell_checks_passed": true,
+    "readonly_observer_did_not_resize_pane": true,
+    "writable_owner_resized_curses": true,
+    "slow_unread_observer_burst_finished": true,
+    "slow_attach_required_forced_client_reap": true,
+    "integrated_web_t02_accepted": false
+  },
+  "checks_passed": 17,
+  "private_remote_resources_removed": true
+}

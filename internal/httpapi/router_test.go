@@ -100,11 +100,12 @@ func TestRouterProtectionAndLogout(t *testing.T) {
 	if other.Value == cookie.Value {
 		t.Fatal("fixed token")
 	}
-	for _, path := range []string{"/api/v1/projects", "/api/v1/terminals"} {
-		w := request(r, "GET", path, "", "", cookie, "")
-		if w.Code != 200 || !strings.Contains(w.Body.String(), `"items":[]`) {
-			t.Fatalf("list %d %s", w.Code, w.Body)
-		}
+	w := request(r, "GET", "/api/v1/projects", "", "", cookie, "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"items":[]`) {
+		t.Fatalf("projects list %d %s", w.Code, w.Body)
+	}
+	if w = request(r, "GET", "/api/v1/terminals", "", "", cookie, ""); w.Code != 503 {
+		t.Fatalf("missing tmux server must not look like an empty terminal list: %d %s", w.Code, w.Body)
 	}
 	if w := request(r, "GET", "/api/v1/projects/missing", "", "", cookie, ""); w.Code != 404 {
 		t.Fatal("unknown project faked")
@@ -113,8 +114,16 @@ func TestRouterProtectionAndLogout(t *testing.T) {
 		if w := request(r, "POST", "/api/v1/auth/logout", "", tt.origin, cookie, tt.csrf); w.Code != 403 {
 			t.Fatalf("CSRF bypass %d", w.Code)
 		}
+		if w := request(r, "POST", "/api/v1/terminals", `{}`, tt.origin, cookie, tt.csrf); w.Code != 403 {
+			t.Fatalf("terminal create CSRF bypass %d", w.Code)
+		}
 	}
-	w := request(r, "POST", "/api/v1/auth/logout", "", cfg.Server.PublicOrigin, cookie, csrf)
+	for _, origin := range []string{"", "null", "http://evil.test"} {
+		if w := request(r, "GET", "/api/v1/terminals/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/stream", "", origin, cookie, ""); w.Code != 403 {
+			t.Fatalf("terminal stream Origin bypass %d", w.Code)
+		}
+	}
+	w = request(r, "POST", "/api/v1/auth/logout", "", cfg.Server.PublicOrigin, cookie, csrf)
 	if w.Code != 204 || w.Body.Len() != 0 || w.Result().Cookies()[0].MaxAge != -1 {
 		t.Fatal("logout")
 	}

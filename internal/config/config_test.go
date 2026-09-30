@@ -22,6 +22,10 @@ func TestConfig(t *testing.T) {
 		valid         bool
 	}{
 		{"valid", content, 0600, true}, {"unknown", content + "unexpected: true\n", 0600, false}, {"duplicate", strings.Replace(content, "mode: development", "mode: development\n  mode: tls", 1), 0600, false}, {"permissions", content, 0644, false}, {"multidoc", content + "---\n{}\n", 0600, false}, {"missingmode", strings.Replace(content, "mode: development", "", 1), 0600, false}, {"badhash", strings.Replace(content, testHash, "bad", 1), 0600, false}, {"badttl", strings.Replace(content, "password_hash:", "session_ttl: -1h\n  password_hash:", 1), 0600, false}, {"originpath", strings.Replace(content, "http://127.0.0.1:5173", "http://127.0.0.1:5173/", 1), 0600, false},
+		{"terminal-default", content + "terminal:\n  history_lines: 5000\n  restore_lines: 120\n  termination_seconds: 30\n", 0600, true},
+		{"terminal-invalid-limit", content + "terminal:\n  history_lines: 99\n", 0600, false},
+		{"terminal-invalid-countdown", content + "terminal:\n  termination_seconds: 121\n", 0600, false},
+		{"terminal-relative-socket", content + "terminal:\n  socket_path: tmux.sock\n", 0600, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := os.WriteFile(path, []byte(tt.content), 0600); err != nil {
@@ -43,6 +47,12 @@ func TestModes(t *testing.T) {
 	c.Auth.PasswordHash = testHash
 	c.Auth.SessionTTL = "168h"
 	c.Storage.Path = "/tmp/persistty/test.sqlite"
+	c.Terminal.TmuxBinary = "/usr/bin/tmux"
+	c.Terminal.Shell = "/bin/sh"
+	c.Terminal.HistoryLines = 5000
+	c.Terminal.RestoreLines = 5000
+	c.Terminal.HistoryBytes = 8 << 20
+	c.Terminal.TerminationSeconds = 10
 	for _, tt := range []struct {
 		mode, origin, listen string
 		valid                bool
