@@ -1,6 +1,6 @@
 import { editorScopes } from "./editor-session";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, ClipboardPaste, FilePlus, FolderPlus, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardPaste, Search, FilePlus, FolderPlus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api, ApiError, errorMessage } from "@/lib/api/client";
 import { useResource } from "@/lib/api/use-resource";
@@ -27,7 +27,7 @@ function draggedEntry(event: React.DragEvent): EntryRef | null {
   } catch { return null; }
 }
 
-export function Explorer({ project, onFile, reveal }: { project: Project; onFile(folderId: string, path: string): void; reveal?: { file: OpenFile | null } }) {
+export function Explorer({ project, onFile, reveal, onSearch }: { project: Project; onFile(folderId: string, path: string): void; reveal?: { file: OpenFile | null }; onSearch?(folderId: string, path: string, replace: boolean): void }) {
   const [epoch, setEpoch] = useState(0);
   const [selectedFile, setSelectedFile] = useState<OpenFile | null>(reveal?.file ?? null);
   useEffect(() => { if (reveal) setSelectedFile(reveal.file); }, [reveal]);
@@ -43,13 +43,13 @@ export function Explorer({ project, onFile, reveal }: { project: Project; onFile
   return <aside className="explorer" aria-label="资源管理器">
     <div className="explorer-heading"><strong>资源管理器</strong><Button size="icon" variant="ghost" aria-label="刷新文件树" title="刷新文件树" onClick={() => setEpoch(value => value + 1)}><RefreshCw /></Button></div>
     {actions.dialogs}{archive.element}
-    <div className="explorer-scroll">{project.folders.map(folder => <FolderTree key={`${folder.id}:${project.version}`} project={project} folderId={folder.id} rootPath={folder.path} epoch={epoch} actions={actions} selectedFile={selectedFile} reveal={reveal} onArchive={path => void archive.begin(folder.id, path)} onFile={path => { setSelectedFile({ folderId: folder.id, path }); onFile(folder.id, path); }} />)}</div>
+    <div className="explorer-scroll">{project.folders.map(folder => <FolderTree key={`${folder.id}:${project.version}`} project={project} folderId={folder.id} rootPath={folder.path} onSearch={onSearch ? (path, replace) => onSearch(folder.id, path, replace) : undefined} epoch={epoch} actions={actions} selectedFile={selectedFile} reveal={reveal} onArchive={path => void archive.begin(folder.id, path)} onFile={path => { setSelectedFile({ folderId: folder.id, path }); onFile(folder.id, path); }} />)}</div>
   </aside>;
 }
 
-type Common = { project: Project; folderId: string; actions: Actions; onArchive(path: string): void; onFile(path: string): void; epoch: number; selectedFile: OpenFile | null; reveal?: { file: OpenFile | null } | undefined };
+type Common = { onSearch?: ((path: string, replace: boolean) => void) | undefined; project: Project; folderId: string; actions: Actions; onArchive(path: string): void; onFile(path: string): void; epoch: number; selectedFile: OpenFile | null; reveal?: { file: OpenFile | null } | undefined };
 
-function FolderTree({ project, folderId, rootPath, epoch, actions, onArchive, onFile, selectedFile, reveal }: Common & { rootPath: string }) {
+function FolderTree({ project, folderId, rootPath, epoch, actions, onArchive, onFile, onSearch, selectedFile, reveal }: Common & { rootPath: string }) {
   const [selected, setSelected] = useState("");
   const [localEpoch, setLocalEpoch] = useState(0);
   useEffect(() => {
@@ -70,16 +70,17 @@ function FolderTree({ project, folderId, rootPath, epoch, actions, onArchive, on
       <Button size="icon" variant="ghost" title="新建文件" aria-label="新建文件" onClick={() => actions.createFile(folderId, selected)}><FilePlus /></Button>
       <Button size="icon" variant="ghost" title="新建文件夹" aria-label="新建文件夹" onClick={() => actions.createDirectory(folderId, selected)}><FolderPlus /></Button>
       <Button size="icon" variant="ghost" title="粘贴" aria-label="粘贴" disabled={!actions.clipboard || actions.pending} onClick={() => void actions.paste(folderId, selected)}><ClipboardPaste /></Button>
+      {onSearch && <Button size="icon" variant="ghost" aria-label="在目录中搜索" title="在目录中搜索" onClick={() => onSearch(selected, false)}><Search /></Button>}
       <UploadControls project={project} folderId={folderId} path={selected} containerRef={containerRef} onChanged={refresh} />
       <Button size="icon" variant="ghost" title="刷新目录" aria-label="刷新目录" onClick={refresh}><RefreshCw /></Button>
     </div>
-    <Directory key={`${epoch}:${localEpoch}`} {...{ project, folderId, actions, onArchive, onFile, epoch, selectedFile, reveal }} path="" depth={0} selected={selected} onSelect={setSelected} />
+    <Directory key={`${epoch}:${localEpoch}`} {...{ project, folderId, actions, onArchive, onFile, onSearch, epoch, selectedFile, reveal }} path="" depth={0} selected={selected} onSelect={setSelected} />
   </section>;
 }
 
 type DirectoryProps = Common & { path: string; depth: number; selected: string; onSelect(path: string): void };
 
-function Directory({ project, folderId, path, depth, actions, onArchive, onFile, epoch, selected, onSelect, selectedFile, reveal }: DirectoryProps) {
+function Directory({ project, folderId, path, depth, actions, onArchive, onFile, onSearch, epoch, selected, onSelect, selectedFile, reveal }: DirectoryProps) {
   const [load] = useState(() => (signal: AbortSignal) => api.entries(project.id, folderId, project.version, path, "", signal));
   const { resource, refreshQuietly } = useResource(load);
   const [extra, setExtra] = useState<FileEntry[]>([]);
@@ -126,7 +127,7 @@ function Directory({ project, folderId, path, depth, actions, onArchive, onFile,
   return <div role="group" aria-label={path || "文件夹根目录"}>
     {resource.status === "loading" && <div className="tree-message"><Loading /></div>}
     {resource.status === "error" && <div className="tree-message"><Failure error={resource.error} retry={reload} /></div>}
-    {items.map(item => <TreeEntry key={item.name} {...{ item, project, folderId, actions, onArchive, onFile, epoch, selected, onSelect, selectedFile, reveal, dragOver, drop }} fullPath={path ? `${path}/${item.name}` : item.name} depth={depth} />)}
+    {items.map(item => <TreeEntry key={item.name} {...{ item, project, folderId, actions, onArchive, onFile, onSearch, epoch, selected, onSelect, selectedFile, reveal, dragOver, drop }} fullPath={path ? `${path}/${item.name}` : item.name} depth={depth} />)}
     {resource.status === "ready" && items.length === 0 && depth === 0 && <p className="tree-message">空文件夹</p>}
     {nextCursor && <Button variant="ghost" size="sm" disabled={pending} onClick={() => void next(nextCursor)}>{pending ? "加载中" : "加载更多"}</Button>}
     {nextError && <p role="alert" className="tree-message text-destructive">{nextError}</p>}
@@ -134,7 +135,7 @@ function Directory({ project, folderId, path, depth, actions, onArchive, onFile,
   </div>;
 }
 
-function TreeEntry({ item, fullPath, depth, project, folderId, actions, onArchive, onFile, epoch, selected, onSelect, selectedFile, reveal, dragOver, drop }: Omit<DirectoryProps, "path"> & { item: FileEntry; fullPath: string; dragOver(event: React.DragEvent): void; drop(event: React.DragEvent, destination: string): void }) {
+function TreeEntry({ item, fullPath, depth, project, folderId, actions, onArchive, onFile, onSearch, epoch, selected, onSelect, selectedFile, reveal, dragOver, drop }: Omit<DirectoryProps, "path"> & { item: FileEntry; fullPath: string; dragOver(event: React.DragEvent): void; drop(event: React.DragEvent, destination: string): void }) {
   const directory = item.kind === "directory";
   const ancestor = directory && reveal?.file?.folderId === folderId && reveal.file.path.startsWith(`${fullPath}/`);
   const [expanded, setExpanded] = useState(() => ancestor || !!useWorkspaceView.getState().projects[project.id]?.expanded?.[fileKey({ folderId, path: fullPath })]);
@@ -153,8 +154,8 @@ function TreeEntry({ item, fullPath, depth, project, folderId, actions, onArchiv
   </Button>;
   return <div role="group">
     <div className="tree-entry-wrap" draggable={item.kind !== "unsupported"} onDragStart={event => { event.dataTransfer.setData("application/x-persistty-entry", JSON.stringify(source)); event.dataTransfer.effectAllowed = "move"; }} onDragOver={directory ? dragOver : undefined} onDrop={directory ? event => drop(event, fullPath) : undefined}>
-      {item.kind === "unsupported" ? row : <EntryMenus project={project} source={source} actions={actions} onOpen={open} onArchive={() => onArchive(fullPath)}>{row}</EntryMenus>}
+      {item.kind === "unsupported" ? row : <EntryMenus project={project} source={source} actions={actions} onOpen={open} onArchive={() => onArchive(fullPath)} onSearch={onSearch ? replace => onSearch(fullPath, replace) : undefined}>{row}</EntryMenus>}
     </div>
-    {directory && expanded && <Directory {...{ project, folderId, actions, onArchive, onFile, epoch, selected, onSelect, selectedFile, reveal }} path={fullPath} depth={depth + 1} />}
+    {directory && expanded && <Directory {...{ project, folderId, actions, onArchive, onFile, onSearch, epoch, selected, onSelect, selectedFile, reveal }} path={fullPath} depth={depth + 1} />}
   </div>;
 }

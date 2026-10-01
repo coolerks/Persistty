@@ -11,7 +11,7 @@ type Four<T> = [T, T, T, T];
 const four = <T,>(fn: (i: GroupIndex) => T): Four<T> => [fn(0), fn(1), fn(2), fn(3)];
 export type ProjectView = {
   groups: Four<OpenFile[]>; active: Four<string | null>; focused: GroupIndex; split: boolean;
-  mobileFiles: OpenFile[]; mobileActive: string | null; mobileView: "files" | "editor" | "terminal"; mobileTerminal: string | null;
+  mobileFiles: OpenFile[]; mobileActive: string | null; mobileView: "files" | "editor" | "terminal" | "search" | "git"; sidebar: "files" | "search" | "git"; mobileTerminal: string | null;
   terminals: Record<string, TerminalPosition>; terminalOrder: string[]; upperActive: Four<string | null>; lowerActive: Four<string | null>; lowerCount: number;
   expanded: Record<string, true>;
 };
@@ -36,7 +36,7 @@ type WorkspaceView = {
   expand(projectId: string, file: OpenFile, expanded: boolean): void;
 };
 export const fileKey = (file: OpenFile) => `${file.folderId}\u0000${file.path}`;
-export const emptyView = (): ProjectView => ({ groups: [[], [], [], []], active: [null, null, null, null], focused: 0, split: false, mobileFiles: [], mobileActive: null, mobileView: "files", mobileTerminal: null, terminals: {}, terminalOrder: [], upperActive: [null, null, null, null], lowerActive: [null, null, null, null], lowerCount: 1, expanded: {} });
+export const emptyView = (): ProjectView => ({ groups: [[], [], [], []], active: [null, null, null, null], focused: 0, split: false, mobileFiles: [], mobileActive: null, mobileView: "files", sidebar: "files", mobileTerminal: null, terminals: {}, terminalOrder: [], upperActive: [null, null, null, null], lowerActive: [null, null, null, null], lowerCount: 1, expanded: {} });
 const sameFile = (a: OpenFile, b: OpenFile) => fileKey(a) === fileKey(b);
 export function allOpenFiles(view: ProjectView | undefined): OpenFile[] { return [...(view?.groups.flat() ?? []), ...(view?.mobileFiles ?? [])]; }
 const matches = (file: OpenFile, source: OpenFile) => file.folderId === source.folderId && (file.path === source.path || file.path.startsWith(`${source.path}/`));
@@ -70,7 +70,8 @@ export function restoreViews(value: unknown): Record<string, ProjectView> {
     view.focused = groupIndex(raw.focused) ? raw.focused : 0;
     if (raw.mobileFiles !== undefined) { if (!Array.isArray(raw.mobileFiles) || raw.mobileFiles.length > 100 || !raw.mobileFiles.every(storedFile)) throw new Error("手机文件标签记录无效。"); view.mobileFiles = raw.mobileFiles; }
     view.mobileActive = view.mobileFiles.some(file => fileKey(file) === raw.mobileActive) ? String(raw.mobileActive) : null;
-    if (raw.mobileView === "files" || raw.mobileView === "editor" || raw.mobileView === "terminal") view.mobileView = raw.mobileView;
+    if (raw.mobileView === "files" || raw.mobileView === "editor" || raw.mobileView === "terminal" || raw.mobileView === "search" || raw.mobileView === "git") view.mobileView = raw.mobileView;
+    if (raw.sidebar === "files" || raw.sidebar === "search" || raw.sidebar === "git") view.sidebar = raw.sidebar;
     view.mobileTerminal = identifier(raw.mobileTerminal) ? raw.mobileTerminal : null;
     if (record(raw.terminals)) {
       if (Object.keys(raw.terminals).length > 500) throw new Error("终端视图记录超过上限。");

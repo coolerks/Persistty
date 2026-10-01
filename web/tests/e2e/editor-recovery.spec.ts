@@ -18,6 +18,7 @@ async function fixture(page: Page) {
       if (reject || input.expected_version.etag !== version(input.path).etag) { await route.fulfill({ status: 409, json: { error: { code: "file_conflict", message: "服务器内容已变化" }, request_id: "fixture" } }); return; }
       expect(request.headers()["x-csrf-token"]).toBe("fixture"); row.content = input.content; row.revision++; data = { version: version(input.path) };
     } else if (path.endsWith("/content")) { const path = query.get("path")!; data = { content: files.get(path)!.content, version: version(path), kind: "text" }; }
+    else if (path.endsWith("/git-baseline")) data = { state: "no_repository", repo_id: "", head: "", content: "", version: null };
     else throw new Error(`未预期请求 ${request.method()} ${path}`);
     await route.fulfill({ json: { data, request_id: "fixture" } });
   });

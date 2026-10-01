@@ -24,6 +24,7 @@ Persistty是Debian单用户浏览器终端与轻量文件工作台。W01 已有�
 | [HTTP 与共享概念](http-api.md) | 跨层权威契约 |
 | [W01 基础协议](foundation-contract.md) | 已批准基础API与共享fixture；覆盖旧bootstrap字段 |
 | [W04 项目与文件 API 契约](workspace-files-contract.md) | 已实现的多根项目、文件、传输、事件与测试矩阵 |
+| [W06 搜索与只读 Git](search-git-contract.md) | 已接入API、快照隔离、替换与CLI边界 |
 | [W05 保存与预览](editor-preview-contract.md) | 强版本保存、JSON 字节边界、内容识别与图片/SVG 安全 |
 | [WebSocket](websocket-protocol.md) | 帧、重连、背压、watcher |
 | [质量与测试](quality-guidelines.md) | 后端门禁、真实集成与安全检查 |

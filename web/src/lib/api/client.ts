@@ -11,7 +11,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, decode: (value: unknown) => T, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, decode: (value: unknown) => T, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api/v1${path}`, { ...options, credentials: "same-origin", cache: "no-store", redirect: "error" });
   if (!response.ok) {
     const value: unknown = await response.json().catch(() => { throw new ProtocolError(); });

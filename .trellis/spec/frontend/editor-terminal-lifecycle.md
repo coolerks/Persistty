@@ -67,3 +67,11 @@ D08 的 [快照截点实验](../backend/snapshot-validation.md) 显示等待 cal
 W03 已通过真实产品验收，当前 owner 为 [前端终端契约](terminal-runtime-contract.md)。runtime 按 terminal ID 保存在工作台 provider，portal 的固定 DOM element 在上下宿主间移动；宿主卸载不 dispose xterm/WS，不自动接管。仅退出整个 scope 才释放视图资源，仍只 detach。addons 按功能引入 fit/web-links，按锁定版本 dispose。ResizeObserver 在可见且尺寸非零时 fit，controller 才发送尺寸，隐藏不发 0x0；server bytes 由有界队列/write callback 排空，保留 split UTF-8。
 clear display 只 clear xterm，不执行 shell clear/kill，不清 tmux history。copy/paste 使用浏览器 clipboard 与权限反馈，paste 不伪造控制序列；clickable URL 仅 http/https，禁止 javascript，外链 noopener。URL/标题/输出不是可信 HTML。
 scope 退出 dispose xterm/addons/listeners/observer/socket/timers，只 detach；create/terminate 分别来自明确 user command。StrictMode 不重复创建连接或 session。每次 attach 由 tmux 重绘当前画面，普通历史独立整体替换，不拼入 live xterm；旧 D07/D08 负例继续约束后续变更。
+
+W06 HEAD标记、只读比较及目标替换保护见 [搜索/Git工作台](search-git-workbench.md)。比较model与编辑model分离，不能通过setValue覆盖未保存buffer。
+
+## 触屏横屏与工作台设备记录（2026-10-01）
+
+ProjectWorkbench 的 useMobile 使用 `(max-width: 760px), (hover: none) and (pointer: coarse)`；粗指针且无悬停的触屏保持基础文本编辑和单内容导航，旋转超过760px不切到桌面Monaco。窄鼠标桌面继续按宽度进入单内容视图，宽鼠标桌面继续多组；终端移动控件使用同一CSS媒体条件。触屏手机/平板共用移动记录，不能以视口变宽推断连接了鼠标或销毁缓冲区。
+
+错误：只按宽度判定，844px横屏把textarea替换成桌面模型并切换恢复记录。正确：触屏条件与窄屏条件共同决定布局，横竖屏保持当前输入和自动保存。`w05-platform-matrix.spec.ts` 用hasTouch、390×844→844×390验证导航、textarea、无Monaco、正文与落盘和横向溢出；此回归不是物理软键盘/输入法验收。

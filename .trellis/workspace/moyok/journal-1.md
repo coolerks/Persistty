@@ -112,3 +112,71 @@ W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控�
 ### Next Steps
 
 - W05 编辑/自动保存/草稿/完整布局恢复尚未建任务；W06～W08 未完成，手机软键盘等真实设备检查继续保留为后续验收事项。
+
+
+## Session 5: W06 搜索替换与只读 Git 功能交付，实机验收延期
+<!-- trellis-session: v=2 fp=4e4a0ffb03ab9946 -->
+
+**Date**: 2026-10-01
+**Task**: W06 搜索替换与只读 Git 功能交付，实机验收延期
+**Branch**: `main`
+
+### Summary
+
+单代理 inline 完成 W06 功能及本地开发门禁；任务保持进行中等待用户统一验收，未提交、推送或归档。
+
+### Main Changes
+
+- 安全目录快照/私有 CLI staging、多根搜索与版本保护替换、目标编辑缓冲区保护。
+- 多仓库只读 Git、固定 HEAD 历史分页、改名比较、所属仓库 HEAD 行标记和工作台入口。
+- 后端/前端 owner、README/AGENTS、任务交付报告与延期验收队列同步。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] Go test/vet/race 全包通过，Linux amd64 编译通过；不代表 Debian 运行验收。
+- [OK] 前端 lint/typecheck/build 通过，23 文件134单测；10项 Chromium 本地回归通过，收尾另复跑W06两项。
+- [OK] 18份 Markdown 的126个本地链接、JSON、Go格式、忽略规则及 diff --check 通过；inline JSONL 校验跳过不计产品验证。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- W05/W06 实机验收等待用户明确安排，后续功能包另建任务；不自动部署或归档。
+
+
+## Session 6: W05/W06 恢复统一验收与两项修正
+<!-- trellis-session: v=2 fp=ba041155e3df27b8 -->
+
+**Date**: 2026-10-01
+**Task**: W05/W06 恢复统一验收与两项修正
+**Branch**: `main`
+
+### Summary
+
+本机门禁及 Chromium/WebKit 回归通过；Debian 传输待明确目标与载荷授权，真实手机仍待设备条件。
+
+### Main Changes
+
+- 修复触屏横屏切换桌面模式与替换预览默认取消焦点，并加入实际回归、六种合成图片和隔离 Debian 包 runner。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] Go test/vet/race、前端 lint/typecheck/134 单测/build 通过；Chromium 综合22项及收尾4项、WebKit收尾4项通过；Python安全回归21项通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 获得 .env 指定 Debian 目标及测试产物传输授权后继续真实专项；协调手机、触控板及 shell 主题操作，排除 Firefox 启动环境阻塞。

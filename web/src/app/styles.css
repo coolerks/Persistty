@@ -211,7 +211,7 @@
 .mobile-workbench-nav svg { width: 15px; height: 15px; }
 .mobile-workbench-content { flex: 1; min-height: 0; min-width: 0; }
 .mobile-workbench-content > .terminal-pane { height: 100%; }
-@media (max-width: 760px) {
+@media (max-width: 760px), (hover: none) and (pointer: coarse) {
   .terminal-shortcuts { display: flex; flex: none; gap: 5px; overflow-x: auto; padding: 6px; border-top: 1px solid var(--border); scrollbar-width: thin; }
   .terminal-shortcuts button { flex: none; min-width: 38px; min-height: 36px; }
   .terminal-runtime-toolbar { gap: 5px; padding-inline: 6px; }
@@ -259,3 +259,17 @@
 .editor-surface textarea { font-family: "Persistty Nerd Mono", monospace; }
 .group-selector { display: flex; flex: none; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); }
 .editor-area { flex-direction: column; }
+
+/* W06 panels share the workbench scroll boundary; comparisons remain read-only. */
+.panel-surface { min-width: 0; min-height: 0; height: 100%; }
+.panel-surface[hidden] { display: none; }
+.feature-panel { display: flex; flex-direction: column; gap: .75rem; height: 100%; min-width: 0; overflow: auto; padding: .75rem; }
+.feature-panel h2 { font-size: .875rem; font-weight: 600; }
+.search-result-button { min-width: 0; justify-content: flex-start; gap: .5rem; flex: 1; }
+.git-file-button { width: 100%; min-width: 0; justify-content: space-between; gap: .5rem; }
+.replace-preview-files { max-height: 25vh; overflow: auto; min-width: 0; }
+.mobile-comparison { display: flex; flex-direction: column; gap: .75rem; max-height: 55vh; overflow: auto; min-width: 0; }
+.mobile-comparison pre { font-family: "Persistty Nerd Mono", monospace; white-space: pre; overflow: auto; padding: .5rem; border: 1px solid var(--border); }
+.git-line-added { border-left: 3px solid var(--chart-2); }
+.git-line-modified { border-left: 3px solid var(--chart-3); }
+.git-line-deleted { border-left: 3px solid var(--destructive); }

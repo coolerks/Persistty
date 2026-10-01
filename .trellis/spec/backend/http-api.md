@@ -10,7 +10,7 @@ W01 的完整签名与请求/响应见[基础协议](foundation-contract.md)，�
 - 工作台调整新增 PATCH /terminals/{id} 与 POST/GET /terminals/termination-batches（GET 带批次 ID），请求/结果/鉴权/错误细节以 [终端运行时](terminal-runtime-contract.md) 为准；POST 批次仍经控制权与服务器统一倒计时，不是立即 close。
 - W04 文件入口见 [W04 契约](workspace-files-contract.md)：按 `project_id/folder_id/project_version/relative_path` 定位，不存在旧 `workspace_id` 文件 API。
 - GET /terminals/{id}/stream 是 WS upgrade；GET /events 是受认证 watcher WS。
-全部路径相对于 /api/v1；其他 Explorer/search/upload/git/settings 端点在对应任务设计中补齐，不自由增加任意执行命令 API。
+全部路径相对于 /api/v1；Explorer/upload 见 W04，search/git 见 [W06 契约](search-git-contract.md)，其他 settings 端点在对应任务设计中补齐，不自由增加任意执行命令 API。
 
 ## 3. 契约
 JSON 字段 snake_case、ID 为服务器生成 opaque string、时间 UTC RFC3339Nano；null/缺省含义必须声明。size/chunk offset 限定 JS safe integer，最大 20GB 不跨此界。Unix 文件名可能非 UTF-8，v0.1 API 对无法编码的名字明确 unsupported，不能 lossy 转换后操作错误目标。

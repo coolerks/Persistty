@@ -51,3 +51,6 @@ Explorer 任务在实施前于 [HTTP 契约](http-api.md) 固化各端点签名�
 
 ## 7. 错误与正确
 错误：`EvalSymlinks -> HasPrefix -> os.WriteFile`。正确：词法校验 + root/安全父目录 handle + 版本复验 + 同目录原子提交。
+
+W06 的 SnapshotEntries/CopySnapshot/WalkSnapshot 使用 no-follow 父目录/叶句柄，读取后复验根、父与文件身份；非 Linux 的安全读取不得在检查后用绝对路径重新 os.Open。CLI 只接受私有快照，详见 [W06 契约](search-git-contract.md)。
+Darwin 目录项元数据同样用 `fstatat(dirfd, name, AT_SYMLINK_NOFOLLOW)`，不能依赖 `dir.Name()` 重新 `Lstat`；Linux snapshot 叶文件继续使用 openat2 的 NO_XDEV/BENEATH/NO_SYMLINKS，与原安全目录契约一致。

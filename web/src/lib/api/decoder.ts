@@ -7,7 +7,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function record(value: unknown): Record<string, unknown> { return isRecord(value) ? value : fail(); }
-function exact(value: unknown, keys: string[]): Record<string, unknown> {
+export function exact(value: unknown, keys: string[]): Record<string, unknown> {
   const object = record(value);
   if (Object.keys(object).length !== keys.length || !keys.every(key => Object.hasOwn(object, key))) fail();
   return object;
@@ -15,7 +15,7 @@ function exact(value: unknown, keys: string[]): Record<string, unknown> {
 function text(value: unknown, max = 4096): string {
   return typeof value === "string" && value.length > 0 && value.length <= max && !value.includes("\0") ? value : fail();
 }
-function id(value: unknown): string {
+export function id(value: unknown): string {
   const result = text(value, 128);
   return /^[A-Za-z0-9_-]+$/.test(result) ? result : fail();
 }
@@ -99,10 +99,10 @@ export function decodeFileContent(value: unknown): FileContent {
   if (object.kind !== "text" || typeof object.content !== "string") fail();
   return { content: object.content, kind: "text", version: decodeVersion(object.version) };
 }
-function integer(value: unknown, min = 0): number {
+export function integer(value: unknown, min = 0): number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= min ? value : fail();
 }
-function optionalText(value: unknown, max = 4096): string {
+export function optionalText(value: unknown, max = 4096): string {
   return typeof value === "string" && value.length <= max && !value.includes("\0") ? value : fail();
 }
 export function decodeVersion(value: unknown): FileVersion {
@@ -201,7 +201,7 @@ export function decodeTerminalHistory(value: unknown): TerminalHistory {
   return { content_base64: object.content_base64, history_size: integer(object.history_size),
     returned_lines: integer(object.returned_lines), alternate_on: object.alternate_on, cols, rows, truncated: object.truncated };
 }
-function array<T>(value: unknown, decode: (item: unknown) => T, max: number): T[] {
+export function array<T>(value: unknown, decode: (item: unknown) => T, max: number): T[] {
   if (!Array.isArray(value) || value.length > max) fail();
   return value.map(decode);
 }

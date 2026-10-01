@@ -18,6 +18,7 @@ test("工作台右键、树选择与重展开定位、已结束终端关闭和�
       const items = other ? [entry("other.ts")] : !path ? [entry("src", "directory"), ...Array.from({ length: 18 }, (_, i) => entry(`file-${i}.ts`))] : path === "src" ? [entry("nested", "directory")] : url.searchParams.get("cursor") ? [entry("target.ts")] : [entry("first.ts")];
       data = { items, next_cursor: path === "src/nested" && !url.searchParams.get("cursor") ? "next" : "", project_version: 1 };
     } else if (url.pathname.endsWith("/content")) data = { kind: "text", content: "const answer = 42;\n", version: { mtime: "2026-09-30T00:00:00Z", size: 19, etag: "fixture", identity: "fixture" } };
+    else if (url.pathname.endsWith("/git-baseline")) data = { state: "no_repository", repo_id: "", head: "", content: "", version: null };
     else throw new Error(`未预期的请求 ${url.pathname}`);
     await route.fulfill({ json: { data, request_id: "fixture" } });
   });

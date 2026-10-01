@@ -4,7 +4,6 @@ package files
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -33,27 +32,11 @@ func openConstrained(folder storage.RegisteredFolder, relative string, _ bool) (
 	if !ok || uint64(stat.Dev) != folder.Device || stat.Ino != folder.Inode {
 		return nil, ErrRootChanged
 	}
-	file, err := root.Open(relative)
+	file, err := root.OpenFile(relative, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	actual := filepath.Join(folder.Path, relative)
-	opened, err := os.Open(actual)
-	if err != nil {
-		return nil, err
-	}
-	checked, err := file.Stat()
-	if err != nil {
-		opened.Close()
-		return nil, err
-	}
-	current, err := opened.Stat()
-	if err != nil || !os.SameFile(checked, current) {
-		opened.Close()
-		return nil, ErrRootChanged
-	}
-	return opened, nil
+	return file, nil
 }
 
 func openMutationParent(folder storage.RegisteredFolder, relative string) (*os.File, error) {

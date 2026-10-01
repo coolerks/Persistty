@@ -37,6 +37,20 @@
     "web/tests/e2e/terminal-scrolling.spec.ts",
     "web/tests/e2e/w05-feedback-live.spec.ts"
   ],
-  "notes": "2026-10-01：W05 既有功能完成；截图批次 U01～U04 已实施：标签灰点、固定右侧文件操作、底部语言入口、空历史保留 live。最终 lint/typecheck/128 项单测/build、Go test/vet/race、18 项 Chromium 与 2 项真实 Debian 专项通过；两个专属实例均已清理，见 feedback-check-report.md。本轮修改未提交。真实手机软键盘、触控板手感与完整图片/平台矩阵未验收，保留 in_progress，不自动归档。",
-  "meta": {}
+  "notes": "2026-10-01：W05 既有功能完成；截图批次 U01～U04 已实施：标签灰点、固定右侧文件操作、底部语言入口、空历史保留 live。最终 lint/typecheck/128 项单测/build、Go test/vet/race、18 项 Chromium 与 2 项真实 Debian 专项通过；两个专属实例均已清理，见 feedback-check-report.md。本轮修改未提交。真实手机软键盘、触控板手感与完整图片/平台矩阵未验收，保留 in_progress，不自动归档。 2026-10-01 用户要求恢复 W05/W06 验收；本地主会话已修复触屏横屏/替换默认焦点，实际结果见 acceptance-report.md。Debian 本轮上传被自动审批拒绝，等待明确目标与载荷授权；实机手机/触控板未验收。",
+  "meta": {
+    "acceptance": {
+      "state": "in_progress",
+      "updatedAt": "2026-10-01",
+      "reason": "用户明确要求开始验收 W05/W06；自动化、真实 Debian 与真实手机分开记录，未执行不计通过",
+      "report": "acceptance-report.md",
+      "pending": [
+        "debian_target_authorization",
+        "real_phone_and_ime",
+        "physical_trackpad",
+        "firefox_environment",
+        "shell_theme_output"
+      ]
+    }
+  }
 }

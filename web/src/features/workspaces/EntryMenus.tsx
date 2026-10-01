@@ -1,14 +1,15 @@
 import { Copy, Download, FolderInput, Pencil, Scissors, Trash2 } from "lucide-react";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { ContextMenu, ContextMenuContent, ContextMenuGroup, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { fileDownloadURL } from "@/lib/api/client";
 import type { Project } from "@/lib/api/decoder";
 import type { EntryRef, useExplorerActions } from "./ExplorerActions";
 
 type Actions = ReturnType<typeof useExplorerActions>;
-export function EntryMenus({ project, source, children, actions, onOpen, onArchive }: { project: Project; source: EntryRef; children: React.ReactElement; actions: Actions; onOpen(): void; onArchive(): void }) {
+export function EntryMenus({ project, source, children, actions, onOpen, onArchive, onSearch }: { project: Project; source: EntryRef; children: React.ReactElement; actions: Actions; onOpen(): void; onArchive(): void; onSearch?: ((replace: boolean) => void) | undefined }) {
   const isDirectory = source.kind === "directory";
-  return <ContextMenu><ContextMenuTrigger render={children} /><ContextMenuContent>
+  return <ContextMenu><ContextMenuTrigger render={children} /><ContextMenuContent><ContextMenuGroup>
     <ContextMenuItem onClick={onOpen}>打开</ContextMenuItem>
+    {isDirectory && onSearch && <><ContextMenuItem onClick={() => onSearch(false)}>在目录中搜索</ContextMenuItem><ContextMenuItem onClick={() => onSearch(true)}>在目录中替换</ContextMenuItem></>}
     <ContextMenuItem onClick={() => void actions.copyPath(source, true)}>复制路径</ContextMenuItem>
     <ContextMenuItem onClick={() => void actions.copyPath(source, false)}>复制相对路径</ContextMenuItem>
     <ContextMenuSeparator />
@@ -19,5 +20,5 @@ export function EntryMenus({ project, source, children, actions, onOpen, onArchi
     <ContextMenuSeparator />
     {isDirectory ? <ContextMenuItem onClick={onArchive}><Download />下载 ZIP</ContextMenuItem> : <ContextMenuItem onClick={() => window.location.assign(fileDownloadURL(project.id, source.folderId, project.version, source.path))}><Download />下载文件</ContextMenuItem>}
     <ContextMenuItem variant="destructive" onClick={() => void actions.previewDelete(source)}><Trash2 />永久删除</ContextMenuItem>
-  </ContextMenuContent></ContextMenu>;
+  </ContextMenuGroup></ContextMenuContent></ContextMenu>;
 }

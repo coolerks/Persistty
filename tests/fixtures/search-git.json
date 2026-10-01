@@ -1,0 +1,123 @@
+{
+  "search": {
+    "id": "search1",
+    "project_version": 1,
+    "files": [
+      {
+        "id": "file1",
+        "folder_id": "root",
+        "path": "中 文.ts",
+        "version": {
+          "mtime": "2026-10-01T00:00:00Z",
+          "size": 12,
+          "etag": "sha256:fixture",
+          "identity": "1:2"
+        },
+        "matches": [
+          {
+            "id": "match1",
+            "line": 1,
+            "column": 3,
+            "end_column": 5,
+            "preview": "😀中文"
+          }
+        ]
+      }
+    ],
+    "truncated": false,
+    "skipped": [],
+    "expires_at": "2026-10-01T00:05:00Z"
+  },
+  "preview": {
+    "id": "preview1",
+    "project_version": 1,
+    "files": [
+      {
+        "id": "file1",
+        "folder_id": "root",
+        "path": "中 文.ts",
+        "version": {
+          "mtime": "2026-10-01T00:00:00Z",
+          "size": 12,
+          "etag": "sha256:fixture",
+          "identity": "1:2"
+        },
+        "count": 1,
+        "new_hash": "sha256:next"
+      }
+    ],
+    "results": [
+      {
+        "id": "file1",
+        "state": "conflict",
+        "reason": "conflict",
+        "version": null
+      }
+    ],
+    "state": "completed",
+    "expires_at": "2026-10-01T00:05:00Z"
+  },
+  "repositories": {
+    "items": [
+      {
+        "id": "repo1",
+        "folder_id": "root",
+        "path": "",
+        "name": "fixture",
+        "state": "available",
+        "reason": ""
+      }
+    ],
+    "truncated": false
+  },
+  "status": {
+    "repo_id": "repo1",
+    "head": "0123456789012345678901234567890123456789",
+    "branch": "main",
+    "changes": [
+      {
+        "path": "中 文.ts",
+        "old_path": "",
+        "index": "M",
+        "worktree": "M"
+      }
+    ],
+    "total_paths": [
+      "中 文.ts"
+    ]
+  },
+  "log": {
+    "items": [
+      {
+        "id": "0123456789012345678901234567890123456789",
+        "parents": [],
+        "author": "测试",
+        "date": "2026-10-01T00:00:00Z",
+        "subject": "根提交"
+      }
+    ],
+    "next_offset": -1,
+    "head": "0123456789012345678901234567890123456789"
+  },
+  "baseline": {
+    "state": "tracked",
+    "repo_id": "repo1",
+    "head": "0123456789012345678901234567890123456789",
+    "content": "😀中文",
+    "version": {
+      "mtime": "2026-10-01T00:00:00Z",
+      "size": 12,
+      "etag": "sha256:fixture",
+      "identity": "1:2"
+    }
+  },
+  "comparison": {
+    "repo_id": "repo1",
+    "path": "renamed.txt",
+    "old_path": "file.txt",
+    "original": "one\ntwo\n",
+    "modified": "one\ntwo\n",
+    "binary": false,
+    "baseline": "0123456789012345678901234567890123456789"
+  }
+}

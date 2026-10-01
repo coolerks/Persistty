@@ -1,16 +1,18 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useOutletContext } from "react-router";
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
-import { Files, FolderKanban, PanelBottom, PanelLeft, PanelRight, TerminalSquare, X, FileText } from "lucide-react";
+import { Files, FolderKanban, PanelBottom, PanelLeft, PanelRight, TerminalSquare, X, FileText, Search, GitBranch } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDropTarget } from "@/lib/use-drop-target";
 import { api } from "@/lib/api/client";
 import { decodeTerminal, type Project, type Terminal } from "@/lib/api/decoder";
+import { SearchPanel, type SearchIntent } from "@/features/search/SearchPanel";
+import { GitPanel } from "@/features/git/GitPanel";
 import { Explorer } from "./Explorer";
 import { watchEditorModels } from "./editor-model-lifecycle";
-import { allOpenFiles, fileKey, groupIndexes, useWorkspaceView } from "./workspace-view";
-import type { GroupIndex, OpenFile } from "./workspace-view";
+import { emptyView, allOpenFiles, fileKey, groupIndexes, useWorkspaceView } from "./workspace-view";
+import type { GroupIndex, OpenFile, ProjectView } from "./workspace-view";
 import { TerminalWorkspace } from "@/features/terminal/TerminalWorkspace";
 import { TerminalSession, TerminalRuntimeProvider } from "@/features/terminal/TerminalRuntime";
 import { TerminalTab } from "@/features/terminal/TerminalTab";
@@ -28,13 +30,14 @@ import { EditorScopeProvider } from "./EditorScopeProvider";
 import { useEditorScope } from "./editor-context";
 
 function useMobile(): boolean {
-  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 760px)").matches);
+  const query = "(max-width: 760px), (hover: none) and (pointer: coarse)";
+  const [mobile, setMobile] = useState(() => window.matchMedia(query).matches);
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 760px)");
+    const media = window.matchMedia(query);
     const update = () => setMobile(media.matches);
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, []);
+  }, [query]);
   return mobile;
 }
 
@@ -47,7 +50,7 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
   const view = useWorkspaceView(state => state.projects[project.id]);
   const open = useWorkspaceView(state => state.open);
   const mobileView = view?.mobileView ?? "files";
-  const setMobileView = (value: "files" | "editor" | "terminal") => useWorkspaceView.getState().mobileView(project.id, value);
+  const setMobileView = (value: ProjectView["mobileView"]) => useWorkspaceView.getState().mobileView(project.id, value);
   const { resource: terminals, refreshQuietly: refreshTerminals } = useResource(api.terminals);
   const refreshRef = useRef(refreshTerminals); refreshRef.current = refreshTerminals;
   useEffect(() => { const id = setInterval(() => refreshRef.current(), 15000); return () => clearInterval(id); }, []);
@@ -72,7 +75,25 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
   function showFiles() { if (mobileView !== "files") revealCurrentFile(); setMobileView("files"); }
   function moveToTop(terminal: Terminal, group: GroupIndex = focused) { useWorkspaceView.getState().placeTerminal(project.id, terminal.id, { region: "top", group }); refreshRef.current(); }
   function moveToBottom(id: string, group: GroupIndex = 0) { useWorkspaceView.getState().placeTerminal(project.id, id, { region: "bottom", group }); setBottomFocusRequest({ id }); terminalRef.current?.expand(); }
-  const explorer = <Explorer project={project} reveal={reveal} onFile={(folderId, path) => { if (mobile) useWorkspaceView.getState().openMobile(project.id, { folderId, path }); else { open(project.id, { folderId, path }); setActiveUpperId(null); } }} />;
+  const [searchIntent, setSearchIntent] = useState<SearchIntent | null>(null);
+  const sidebar = view?.sidebar ?? "files";
+  const showSidebar = (value: ProjectView["sidebar"]) => { useWorkspaceView.setState(state => ({ projects: { ...state.projects, [project.id]: { ...(state.projects[project.id] ?? emptyView()), sidebar: value } } })); sidebarRef.current?.expand(); };
+  const onSearch = (folderId: string, path: string, replace: boolean) => { setSearchIntent({ folderId, path, replace, id: Date.now() }); if (mobile) setMobileView("search"); else showSidebar("search"); };
+  useEffect(() => {
+    const keyboard = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || !event.shiftKey || event.altKey || event.isComposing || document.querySelector('[data-slot="dialog-content"]')) return;
+      const key = event.key.toLowerCase(); if (key !== "f" && key !== "h" && key !== "g") return;
+      event.preventDefault(); const panel = key === "g" ? "git" : "search";
+      if (panel === "search") setSearchIntent({ folderId: "", path: "", replace: key === "h", id: Date.now() });
+      if (mobile) useWorkspaceView.getState().mobileView(project.id, panel);
+      else { useWorkspaceView.setState(state => ({ projects: { ...state.projects, [project.id]: { ...(state.projects[project.id] ?? emptyView()), sidebar: panel } } })); sidebarRef.current?.expand(); }
+    };
+    window.addEventListener("keydown", keyboard); return () => window.removeEventListener("keydown", keyboard);
+  }, [mobile, project.id, sidebarRef]);
+  const openFromPanel = (file: OpenFile) => { if (mobile) useWorkspaceView.getState().openMobile(project.id, file); else { open(project.id, file); setActiveUpperId(null); } };
+  const searchPanel = <SearchPanel project={project} mobile={mobile} intent={searchIntent} visible={mobile ? mobileView === "search" : sidebar === "search"} onOpen={openFromPanel} />;
+  const gitPanel = <GitPanel project={project} mobile={mobile} visible={mobile ? mobileView === "git" : sidebar === "git"} />;
+  const explorer = <Explorer onSearch={onSearch} project={project} reveal={reveal} onFile={(folderId, path) => { if (mobile) useWorkspaceView.getState().openMobile(project.id, { folderId, path }); else { open(project.id, { folderId, path }); setActiveUpperId(null); } }} />;
   const editorAreaRef = useRef<HTMLDivElement>(null);
   const [editorWidth, setEditorWidth] = useState(window.innerWidth - 300);
   useEffect(() => { const element = editorAreaRef.current; if (!element) return; const observer = new ResizeObserver(entries => { const entry = entries[0]; if (entry) setEditorWidth(entry.contentRect.width); }); observer.observe(element); return () => observer.disconnect(); }, [mobile]);
@@ -92,18 +113,22 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
     {mobile ? <>
       <nav className="mobile-workbench-nav" aria-label="工作区视图">
         <Button variant={mobileView === "files" ? "secondary" : "ghost"} onClick={showFiles}><Files />文件</Button>
+        <Button variant={mobileView === "search" ? "secondary" : "ghost"} onClick={() => setMobileView("search")}><Search />搜索</Button>
+        <Button variant={mobileView === "git" ? "secondary" : "ghost"} onClick={() => setMobileView("git")}><GitBranch />Git</Button>
         <Button variant={mobileView === "editor" ? "secondary" : "ghost"} onClick={() => setMobileView("editor")}><FileText />编辑器</Button>
         <Button variant={mobileView === "terminal" ? "secondary" : "ghost"} onClick={() => setMobileView("terminal")}><TerminalSquare />终端</Button>
       </nav>
-      <div className="mobile-workbench-content">{mobileView === "files" ? explorer : mobileView === "editor" ? editors : <TerminalWorkspace project={project} mobile />}</div>
+      <div className="mobile-workbench-content"><div className="panel-surface" hidden={mobileView !== "files"}>{explorer}</div><div className="panel-surface" hidden={mobileView !== "search"}>{searchPanel}</div><div className="panel-surface" hidden={mobileView !== "git"}>{gitPanel}</div>{mobileView === "editor" ? editors : mobileView === "terminal" ? <TerminalWorkspace project={project} mobile /> : null}</div>
     </> : <div className="workbench-body">
       <nav className="activity-bar" aria-label="活动栏">
-        <Button variant="ghost" size="icon" aria-label="资源管理器" title="资源管理器" onClick={() => sidebarRef.current?.isCollapsed() ? sidebarRef.current?.expand() : sidebarRef.current?.collapse()}><Files /></Button>
+        <Button variant="ghost" size="icon" aria-label="资源管理器" title="资源管理器" onClick={() => sidebar === "files" ? sidebarRef.current?.isCollapsed() ? sidebarRef.current?.expand() : sidebarRef.current?.collapse() : showSidebar("files")}><Files /></Button>
+        <Button variant="ghost" size="icon" aria-label="搜索与替换" title="搜索与替换" onClick={() => showSidebar("search")}><Search /></Button>
+        <Button variant="ghost" size="icon" aria-label="只读 Git" title="只读 Git" onClick={() => showSidebar("git")}><GitBranch /></Button>
         <Link className={buttonVariants({ variant: "ghost", size: "icon" })} to="/projects" aria-label="项目面板" title="项目面板"><FolderKanban /></Link>
         <Button variant="ghost" size="icon" aria-label="终端面板" title="终端面板" onClick={() => terminalRef.current?.isCollapsed() ? terminalRef.current?.expand() : terminalRef.current?.collapse()}><TerminalSquare /></Button>
       </nav>
       <Group orientation="horizontal" defaultLayout={sidebarLayout.defaultLayout} onLayoutChanged={sidebarLayout.onLayoutChanged}>
-        <Panel id="sidebar" panelRef={sidebarRef} defaultSize="24%" minSize={200} maxSize="45%" collapsible collapsedSize={0} className="workbench-sidebar" onResize={(size, _id, previous) => { if (size.inPixels > 0 && (!previous || previous.inPixels === 0)) revealCurrentFile(); }}>{explorer}</Panel>
+        <Panel id="sidebar" panelRef={sidebarRef} defaultSize="24%" minSize={200} maxSize="45%" collapsible collapsedSize={0} className="workbench-sidebar" onResize={(size, _id, previous) => { if (size.inPixels > 0 && (!previous || previous.inPixels === 0)) revealCurrentFile(); }}><div className="panel-surface" hidden={sidebar !== "files"}>{explorer}</div><div className="panel-surface" hidden={sidebar !== "search"}>{searchPanel}</div><div className="panel-surface" hidden={sidebar !== "git"}>{gitPanel}</div></Panel>
         <Separator className="workbench-separator vertical" />
         <Panel id="main" minSize="40%"><Group orientation="vertical" defaultLayout={verticalLayout.defaultLayout} onLayoutChanged={verticalLayout.onLayoutChanged}>
           <Panel id="editors" defaultSize="62%" minSize={160}>{editors}</Panel>

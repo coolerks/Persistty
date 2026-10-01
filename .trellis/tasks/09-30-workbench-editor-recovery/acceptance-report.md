@@ -1,0 +1,5 @@
+# W05 恢复验收
+
+2026-10-01 用户明确要求恢复 W05/W06 统一验收。最新共同记录以[统一验收进展](../10-01-search-readonly-git/acceptance-report.md)为准；原[检查报告](check-report.md)和[截图反馈报告](feedback-check-report.md)保留历史真实Debian证据。
+
+本轮修复触屏横屏切换到桌面模式的问题，补充六种图片/三主题/字体/横竖屏与未保存输入回归。本机自动化检查通过，当前真实手机、触控板、shell主题及新Debian专项尚未完成，任务保持 `in_progress`、`acceptance=in_progress`。未提交、推送或归档。

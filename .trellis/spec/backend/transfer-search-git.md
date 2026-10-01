@@ -1,7 +1,7 @@
 # 传输、搜索替换与 Git
 
 ## 1. 范围 / 触发
-这些功能共用 [安全文件访问](filesystem-guidelines.md)、[命令执行](process-guidelines.md)、[认证](security-config.md)，不能各自实现更弱的路径验证。下面是初始业务契约，具体 route/body 由 owning task 完整设计。
+这些功能共用 [安全文件访问](filesystem-guidelines.md)、[命令执行](process-guidelines.md)、[认证](security-config.md)，不能各自实现更弱的路径验证。传输沿用 W04；搜索/替换/Git 的已实施 API、DTO、配置和隔离边界以 [W06 契约](search-git-contract.md)为准，本文相关签名为历史初始设计。
 
 ## 2. 签名
 上传状态机 `create -> put chunk(index,sha256) -> status -> complete(total_sha256) -> committed`；可 cancel/expire，所有 upload ID 操作仍鉴权并绑定 workspace/path。search 返回 search_id、files 的 version、match_id/file/line/column/preview；replace 先生成 preview/diff，再 apply(search_id, selected_match_ids, expected_versions)。Git 仅 branch/status/working diff/staged diff/log/commit detail。

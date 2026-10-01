@@ -17,13 +17,18 @@ import (
 	"persistty/internal/auth"
 	"persistty/internal/config"
 	"persistty/internal/files"
+	"persistty/internal/gitview"
+	"persistty/internal/search"
 	"persistty/internal/storage"
 	"persistty/internal/terminal"
+	"persistty/internal/toolrunner"
 	"persistty/internal/transfer"
 	"persistty/internal/workspace"
 )
 
 type api struct {
+	search    *search.Service
+	git       *gitview.Service
 	cfg       config.Config
 	store     *storage.Store
 	auth      *auth.Service
@@ -52,6 +57,9 @@ func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Eng
 		return nil, err
 	}
 	a := &api{cfg: cfg, store: store, auth: service, logger: logger}
+	runner := toolrunner.New(cfg.GitOptions().Binary, cfg.SearchOptions().Binary, cfg.ToolTimeout())
+	a.search = search.New(store, runner, cfg)
+	a.git = gitview.New(store, runner, cfg)
 	a.terminals = &terminal.Service{Store: store, Tmux: &terminal.Tmux{
 		Binary: cfg.Terminal.TmuxBinary, Socket: cfg.TerminalSocketPath(), Shell: cfg.Terminal.Shell,
 		HistoryLines: cfg.Terminal.HistoryLines, RestoreLines: cfg.Terminal.RestoreLines,
@@ -83,6 +91,7 @@ func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Eng
 	r.POST("/api/v1/auth/login", a.login)
 	protected := r.Group("/api/v1")
 	protected.Use(a.authenticate())
+	a.registerSearchGit(protected)
 	protected.GET("/auth/session", func(c *gin.Context) { a.success(c, c.MustGet("session")) })
 	protected.POST("/auth/logout", func(c *gin.Context) {
 		if err := service.Logout(c.Request.Context(), c.MustGet("token").(string)); err != nil {
@@ -271,6 +280,23 @@ func (a *api) error(c *gin.Context, err error) {
 		c.Abort()
 	case errors.Is(err, auth.ErrUnauthenticated):
 		a.fail(c, 401, "unauthenticated", "请先登录。")
+	case errors.Is(err, search.ErrInvalid), errors.Is(err, gitview.ErrInvalid), errors.Is(err, toolrunner.ErrInvalid):
+		a.fail(c, 400, "invalid_request", "搜索或 Git 参数无效。")
+	case errors.Is(err, search.ErrPattern):
+		a.fail(c, 400, "invalid_pattern", "正则表达式无效或不支持此语法。")
+	case errors.Is(err, search.ErrExpired):
+		a.fail(c, 410, "expired", "搜索或替换预览已过期，请重新搜索。")
+	case errors.Is(err, toolrunner.ErrUnavailable):
+		a.fail(c, 503, "tool_unavailable", "Git/rg 工具不可用或缺少必要能力。")
+	case errors.Is(err, gitview.ErrUnavailable):
+		a.fail(c, 503, "repository_unavailable", "仓库含不支持或不安全的元数据，无法读取。")
+	case errors.Is(err, toolrunner.ErrCapacity):
+		c.Header("Retry-After", "5")
+		a.fail(c, 429, "capacity_exceeded", "工具或快照额度已用满，请释放旧预览后重试。")
+	case errors.Is(err, toolrunner.ErrLimit):
+		a.fail(c, 413, "limit_exceeded", "工具输出超过上限，请缩小范围。")
+	case errors.Is(err, context.DeadlineExceeded):
+		a.fail(c, 503, "timeout", "操作超时，请缩小范围后重试。")
 	case errors.Is(err, auth.ErrRateLimited):
 		c.Header("Retry-After", "60")
 		a.fail(c, 429, "rate_limited", "请求过于频繁，请稍后重试。")

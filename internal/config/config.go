@@ -19,6 +19,8 @@ import (
 )
 
 type Config struct {
+	Search SearchConfig `yaml:"search"`
+	Git    GitConfig    `yaml:"git"`
 	Server struct {
 		Listen         string   `yaml:"listen"`
 		PublicOrigin   string   `yaml:"public_origin"`
@@ -254,7 +256,7 @@ func (c Config) Validate() error {
 		c.Terminal.TerminationSeconds < 1 || c.Terminal.TerminationSeconds > 120 {
 		return errors.New("terminal容量或倒计时配置无效")
 	}
-	return nil
+	return c.validateTools()
 }
 func isLoopback(s string) bool { a, e := netip.ParseAddr(s); return e == nil && a.IsLoopback() }
 func validPort(s string) bool {

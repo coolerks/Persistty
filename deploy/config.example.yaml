@@ -24,3 +24,13 @@ terminal:
   restore_lines: 5000
   history_bytes: 8388608
   termination_seconds: 10
+search:
+  binary: /usr/bin/rg
+  timeout_seconds: 15
+  max_entries: 50000
+  max_results: 5000
+  max_bytes: 67108864
+  exclude_directories: [node_modules, dist, .next, vendor]
+git:
+  binary: /usr/bin/git
+  max_bytes: 536870912

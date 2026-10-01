@@ -21,3 +21,5 @@ rg/Git adapter 的 cwd 校验只限制开始位置，不能约束实际遍历；
 W02 的 [受限 CLI 探针](../../../tests/integration/debian/cli/README.md) 已在真实 Debian 临时树验证 Landlock 拒绝根外合成哨兵、symlink/目录替换且固定 rg/Git 可运行。这不是完整策略 1：动态工具所需 `/usr` 等系统读取仍构成白名单外链可见面，实际产品必须缩小许可并测试链接指向每个系统许可路径；若不能证明批准根的数据保密边界，改用安全输入或拒绝开放 API。CLI 探针的固定参数、词法根校验也不能替代文件身份与当前项目成员校验。
 
 测试带空格/Unicode/前导短横线/换行的路径、超时、取消、stderr 截断、恶意配置、子进程回收。增加在工具扫描过程中交换 symlink/父目录的根外 sentinel 测试，断言敏感内容从未被读取或出现在 stdout/stderr/API；仅事后过滤测试不足。命令执行不记全参数和输出。
+
+W06 Git/rg 的具体 runner、环境白名单、私有 snapshot 与取消边界见 [W06 契约](search-git-contract.md)。原始仓库不得直接交 CLI 读取。

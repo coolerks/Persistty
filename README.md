@@ -2,7 +2,7 @@
 
 Persistty 是面向 Debian 开发机的单用户、自托管浏览器终端与轻量文件工作台。最终范围包括持久终端、多文件夹项目、文件管理与自动保存、搜索替换、上传下载和只读 Git。
 
-W01/W02/W04 已完成归档，W03 已通过真实 Debian/systemd 和桌面/手机浏览器验收。当前提供认证、多文件夹项目、文件管理与传输、桌面 Monaco/手机基础文本编辑，以及真实持久终端、多端单控制权和可取消倒计时终止。W05 已实施版本保护自动保存、本地草稿、分组/布局恢复、有界图片预览与自托管字体，自动化及真实 Debian 专项通过；[W05 任务](.trellis/tasks/09-30-workbench-editor-recovery/prd.md)仍待真实手机软键盘等最终验收。搜索/只读 Git、单文件提权和正式部署仍由后续任务交付，不是完整 IDE 已完成。完整规划见[需求](.trellis/tasks/archive/2026-09/09-26-requirements-research/prd.md)及[实施计划](.trellis/tasks/archive/2026-09/09-26-requirements-research/implement.md)。Trellis入口为[AGENTS.md](AGENTS.md)和[工作流](.trellis/workflow.md)。
+W01/W02/W04 已完成归档，W03 已通过真实 Debian/systemd 和桌面/手机浏览器验收。当前提供认证、多文件夹项目、文件管理与传输、桌面 Monaco/手机基础文本编辑，以及真实持久终端、多端单控制权和可取消倒计时终止。W05 已实施版本保护自动保存、本地草稿、分组/布局恢复、有界图片预览与自托管字体，已有自动化及真实 Debian 专项证据；[W05 任务](.trellis/tasks/09-30-workbench-editor-recovery/prd.md)仍待最终验收。[W06 搜索替换与只读 Git](.trellis/tasks/10-01-search-readonly-git/prd.md)已接入多根搜索、版本保护替换预览、多仓库只读 Git 与 HEAD 行标记，契约见[搜索/Git](.trellis/spec/backend/search-git-contract.md)。用户于 2026-10-01 已恢复两包统一验收：本轮本机自动化及 Chromium/WebKit 专项通过，Debian 产物传输待明确目标授权，真实手机、触控板、shell 主题及 Firefox 环境待补齐，两个任务仍进行中。结果见[统一验收进展](.trellis/tasks/10-01-search-readonly-git/acceptance-report.md)。单文件提权和正式部署仍由后续任务交付，不是完整 IDE 已完成。完整规划见[需求](.trellis/tasks/archive/2026-09/09-26-requirements-research/prd.md)及[实施计划](.trellis/tasks/archive/2026-09/09-26-requirements-research/implement.md)。Trellis入口为[AGENTS.md](AGENTS.md)和[工作流](.trellis/workflow.md)。
 
 ## 本地运行
 
@@ -58,3 +58,5 @@ npm --prefix web run build
 关闭页面、网络中断、登出以及 Web 服务重启不终止独立 tmux 服务中的任务。多端可查看，仅一个控制端输入；显式终止由控制端发起全端倒计时，截止前任一查看端可取消。面板收起不同于终止，上方终端标签 X 是终止入口。W03 已用计数、HTTP、确定性 TUI 三类负载验证这些路径；界面恢复不重放输入。
 
 普通 tmux 进程无法跨主机重启保存运行中的内存状态，Persistty v0.1 不承诺主机重启后恢复正在执行的进程。程序自行退出、系统终止或管理员停止 tmux 服务也属于真实终止原因。
+
+搜索入口：活动栏或 Ctrl/Cmd+Shift+F/H；目录右键可收窄范围。Git 入口为活动栏或 Ctrl/Cmd+Shift+G，面板仅查看。替换必须先选择、预览，再明确应用；未保存输入/版本冲突会跳过或失败，不自动覆盖。根外 Git 元数据、对象 alternates 和外部过滤器暂不可用。

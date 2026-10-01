@@ -106,3 +106,20 @@ it("干净标签关闭释放缓存，重开重新读取并正常自动保存", a
   expect(reopened).not.toBe(first); reopened.change("reopened"); await reopened.save();
   expect(h.client.content).toHaveBeenCalledTimes(2); expect(h.client.saveContent).toHaveBeenCalledOnce(); h.scope.dispose();
 });
+it("替换仅保护目标干净缓冲区，新输入保留且不自动覆盖新磁盘基线", async () => {
+  vi.useFakeTimers(); const h = harness(); const buffer = h.scope.open(file); await vi.waitFor(() => expect(buffer.state.status).toBe("ready"));
+  const protection = h.scope.prepareReplacement([{ id: "target", folder_id: file.folderId, path: file.path, version }]);
+  expect(protection.protectedIDs).toEqual([]); buffer.change("during replacement"); await buffer.save(true);
+  expect(h.client.saveContent).not.toHaveBeenCalled();
+  vi.mocked(h.client.content).mockResolvedValue({ ...snapshot, content: "replacement", version: { ...version, identity: "1:9", etag: "new" } });
+  await protection.release(); await vi.advanceTimersByTimeAsync(2000);
+  expect(buffer.state.content).toBe("during replacement"); expect(buffer.dirty).toBe(true); expect(buffer.state.saveState).toBe("paused"); expect(h.client.saveContent).not.toHaveBeenCalled(); expect(h.rows.size).toBe(1); h.scope.dispose();
+});
+it("替换跳过脏、恢复暂停及版本不同的缓冲区，干净文件刷新", async () => {
+  const h = harness(), buffer = h.scope.open(file); await vi.waitFor(() => expect(buffer.state.status).toBe("ready"));
+  const target = { id: "target", folder_id: file.folderId, path: file.path, version };
+  buffer.change("dirty"); expect(h.scope.prepareReplacement([target]).protectedIDs).toEqual(["target"]);
+  buffer.suspend(); buffer.update({ content: snapshot.content, saveState: "paused" }); expect(h.scope.prepareReplacement([target]).protectedIDs).toEqual(["target"]); buffer.resume();
+  expect(h.scope.prepareReplacement([{ ...target, version: { ...version, etag: "other" } }]).protectedIDs).toEqual(["target"]);
+  const protection = h.scope.prepareReplacement([target]); vi.mocked(h.client.content).mockResolvedValue({ ...snapshot, content: "replacement", version: { ...version, etag: "new" } }); await protection.release(); expect(buffer.state.content).toBe("replacement"); expect(buffer.state.saveState).toBe("saved"); h.scope.dispose();
+});

@@ -1,4 +1,6 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useGitBaseline } from "@/features/git/use-git-baseline";
+import { useEditorLocation } from "./editor-navigation";
+import { lazy, Suspense, useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,9 +32,21 @@ export function FileEditor({ project, file, mobile }: { project: Project; file: 
   const language = mode ?? detected;
   const baseChanged = !!draft && !!state?.base && !sameVersion(draft.base.version, state.base.version);
   const ready = state?.status === "ready";
+  const baseline = useGitBaseline(project, file, state?.base?.version.etag ?? "", ready);
+  const requested = useEditorLocation(value => value.location);
+  const location = requested?.projectId === project.id && fileKey(requested.file) === fileKey(file) && ready && !buffer?.dirty && state.base && sameVersion(requested.version, state.base.version) ? requested : undefined;
+  const textArea = useRef<HTMLTextAreaElement>(null), selectedLocation = useRef("");
+  useEffect(() => {
+    if (!mobile || !location || !textArea.current || selectedLocation.current === location.id || !state) return;
+    selectedLocation.current = location.id; const lines = editorText(state.content).split("\n");
+    const start = lines.slice(0, location.line - 1).reduce((sum, line) => sum + line.length + 1, 0) + location.column - 1;
+    textArea.current.setSelectionRange(start, start + location.endColumn - location.column); textArea.current.focus();
+    textArea.current.scrollTop = Math.max(0, (location.line - 4) * 20);
+  }, [location, mobile, state]);
   const svg = ready && /^\s*(?:<\?xml[^>]*>\s*)?<svg[\s>]/.test(editorText(state.content));
   return <div className="file-editor"><div className="editor-breadcrumb">
     <span className="truncate" title={file.path}>{project.folders.find(folder => folder.id === file.folderId)?.path}/{file.path}</span>
+    {ready && <span className="text-muted-foreground" title="HEAD 与当前输入的差异">{baseline?.state === "tracked" ? `HEAD ${baseline.head.slice(0, 8)}` : baseline?.state === "untracked" ? "Git 未跟踪" : baseline?.state === "unavailable" ? "Git 基线不可用" : ""}</span>}
     {svg && <Button size="sm" variant="outline" onClick={() => setSource(value => !value)}>{source ? "查看图片" : "编辑源码"}</Button>}
     {ready && ["conflict", "failed", "paused"].includes(state.saveState) && <Badge className="editor-save-warning" role="status" aria-live="polite" variant={state.saveState === "paused" ? "secondary" : "destructive"}>{labels[state.saveState]}</Badge>}
   </div>
@@ -45,7 +59,7 @@ export function FileEditor({ project, file, mobile }: { project: Project; file: 
       {state.drafts.length > 0 && <Alert><AlertDescription>此文件有 {state.drafts.length} 份本地草稿。{state.drafts.map((item, index) => <Button key={item.id} size="sm" variant="outline" onClick={() => setDraft(item)}>查看草稿 {index + 1}</Button>)}</AlertDescription></Alert>}
       {state.saveState === "paused" && <Alert><AlertDescription>恢复内容尚未写入服务器。<Button size="sm" variant="outline" onClick={() => void buffer?.save(true)}>保存恢复内容</Button></AlertDescription></Alert>}
       {svg && !source ? <FilePreview project={project} file={file} /> : <div className="editor-surface" onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); if (state.saveState !== "conflict") void buffer?.save(true); } }}>
-        {mobile ? <textarea aria-label={`${file.path} 内容`} value={editorText(state.content)} onChange={event => buffer?.change(event.target.value)} spellCheck={false} /> : <Suspense fallback={<Loading />}><DesktopEditor projectId={project.id} folderId={file.folderId} path={file.path} modelURI={buffer?.uri} content={editorText(state.content)} language={language} onChange={(value, changes) => buffer?.change(value, changes)} isModelOpen={() => !!buffer && scope.isOpen(buffer)} /></Suspense>}
+        {mobile ? <textarea ref={textArea} aria-label={`${file.path} 内容`} value={editorText(state.content)} onChange={event => buffer?.change(event.target.value)} spellCheck={false} /> : <Suspense fallback={<Loading />}><DesktopEditor projectId={project.id} folderId={file.folderId} path={file.path} modelURI={buffer?.uri} content={editorText(state.content)} language={language} onChange={(value, changes) => buffer?.change(value, changes)} isModelOpen={() => !!buffer && scope.isOpen(buffer)} baseline={baseline?.state === "tracked" ? baseline.content : undefined} location={location} /></Suspense>}
       </div>}
     </>}
     <Dialog open={draft !== null} onOpenChange={open => { if (!open) setDraft(null); }}><DialogContent className="draft-dialog"><DialogHeader><DialogTitle>本地草稿</DialogTitle><DialogDescription>{draft ? new Date(draft.updatedAt).toLocaleString() : ""} · {baseChanged ? "服务器内容已经变化" : "服务器基线未变化"}。恢复后仍需明确保存。</DialogDescription></DialogHeader>

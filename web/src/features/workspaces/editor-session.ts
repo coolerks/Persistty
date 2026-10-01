@@ -20,6 +20,7 @@ export class FileBuffer {
   private epoch = 0;
   private draftQueue: Promise<void> = Promise.resolve();
   private suspended = false;
+  private replacementHold = 0;
   sourceRoot: string;
   constructor(readonly scope: EditorScope, public file: OpenFile) {
     this.sourceRoot = scope.project.folders.find(folder => folder.id === file.folderId)?.path ?? "";
@@ -69,7 +70,7 @@ export class FileBuffer {
   async save(explicit = false): Promise<void> {
     clearTimeout(this.timer);
     const base = this.state.base;
-    if (!base || !this.dirty || this.saving || !this.scope.csrf || (this.suspended && !explicit)) return;
+    if (!base || !this.dirty || this.saving || this.replacementHold > 0 || !this.scope.csrf || (this.suspended && !explicit)) return;
     if (this.state.saveState === "conflict" && !this.state.comparison) return;
     const epoch = this.epoch; const content = this.state.content; const generation = this.state.generation;
     const expected = this.state.comparison ?? base;
@@ -93,6 +94,12 @@ export class FileBuffer {
     } finally { this.saving = false; if (epoch === this.epoch) this.schedule(); }
   }
   suspend(): void { this.suspended = true; clearTimeout(this.timer); this.request?.abort(); this.epoch++; if (this.state.status === "ready" && ["pending", "saving"].includes(this.state.saveState)) this.update({ saveState: "paused" }); }
+  holdReplacement(version: FileVersion): (() => Promise<void>) | null {
+    if (this.state.status !== "ready" || this.dirty || this.saving || this.suspended || this.replacementHold || this.state.saveState !== "saved" || !this.state.base || !sameVersion(this.state.base.version, version)) return null;
+    this.replacementHold++; this.suspend();
+    let released = false;
+    return async () => { if (released) return; released = true; await this.refresh(); this.replacementHold--; if (this.dirty) { this.update({ saveState: "paused" }); await this.persist(); } else this.resume(); };
+  }
   resume(): void { if (this.state.saveState === "saved" || this.state.saveState === "paused") { this.suspended = false; this.update({ saveState: this.dirty ? "pending" : "saved" }); this.schedule(); } }
   async refresh(): Promise<void> {
     if (this.state.status !== "ready" || this.saving) return;
@@ -156,6 +163,17 @@ export class EditorScope {
     const results = await Promise.all(buffers.map(async buffer => { buffer.suspend(); return buffer.persist(); })); return results.every(Boolean);
   }
   async refresh(): Promise<void> { await Promise.all([...new Set(this.buffers.values())].filter(buffer => this.isOpen(buffer)).map(buffer => buffer.refresh())); }
+  prepareReplacement(files: readonly { id: string; folder_id: string; path: string; version: FileVersion }[]): { protectedIDs: string[]; release(): Promise<void> } {
+    const protectedIDs: string[] = [], releases: (() => Promise<void>)[] = [];
+    for (const file of files) {
+      const matching = [...new Set(this.buffers.values())].filter(buffer => buffer.state.base?.version.identity === file.version.identity || buffer.aliases.has(fileKey({ folderId: file.folder_id, path: file.path })));
+      for (const buffer of matching) {
+        const release = buffer.holdReplacement(file.version);
+        if (!release) protectedIDs.push(file.id); else releases.push(release);
+      }
+    }
+    return { protectedIDs: [...new Set(protectedIDs)], release: async () => { await Promise.all(releases.map(release => release())); } };
+  }
   async configure(project: Project, csrf: string): Promise<void> {
     if (project.version < this.project.version) return;
     if (project.version === this.project.version && csrf === this.csrf) return;

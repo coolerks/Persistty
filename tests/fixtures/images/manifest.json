@@ -1,0 +1,11 @@
+{
+  "generated": "Pillow 12.3.0；自有3×2合成图与手写安全SVG",
+  "sha256": {
+    "w05-valid.avif": "a4c8b46672a7b561513b91c064649b6a1f5d608d92547e1a563baa5764e48a16",
+    "w05-valid.gif": "064afb355bec8644b5ca59bfcadb0ff45da11baf630a29ba3c54ffb79d26a2d6",
+    "w05-valid.jpeg": "895a8e36630954f23598d36867c1cf9a8a0b7b1557a9517290253ec391eafb85",
+    "w05-valid.png": "07df39cf39005e9c6c8cef33028970ca80f199769920c0b36c5c5572f4bcdfda",
+    "w05-valid.svg": "1a7cc91c6981e9d87c701a39f562bb782f263c3f469e96ad50f1dfe3fcd36706",
+    "w05-valid.webp": "1db2c923eb3efe81ecb9b1f2c9040146066637c32d94240e9222caaf357f19ea"
+  }
+}

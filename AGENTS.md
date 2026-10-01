@@ -43,6 +43,8 @@ W01 工程基础、W02 Debian 实验和 W04 多文件夹项目与文件管理已
 - 部署：Debian、systemd、Nginx；首版需求规划为 WireGuard VPN 内访问。具体部署与认证契约需在实施前完成审查。
 - Go/Node 版本、SQLite driver、前端包管理器及依赖版本由工程基础任务验证和锁定；使用实际 manifest 与锁文件，不猜测版本，不混用包管理器。
 
+2026-10-01 用户已明确恢复 W05/W06 统一验收，此前的验收延期安排已结束。[W06 多根搜索替换与只读 Git](.trellis/tasks/10-01-search-readonly-git/prd.md)已接入功能，本轮本机自动化和 Chromium/WebKit 专项通过，修复触屏横屏模式与替换取消焦点；Debian 产物传输待明确目标授权，真实手机、触控板、shell 主题及 Firefox 环境仍待补齐。两个任务保持进行中，不将未执行项记为通过或完成/归档。结果见[统一验收进展](.trellis/tasks/10-01-search-readonly-git/acceptance-report.md)，实际协议见[W06 契约](.trellis/spec/backend/search-git-contract.md)。
+
 ## 需求与规范的使用顺序
 
 先读取当前任务的 `prd.md`，再读取存在的 `design.md`、`implement.md` 及相关规范。后端入口为 [.trellis/spec/backend/index.md](.trellis/spec/backend/index.md)，前端入口为 [.trellis/spec/frontend/index.md](.trellis/spec/frontend/index.md)，跨层修改同时读取 [思考指南](.trellis/spec/guides/index.md) 及其对应文档。
