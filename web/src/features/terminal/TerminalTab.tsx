@@ -8,9 +8,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import type { Terminal } from "@/lib/api/decoder";
 import { useTerminalRuntime } from "./runtime-context";
 
-export function TerminalTab({ terminal, region, value = terminal.id, active, onActivate, onRefresh, onMove, position = "bottom", allowBatch = true }: {
+export function TerminalTab({ terminal, region, value = terminal.id, active, onActivate, onRefresh, onMove, position = "bottom", allowBatch = true, moves = [] }: {
   terminal: Terminal; region: Terminal[]; value?: string; active: boolean; onActivate(): void; onRefresh(): void;
-  onMove?: ((terminal: Terminal) => void) | undefined; position?: "top" | "bottom"; allowBatch?: boolean;
+  moves?: { label: string; run(terminal: Terminal): void }[]; onMove?: ((terminal: Terminal) => void) | undefined; position?: "top" | "bottom"; allowBatch?: boolean;
 }) {
   const { scope, entry } = useTerminalRuntime(terminal.id);
   const item = entry?.terminal ?? terminal;
@@ -27,6 +27,7 @@ export function TerminalTab({ terminal, region, value = terminal.id, active, onA
     ...(entry?.state.history ? [{ label: "刷新终端历史", icon: RotateCw, run: () => entry.actions?.refreshHistory() }] : []),
     ...(entry?.state.connection === "disconnected" ? [{ label: "重试连接", icon: RotateCw, run: () => entry.actions?.retry() }] : []),
     ...(onMove ? [{ label: position === "top" ? "移回下方终端面板" : "移到上方标签", icon: position === "top" ? PanelBottom : PanelTop, run: () => onMove(item) }] : []),
+    ...moves.map(move => ({ label: move.label, icon: PanelTop, run: () => move.run(item) })),
     { label: "关闭当前", icon: X, destructive: true, disabled: !closable, run: () => close([item]) },
     ...(allowBatch ? [
       { label: "关闭其他", icon: X, destructive: true, disabled: !region.some(other => other.id !== item.id && canClose(other)), run: () => close(region.filter(other => other.id !== item.id)) },
@@ -38,7 +39,7 @@ export function TerminalTab({ terminal, region, value = terminal.id, active, onA
   return <ContextMenu><ContextMenuTrigger render={<div className={cn("terminal-tab", active && "active")} />}
     data-terminal-id={item.id}
     draggable={Boolean(onMove)} onDragStart={event => {
-      if (onMove) { event.dataTransfer.setData(position === "top" ? "application/x-persistty-upper-terminal" : "application/x-persistty-lower-terminal", JSON.stringify(position === "top" ? { id: item.id } : item)); event.dataTransfer.effectAllowed = "move"; }
+      if (onMove) { event.dataTransfer.setData(position === "top" ? "application/x-persistty-upper-terminal" : "application/x-persistty-lower-terminal", JSON.stringify(item)); event.dataTransfer.effectAllowed = "move"; }
     }}>
     {running && !controlled && <Tooltip><TooltipTrigger render={<Button size="icon-xs" variant="ghost" className="terminal-tab-takeover" aria-label={`接管 ${item.display_name}`} onClick={() => scope.takeover(item)} />}><Eye /></TooltipTrigger><TooltipContent>未接管，点击接管</TooltipContent></Tooltip>}
     <Tooltip><TooltipTrigger render={<TabsTrigger value={value} className="terminal-tab-label" onClick={onActivate} onDoubleClick={() => scope.rename(item)} />}>

@@ -106,7 +106,8 @@ test("工作台右键、树选择与重展开定位、已结束终端关闭和�
   await page.reload(); await page.getByRole("button", { name: "资源管理器", exact: true }).click();
   await expect(file("file-11.ts")).toHaveAttribute("aria-selected", "true");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "编辑器", exact: true }).click();
+  await page.getByRole("button", { name: "文件", exact: true }).click();
+  await file("first.ts").click();
   await page.getByRole("tab", { name: "first.ts", exact: true }).click();
   await page.getByRole("button", { name: "文件", exact: true }).click();
   await expect(file("first.ts")).toHaveAttribute("aria-selected", "true");

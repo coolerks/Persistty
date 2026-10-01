@@ -1,6 +1,7 @@
 import { useEffectiveTheme } from "@/features/settings/use-effective-theme";
 import { Editor as MonacoEditor, loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
+import type { TextChange } from "./editor-text";
 import { editorURI, retainEditorModel } from "./editor-model-lifecycle";
 import editorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import jsonWorker from "monaco-editor/language/json/json.worker.js?worker";
@@ -26,10 +27,11 @@ monaco.css.lessDefaults.setDiagnosticsOptions({ validate: false });
 monaco.html.htmlDefaults.setModeConfiguration({ ...monaco.html.htmlDefaults.modeConfiguration, diagnostics: false });
 loader.config({ monaco });
 
-export default function DesktopEditor({ projectId, folderId, path, content, language }: { projectId: string; folderId: string; path: string; content: string; language: string }) {
+export default function DesktopEditor({ projectId, folderId, path, content, language, modelURI, onChange, isModelOpen }: { projectId: string; folderId: string; path: string; content: string; language: string; modelURI?: string | undefined; onChange?(value: string, changes: readonly TextChange[]): void; isModelOpen?(): boolean }) {
   const theme = useEffectiveTheme() === "dark" ? "vs-dark" : "vs";
-  return <MonacoEditor path={editorURI(projectId, { folderId, path })} value={content} language={language} theme={theme} keepCurrentModel saveViewState onMount={editor => {
+  return <MonacoEditor path={modelURI ?? editorURI(projectId, { folderId, path })} value={content} language={language} theme={theme} keepCurrentModel saveViewState onChange={(value, event) => onChange?.(value ?? "", event.changes)} onMount={editor => {
     const model = editor.getModel();
-    if (model) retainEditorModel(projectId, { folderId, path }, () => { if (!model.isDisposed()) model.dispose(); });
-  }} options={{ readOnly: true, minimap: { enabled: true }, automaticLayout: true, wordWrap: "on", fontSize: 13, scrollBeyondLastLine: false, glyphMargin: true }} />;
+    if (model) retainEditorModel(projectId, { folderId, path }, () => { if (!model.isDisposed()) model.dispose(); }, isModelOpen, modelURI);
+    void document.fonts?.load('13px "Persistty Nerd Mono"').then(() => { if (!model?.isDisposed()) { monaco.editor.remeasureFonts(); editor.layout(); } }).catch(() => { /* Keep the measured fallback font. */ });
+  }} options={{ readOnly: !onChange, fontFamily: "Persistty Nerd Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", minimap: { enabled: true }, automaticLayout: true, wordWrap: "on", fontSize: 13, scrollBeyondLastLine: false, glyphMargin: true }} />;
 }

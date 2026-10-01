@@ -1,6 +1,6 @@
-import { fileKey, useWorkspaceView, type OpenFile } from "./workspace-view";
+import { allOpenFiles, fileKey, useWorkspaceView, type OpenFile } from "./workspace-view";
 
-type RetainedModel = { projectId: string; file: OpenFile; dispose(): void };
+type RetainedModel = { projectId: string; file: OpenFile; isOpen?: (() => boolean) | undefined; dispose(): void };
 const models = new Map<string, RetainedModel>();
 const scopes = new Map<string, number>();
 
@@ -8,15 +8,15 @@ export function editorURI(projectId: string, file: OpenFile): string {
   return `persistty:///${encodeURIComponent(projectId)}/${encodeURIComponent(file.folderId)}/${file.path.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-export function retainEditorModel(projectId: string, file: OpenFile, dispose: () => void): void {
-  models.set(editorURI(projectId, file), { projectId, file, dispose });
+export function retainEditorModel(projectId: string, file: OpenFile, dispose: () => void, isOpen?: () => boolean, uri?: string): void {
+  models.set(uri ?? editorURI(projectId, file), { projectId, file, dispose, isOpen });
 }
 
 function prune(projectId: string): void {
   const view = useWorkspaceView.getState().projects[projectId];
-  const open = new Set(view?.groups.flat().map(fileKey));
+  const open = new Set(allOpenFiles(view).map(fileKey));
   for (const [uri, model] of models) {
-    if (model.projectId === projectId && (!scopes.has(projectId) || !open.has(fileKey(model.file)))) {
+    if (model.projectId === projectId && (!scopes.has(projectId) || !(model.isOpen ? model.isOpen() : open.has(fileKey(model.file))))) {
       model.dispose(); models.delete(uri);
     }
   }

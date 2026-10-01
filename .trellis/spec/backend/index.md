@@ -1,7 +1,7 @@
 # 后端开发规范
 
 ## 适用状态
-Persistty是Debian单用户浏览器终端与轻量文件工作台。W01 已有配置、认证、SQLite 和元数据读接口，见[基础协议](foundation-contract.md)；W04 项目与文件接口见[W04 契约](workspace-files-contract.md)。W03 真实终端已通过 Debian/systemd 与浏览器验收，见[运行时契约](terminal-runtime-contract.md)；W05 自动保存/草稿仍未交付。规范用简体中文，标识符/协议字段保持英文。
+Persistty是Debian单用户浏览器终端与轻量文件工作台。W01 已有配置、认证、SQLite 和元数据读接口，见[基础协议](foundation-contract.md)；W04 项目与文件接口见[W04 契约](workspace-files-contract.md)。W03 真实终端已通过 Debian/systemd 与浏览器验收，见[运行时契约](terminal-runtime-contract.md)；W05 编辑/自动保存/本地草稿和有界预览已实施并通过自动化与真实 Debian 专项，任务仍待最终验收。规范用简体中文，标识符/协议字段保持英文。
 
 ## 规范索引
 | 文档 | 归属 |
@@ -24,6 +24,7 @@ Persistty是Debian单用户浏览器终端与轻量文件工作台。W01 已有�
 | [HTTP 与共享概念](http-api.md) | 跨层权威契约 |
 | [W01 基础协议](foundation-contract.md) | 已批准基础API与共享fixture；覆盖旧bootstrap字段 |
 | [W04 项目与文件 API 契约](workspace-files-contract.md) | 已实现的多根项目、文件、传输、事件与测试矩阵 |
+| [W05 保存与预览](editor-preview-contract.md) | 强版本保存、JSON 字节边界、内容识别与图片/SVG 安全 |
 | [WebSocket](websocket-protocol.md) | 帧、重连、背压、watcher |
 | [质量与测试](quality-guidelines.md) | 后端门禁、真实集成与安全检查 |
 

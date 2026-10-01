@@ -1,46 +1,63 @@
 # Monaco、xterm 与草稿生命周期
 
-## 当前批准规则（覆盖旧候选）
-默认去抖1秒自动保存且绑定buffer generation/文件版本，Ctrl+S只复用同保存入口；冲突暂停、不自动overwrite。桌面Monaco禁诊断/LSP，手机基础textarea无diff。恢复草稿先服务器复验/diff再明确允许写回，手机基线变化只保留/导出。model/runtime与布局宿主解耦，跨组/移上下不清undo、不dispose原终端连接；controller才 fit/发正尺寸，observer live 跟随服务端字符网格、在容器裁剪/留空，详见[终端运行时](terminal-runtime-contract.md)。文件身份按project/folder/真实资源及view修订隔离。当前文本8MiB/图片16MiB另限像素，PDF/Office/hex均下载不预览。下文旧手动保存/PDF/hex/共享workspace键示例已被覆盖，W05实现前必须按新规则固化真实fixture和测试。
+## 1. 范围与触发条件
 
-## Monaco
+W05 编辑/自动保存/草稿/预览与既有 Monaco、xterm 的生命周期 owner。修改 model、buffer、异步请求或宿主移动时适用。桌面 Monaco 可编辑且诊断/LSP 关闭；手机 textarea 基础编辑，不提供 diff。保存与预览协议归 [后端 owner](../backend/editor-preview-contract.md)，本地记录归 [状态规范](state-management.md)。
 
-### 当前语言与只读 model 实现（2026-09-30）
+## 2. 签名
+
+`FileBuffer.change(text, changes?)` 接受归一化 LF 视图与 Monaco rangeOffset/rangeLength/text 数组；`save(explicit=false)`、refresh/compare/restore/discardDraft/reloadCompared/persist/suspend/resume 管理保存状态。`DesktopEditor` 接收 modelURI/onChange/isModelOpen；DesktopDiff 接收原始 original/modified 和 language，只读。后端使用 W04 强版本 PUT 与 W05 inspect/preview；无 LSP 或语言服务网络 API。
+
+## 3. 契约
+
+### 文本与保存
+
+首次读取原始 UTF-8 snapshot，不删除 BOM、不统一落盘换行。视图去前导 BOM 并归一化 LF；编辑按 Monaco 同时变更 offset 映射回原始正文，保留未修改段的 CRLF/LF/CR 与末尾换行，插入部分采用原始主换行。手机使用最小公共前后缀更新；不能用一次全量 LF setValue 代替原始正文。
+
+默认去抖 1 秒自动保存，按钮与 Ctrl/Cmd+S 复用同一入口。请求捕获 content/generation/epoch、完整 expected_version 和 CSRF；单 buffer 单写入在途。成功仅将提交正文变为 base，新输入继续 pending；失败暂停且保留输入，不隐式重试。409 必须先重新读取并比较，再明确保存本地内容，后端仍复验，手机冲突只保留/导出或加载服务器。
+
+watcher/15 秒轮询/focus/online 触发复验。clean 更新；dirty 暂停并显示冲突。在途保存时跳过读取，读取返回时再次核对发起时 base/epoch，不能让旧读响应倒退刚保存的强版本。配置更新/关闭/退出暂停请求与计时器；取消 HTTP 不代表已发送的服务器写入回滚，后续重新读取实际文件。
+
+### 草稿与 model
+
+恢复必须先读服务器，再展示候选草稿与桌面只读 diff；恢复到 buffer 后 paused，明确保存才 PUT。手机基线变化不提供恢复按钮，只能导出；未变化可明确恢复。IDB 失败可见且保留内存，成功保存不清理其他视图草稿。配额与 schema 见状态 owner。
+
+buffer.uri 在重命名/移动/重绑后保持稳定，重叠根按服务端 identity 共享调度。同文件多组复用 model/undo；DesktopEditor keepCurrentModel，最后桌面或手机别名视图关闭后延迟到 React 脱离再释放。最后干净标签关闭移除 buffer 缓存，重开重新读取并正常保存；脏输入保留 paused，明确保存才恢复。scope 退出释放 model 视图，StrictMode 即时重挂不误释放。禁止通过受控 setValue 重建 URI/清空编辑 undo。
+
+DiffEditor 使用公开 createDiffEditor/createModel/createViewModel；清理顺序是 setModel(null)、viewModel.dispose() 取消 diff worker、editor.dispose()、两份 model.dispose()。仅销毁 editor 再立即销毁 models 会产生异步 “no diff result available”，必须验关闭 diff 后的 pageerror。
+
+### 语言
 
 `web/src/features/workspaces/file-language.ts` 提供 `languageForFile(path: string, content?: string): string` 及完整清单。`web/scripts/generate-language-metadata.mjs` 从锁定 Monaco 0.57.0 的真实注册 AST 提取 91 个 ID（89 基础语言、JSON、plaintext），沿主入口注册顺序，不维护少量后缀白名单。非静态元数据、版本或集合变化须停止生成并复核。图标可复用轻量 metadata，但文件树不能因此提前加载引擎/worker。
 
 推断为 exact basename → 最长 registered extension → 有界首行上游 shebang → plaintext，名称小写匹配。桌面 breadcrumb 用既有 shadcn Select 提供自动识别及全部模式；FreeMarker 六变体、mysql/pgsql/redshift 无独立后缀，保留手动入口。选择只改变 model language，不写文件/启用诊断/LSP；JSON/CSS/HTML/TS/JS 的诊断关闭，语法/worker 本地动态加载。
 
-`editor-model-lifecycle.ts` 的 `editorURI(projectId, { folderId, path })` 按项目/文件夹/分段编码路径生成 URI。DesktopEditor 使用 keepCurrentModel，切标签/模式/主题及同文件分组复用 model；`watchEditorModels(projectId)` 在最后文件视图关闭、路径移除或项目 scope 退出后释放，延后到 React editor 脱离后执行，StrictMode 立即重挂不得误释放。临时覆盖归[状态规范](state-management.md)。当前仍是只读快照，下文保存/草稿是 W05 契约。
+### 预览
 
-正常：.yaml/.yml 同 YAML，.html.liquid 最长后缀为 Liquid。基础：未知文件 plaintext，SQL 方言可手选。错误：仅 ID 注册便声称高亮通过，或切语言重建 URI/model。正确：既有 model 更新 language，真实浏览器验证所有非 plaintext 模式的样例语法 token。
+内容分类与大小由服务端确定，路径后缀不能让图片进入文本。文本最多 8 MiB，图片最多 16 MiB、8192 单边、16,000,000 像素。支持 PNG/JPEG/GIF/WebP/AVIF 与严格白名单 SVG；SVG 用受认证 img URL，不内联用户 HTML，可切换源码编辑。脚本/外链 SVG 仅源码/下载。PDF/Office/未知二进制及超限只下载。图片加载失败可见，不冒充已通过格式验收；完整策略与 DTO 见后端 owner。
 
-file-language/workspace-view/editor-model-lifecycle 单测与 `web/tests/e2e/editor-assets.spec.ts` 验完整加载、model 身份、光标/滚动及模式恢复；真实工作台用例验分组/窄屏。mock 不代替着色，视口模拟不声称真机验收。
+## 4. 验证与错误矩阵
 
-### W05 保存与草稿契约
-
-model 以 workspace ID + 正规化相对 path 的 URI 为 key；每文件一个 model，editor view 与 model 生命周期分开。tabs 复用 model 保留 undo/view state；关 tab 或切工作区按 dirty 提示与 draft 策略处理。dispose editor/diff editor、listeners、decorations、models、worker；避免每次 render 重建或给受控 props setValue 清空 undo。
-打开 snapshot 得 content/version，buffer 修改只设 dirty。Ctrl/Cmd+S 捕获应用 command，以 base expected_version 调 PUT；成功更新 snapshot，pending 期间继续输入不得被旧保存响应标成 clean（按保存时 buffer generation 比较）。409 保存本地内容并显示 Diff/Reload/Overwrite；diff 使用只读 server model + draft model，不能覆盖旧 buffer。
-外部 watcher 变更：clean tab 可安全刷新，dirty tab 只标 external modification。DiffEditor 的 models/disposables 同样释放。find/replace/go to line/语言推断从文件类型 adapter，不让 binary 或超编辑大小进 model。
-
-## IndexedDB 草稿
-记录 workspace_id/path/base_version/content/updated_at/schema_version；去抖有界保存 dirty draft，成功 server save 后删除对应版本 draft，不能删掉后续输入。页面 reopen 先读取服务器，再展示 View Diff/Restore Draft/Discard Draft；恢复到 buffer 并保持基于当前 server snapshot 的显式冲突策略，不自动 PUT。配额/权限失败可见，schema 升级不悄悄丢内容；登出不上传草稿。
-
-## 文件预览分类
-
-文件类型以服务端验证后的内容分类与大小为依据，扩展名只用于展示提示，不能使二进制文件进入 Monaco 或文本替换。后端访问与预览隔离复用 [文件安全](../backend/filesystem-guidelines.md) 和 [传输规范](../backend/transfer-search-git.md)，前端不自行放宽策略。
-
-| 类型 | 展示与限制 |
+| 条件 | 行为 |
 | --- | --- |
-| 支持编码的文本/代码 | 在 `files.max_edit_size` 内进入 Monaco，支持语法高亮、查找、替换、跳转行及保存；超限提供明确提示和下载入口，不无界载入 |
-| PNG/JPEG/WebP/GIF/AVIF | 在 `files.max_preview_size` 内展示图片；加载失败、解码超限及不支持格式有可见结果 |
-| SVG | 可查看源码；安全预览使用隔离策略，禁直接插入页面 HTML、执行脚本或加载外部资源 |
-| PDF | 只读隔离预览；不实现编辑，加载失败时可下载 |
-| 二进制/未知格式 | 展示大小、类型、修改时间等元数据，按需提供有界十六进制预览和下载；不进入文本编辑或批量替换 |
+| 保存期间输入 | 新 generation 保留 pending，继续下一次正常保存 |
+| 409 / 403 / 文件消失 / 离线 | 暂停，保留正文与草稿，明确处理 |
+| 恢复草稿 | 不 PUT，先 paused 再明确保存 |
+| stale read/compare/config 响应 | epoch/base/config revision 不符便丢弃 |
+| 不安全 SVG / 不支持或超限 | 可见错误及原字节下载，不进图片或文本错误路径 |
+| 移动 model/runtime 宿主 | 保留身份和连接；不 create/terminate/input |
 
-当前初始上限为编辑 10 MiB、预览 50 MiB，最终使用 [配置规范](../backend/security-config.md) 返回的实际值。不得将超限文件无条件 `fetch` 到浏览器内存再显示“过大”。预览任务须明确内容分类 DTO、受认证流式端点、按需读取和图片解码限制；引用 URL/文件名不作为可信 HTML。切换或关闭预览释放请求、对象 URL 和渲染资源。
+## 5. 正常 / 基础 / 错误用例
 
-验收覆盖伪装为文本扩展名的二进制、格式/大小边界、Unicode 文件名、各图片格式、含脚本/外部资源的 SVG、只读 PDF、超限下载入口、无认证拒绝及切换后资源释放。
+正常：带 BOM/混合换行文本改一行，真实原子写入保留其他行字节。基础：未知 UTF-8 文件 plaintext 可编辑。错误：恢复草稿立即覆盖磁盘，或切语言/移动组导致 model 重建。
+
+## 6. 所需测试
+
+editor-session 单测覆盖同时输入/多光标/强版本/迟到读取/409/IDB 失败/多视图隔离/身份与关联；editor-recovery 验真实 model/undo、IDB、关闭 diff 无错误及恢复零隐式写入；editor-assets 验所有语言真实着色；真实 Debian w05-live 验原子保存、外部冲突、PNG/SVG、匿名拒绝。图片格式全浏览器矩阵和真实手机软键盘尚未完成，不能从头部识别单测推定。
+
+## 7. 错误与正确示例
+
+错误：`base = response; dirty = false`。正确：base 只对应捕获的提交正文，当前正文不同便仍 pending；先排空草稿队列，再按提交 generation 清理。错误：只 dispose diff editor；正确：先分离并取消 viewModel，然后释放 editor 与 models。
 
 ## xterm
 D07 的独立 @xterm/headless 解析测试只证明固定记录的库解析状态，未安装产品 xterm，也未证明浏览器 renderer/实时 WS 通过。tmux 外层 attach 的 alternate 与 pane TUI 模式不同，历史直接 capture+attach 有遗漏反例；恢复方案遵守 [机制实验边界](../backend/history-validation.md)，不能简单拼接或剥 ANSI。buffer 断言须等待 write callback，并比较 normal/alternate、cell 与 cursor，不以字符串 marker 代替全部状态。
@@ -50,7 +67,3 @@ D08 的 [快照截点实验](../backend/snapshot-validation.md) 显示等待 cal
 W03 已通过真实产品验收，当前 owner 为 [前端终端契约](terminal-runtime-contract.md)。runtime 按 terminal ID 保存在工作台 provider，portal 的固定 DOM element 在上下宿主间移动；宿主卸载不 dispose xterm/WS，不自动接管。仅退出整个 scope 才释放视图资源，仍只 detach。addons 按功能引入 fit/web-links，按锁定版本 dispose。ResizeObserver 在可见且尺寸非零时 fit，controller 才发送尺寸，隐藏不发 0x0；server bytes 由有界队列/write callback 排空，保留 split UTF-8。
 clear display 只 clear xterm，不执行 shell clear/kill，不清 tmux history。copy/paste 使用浏览器 clipboard 与权限反馈，paste 不伪造控制序列；clickable URL 仅 http/https，禁止 javascript，外链 noopener。URL/标题/输出不是可信 HTML。
 scope 退出 dispose xterm/addons/listeners/observer/socket/timers，只 detach；create/terminate 分别来自明确 user command。StrictMode 不重复创建连接或 session。每次 attach 由 tmux 重绘当前画面，普通历史独立整体替换，不拼入 live xterm；旧 D07/D08 负例继续约束后续变更。
-
-## 正反例与必需测试
-错误：editor save 成功就 dirty=false，不看期间输入。正确：确认 saved generation 后更新 base，后续输入继续 dirty。
-测试 Monaco model reuse/undo/dirty/409/diff dispose/draft 三选择/配额/保存期间输入；xterm mount-cleanup-remount、隐藏尺寸、binary 分块、copy/paste/search/URL/clear/fullscreen、unmount 零 close 请求。真实 browser E2E 验 renderer/font/焦点及恢复，fake terminal 不能替代持久化 acceptance。

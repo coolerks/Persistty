@@ -1,3 +1,4 @@
+@font-face { font-family: "Persistty Nerd Mono"; src: url("/fonts/JetBrainsMonoNLNerdFontMono-Regular.ttf") format("truetype"); font-style: normal; font-weight: 400; font-display: swap; }
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -236,3 +237,11 @@
 }
 
 .editor-breadcrumb .editor-language-select { flex: none; width: 150px; max-width: 40%; height: 24px; font-size: 12px; }
+
+.draft-dialog { width: min(960px, 94vw); max-width: 960px; }
+.draft-diff { height: min(55dvh, 500px); min-width: 0; }
+.file-preview { flex: 1; min-height: 0; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.file-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.editor-surface textarea { font-family: "Persistty Nerd Mono", monospace; }
+.group-selector { display: flex; flex: none; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); }
+.editor-area { flex-direction: column; }

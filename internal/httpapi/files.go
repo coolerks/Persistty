@@ -85,7 +85,8 @@ func (a *api) saveContent(c *gin.Context) {
 		ExpectedVersion *files.Version `json:"expected_version"`
 		Content         string         `json:"content"`
 	}
-	if err := decodeJSONWithLimit(c.Writer, c.Request, &input, 8<<20+8192, "project_version", "path", "expected_version", "content"); err != nil {
+	// JSON escaping may use six bytes per source byte; the file layer still enforces 8 MiB.
+	if err := decodeJSONWithLimit(c.Writer, c.Request, &input, 6*(8<<20)+8192, "project_version", "path", "expected_version", "content"); err != nil {
 		a.decodeFailure(c, err)
 		return
 	}

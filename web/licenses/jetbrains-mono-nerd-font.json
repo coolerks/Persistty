@@ -1,0 +1,13 @@
+{
+  "release": "v3.5.1",
+  "source": "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz",
+  "file": "JetBrainsMonoNLNerdFontMono-Regular.ttf",
+  "sha256": "d9a80146bbf2ff23b187316a3e82ee2a2ceab8220267fe09ac150ca46ab2c3bd",
+  "names": {
+    "1": "JetBrainsMonoNL NFM",
+    "2": "Regular",
+    "4": "JetBrainsMonoNL NFM Regular",
+    "6": "JetBrainsMonoNLNFM-Regular"
+  },
+  "license": "SIL Open Font License 1.1"
+}

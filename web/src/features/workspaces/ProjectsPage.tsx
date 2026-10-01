@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Folder, ArrowUpRight, RefreshCw, ExternalLink, PanelTop, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Failure, Loading } from "@/components/Feedback";
 import { useAuth } from "@/features/auth/auth-context";
 import { errorMessage } from "@/lib/api/client";
 import { ProjectEditor } from "./ProjectEditor";
+import { DraftRecovery } from "./DraftRecovery";
 import { ProjectWorkbench } from "./ProjectWorkbench";
 
 export function ProjectsPage() {
@@ -64,12 +65,13 @@ export function ProjectRoute() {
 }
 function ProjectPage({ projectId }: { projectId: string }) {
   const [load] = useState(() => (signal: AbortSignal) => api.project(projectId, signal));
-  const { resource, refresh } = useResource(load);
+  const { resource, refresh, refreshQuietly } = useResource(load);
+  useEffect(() => { const timer = setInterval(refreshQuietly, 15000); return () => clearInterval(timer); }, [refreshQuietly]);
   const [editing, setEditing] = useState(false);
   if (resource.status === "loading") return <main className="page-main"><Link className={buttonVariants({ variant: "ghost" })} to="/projects">Persistty</Link><Loading /></main>;
   if (resource.status === "error") return <main className="page-main">{resource.error instanceof ApiError && resource.error.status === 404 ?
-    <Empty><EmptyHeader><EmptyMedia variant="icon"><Folder /></EmptyMedia><EmptyTitle>项目不存在</EmptyTitle><EmptyDescription>此项目已移除或地址无效。</EmptyDescription></EmptyHeader><div className="flex flex-wrap justify-center gap-2"><Link className={buttonVariants({ variant: "outline" })} to="/projects">项目面板</Link><Link className={buttonVariants()} to="/terminals">终端</Link></div></Empty> : <Failure error={resource.error} retry={refresh} />}</main>;
+    <Empty><EmptyHeader><EmptyMedia variant="icon"><Folder /></EmptyMedia><EmptyTitle>项目不存在</EmptyTitle><EmptyDescription>此项目已移除或地址无效。</EmptyDescription></EmptyHeader><div className="flex flex-wrap justify-center gap-2"><Link className={buttonVariants({ variant: "outline" })} to="/projects">项目面板</Link><Link className={buttonVariants()} to="/terminals">终端</Link></div><DraftRecovery projectId={projectId} /></Empty> : <Failure error={resource.error} retry={refresh} />}</main>;
   return <><ProjectWorkbench project={resource.data} onEdit={() => setEditing(true)} />
-    {editing && <ProjectEditor project={resource.data} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); refresh(); }} />}
+    {editing && <ProjectEditor project={resource.data} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); refreshQuietly(); }} />}
   </>;
 }

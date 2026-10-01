@@ -30,6 +30,7 @@ function visit(node) {
 visit(tree);
 notices.push({ name: "shadcn/ui 复制组件", text: readFileSync(join(root, "licenses/shadcn-ui.txt"), "utf8") });
 notices.push({ name: "Material Icon Theme 5.38.1 内置图标", text: readFileSync(join(root, "licenses/material-icon-theme.txt"), "utf8") });
+notices.push({ name: "JetBrainsMonoNL Nerd Font Mono v3.5.1", text: readFileSync(join(root, "licenses/jetbrains-mono-nerd-font.txt"), "utf8").replace(/[ \t]+$/gm, "") });
 notices.sort((a, b) => a.name.localeCompare(b.name, "en"));
 mkdirSync(join(root, "public"), { recursive: true });
 writeFileSync(join(root, "public/third-party-licenses.txt"), notices.map(notice => `${notice.name}\n${"=".repeat(72)}\n${notice.text}`).join("\n\n"));

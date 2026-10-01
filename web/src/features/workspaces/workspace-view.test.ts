@@ -1,5 +1,5 @@
 import { beforeEach, expect, it } from "vitest";
-import { fileKey, useWorkspaceView } from "./workspace-view";
+import { fileKey, restoreViews, useWorkspaceView } from "./workspace-view";
 
 beforeEach(() => { useWorkspaceView.setState({ projects: {}, languageModes: {} }); localStorage.clear(); });
 
@@ -54,4 +54,26 @@ it("语言覆盖随目录重命名迁移，删除与自动模式清理，未知�
   state().setLanguage("a", target, undefined); expect(state().languageModes.a?.[fileKey(target)]).toBeUndefined();
   state().setLanguage("a", target, "redshift"); state().remove("a", { folderId: "other", path: "new" });
   expect(state().languageModes.a).toEqual({});
+});
+
+it("四个左右分组可排序，手机操作不覆盖桌面标签", () => {
+  const state = () => useWorkspaceView.getState(); const one = { folderId: "root", path: "one.go" }; const two = { folderId: "root", path: "two.go" };
+  state().open("p", one); state().open("p", two); state().split("p", one); state().split("p", two); state().split("p", one); state().split("p", two);
+  expect(state().projects.p?.groups.map(files => files.length)).toEqual([2, 1, 1, 1]);
+  state().move("p", two, 0, 0, one); expect(state().projects.p?.groups[0]).toEqual([two, one]);
+  state().openMobile("p", two); state().closeMobile("p", two); expect(state().projects.p?.groups[0]).toEqual([two, one]);
+  state().unsplit("p"); expect(state().projects.p?.groups).toEqual([[two, one], [], [], []]);
+});
+it("终端位置仅保存 ID/组，移动/排序不持久化 runtime 或正文", () => {
+  const state = () => useWorkspaceView.getState(); state().placeTerminal("p", "a", { region: "top", group: 2 }); state().placeTerminal("p", "b", { region: "bottom", group: 3 }); state().orderTerminal("p", "b", "a");
+  expect(state().projects.p?.upperActive[2]).toBe("a"); expect(state().projects.p?.lowerCount).toBe(4); expect(state().projects.p?.terminalOrder).toEqual(["b", "a"]);
+  state().unsplit("p"); expect(state().projects.p?.terminals.a).toEqual({ region: "top", group: 0 });
+});
+
+it("旧双组迁移、损坏记录、数量和路径边界受验证", () => {
+  const old = { groups: [[{ folderId: "root", path: "a.ts" }], []], active: ["root\u0000a.ts", null], focused: 0, split: false };
+  expect(restoreViews({ projects: { p: old } }).p?.groups).toHaveLength(4);
+  expect(() => restoreViews({ projects: { p: { ...old, groups: [[{ folderId: "root", path: "../a" }], []] } } })).toThrow();
+  expect(() => restoreViews({ projects: { p: { ...old, groups: [Array.from({ length: 101 }, (_, i) => ({ folderId: "root", path: `${i}.ts` })), []] } } })).toThrow();
+  expect(() => restoreViews(null)).toThrow();
 });

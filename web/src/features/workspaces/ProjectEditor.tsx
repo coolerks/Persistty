@@ -9,6 +9,8 @@ import type { Project } from "@/lib/api/decoder";
 import { useAuth } from "@/features/auth/auth-context";
 import { DirectoryPicker } from "./DirectoryPicker";
 
+import { editorScopes } from "./editor-session";
+
 type Row = { id: string | null; path: string };
 
 export function ProjectEditor({ project, onClose, onSaved }: { project: Project | undefined; onClose(): void; onSaved(project: Project): void }) {
@@ -16,16 +18,22 @@ export function ProjectEditor({ project, onClose, onSaved }: { project: Project 
   const [name, setName] = useState(project?.name ?? "");
   const [rows, setRows] = useState<Row[]>(project?.folders.map(folder => ({ ...folder })) ?? []);
   const [mainPath, setMainPath] = useState(project?.folders.find(folder => folder.id === project.main_folder_id)?.path ?? "");
+  const [review, setReview] = useState<string[] | null>(null);
   const [picker, setPicker] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const request = useRef<AbortController | null>(null);
 
-  async function save() {
+  async function save(confirmed = false) {
     if (pending || auth.state.status !== "authenticated") return;
+    const scope = project ? editorScopes.get(project.id) : undefined;
+    const removed = project?.folders.filter(folder => !rows.some(row => row.id === folder.id)).map(folder => folder.id) ?? [];
+    const affected = scope ? [...new Set(scope.buffers.values())].filter(buffer => removed.includes(buffer.file.folderId)) : [];
+    if (affected.length && !confirmed) { setReview(affected.map(buffer => buffer.file.path)); return; }
     const controller = new AbortController(); request.current = controller;
     setPending(true); setError(null);
     try {
+      for (const buffer of affected) { buffer.suspend(); if (!await buffer.persist()) throw new Error("草稿保护失败，未修改项目配置，请先导出输入。"); }
       let saved: Project;
       if (project) {
         const existing = rows.filter(row => row.id !== null);
@@ -39,7 +47,7 @@ export function ProjectEditor({ project, onClose, onSaved }: { project: Project 
       } else {
         saved = await api.createProject(name, rows.map(row => row.path), rows.findIndex(row => row.path === mainPath), auth.state.session.csrf_token, controller.signal);
       }
-      if (!controller.signal.aborted) onSaved(saved);
+      if (!controller.signal.aborted) { await scope?.configure(saved, auth.state.session.csrf_token); onSaved(saved); }
     } catch (cause: unknown) {
       if (!controller.signal.aborted) setError(errorMessage(cause));
     } finally { request.current = null; if (!controller.signal.aborted) setPending(false); }
@@ -59,6 +67,7 @@ export function ProjectEditor({ project, onClose, onSaved }: { project: Project 
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     <DialogFooter><Button variant="outline" disabled={pending} onClick={onClose}>取消</Button><Button disabled={pending || !name.trim() || rows.length === 0 || !rows.some(row => row.path === mainPath)} onClick={() => void save()}>{pending ? "保存中" : "保存"}</Button></DialogFooter>
   </DialogContent></Dialog>
+  <Dialog open={review !== null} onOpenChange={open => { if (!open) setReview(null); }}><DialogContent><DialogHeader><DialogTitle>移除文件夹关联</DialogTitle><DialogDescription>以下打开文件将先保护草稿；剩余文件夹仍覆盖同一文件时复验并迁移，否则保留输入供导出。</DialogDescription></DialogHeader><ul>{review?.map(path => <li key={path}>{path}</li>)}</ul><DialogFooter><Button variant="outline" onClick={() => setReview(null)}>取消</Button><Button onClick={() => { setReview(null); void save(true); }}>保护输入并继续</Button></DialogFooter></DialogContent></Dialog>
   <DirectoryPicker open={picker} onOpenChange={setPicker} onSelect={path => { if (!rows.some(row => row.path === path)) { setRows(current => [...current, { id: null, path }]); if (!mainPath) setMainPath(path); } }} />
   </>;
 }

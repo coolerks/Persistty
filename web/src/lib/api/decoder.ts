@@ -105,9 +105,24 @@ function integer(value: unknown, min = 0): number {
 function optionalText(value: unknown, max = 4096): string {
   return typeof value === "string" && value.length <= max && !value.includes("\0") ? value : fail();
 }
-function decodeVersion(value: unknown): FileVersion {
+export function decodeVersion(value: unknown): FileVersion {
   const item = exact(value, ["mtime", "size", "etag", "identity"]);
   return { mtime: text(item.mtime, 64), size: integer(item.size), etag: text(item.etag, 128), identity: text(item.identity, 128) };
+}
+export function decodeSaveResult(value: unknown): { version: FileVersion } {
+  const item = exact(value, ["version"]);
+  return { version: decodeVersion(item.version) };
+}
+export type FileInspection = { kind: "text" | "binary" | "image"; mime: string; size: number; width: number; height: number; editable: boolean; previewable: boolean };
+export function decodeInspection(value: unknown): FileInspection {
+  const item = exact(value, ["kind", "mime", "size", "width", "height", "editable", "previewable"]);
+  if (!["text", "binary", "image"].includes(String(item.kind)) || typeof item.editable !== "boolean" || typeof item.previewable !== "boolean") fail();
+  const kind = item.kind;
+  if (kind !== "text" && kind !== "binary" && kind !== "image") fail();
+  const size = integer(item.size), width = integer(item.width), height = integer(item.height);
+  if (item.previewable && (kind !== "image" || size > (16 << 20) || width < 1 || height < 1 || width > 8192 || height > 8192 || width * height > 16_000_000)) fail();
+  if (item.editable && (kind === "binary" || size > (8 << 20))) fail();
+  return { kind, mime: text(item.mime, 128), size, width, height, editable: item.editable, previewable: item.previewable };
 }
 export function decodeFileMetadata(value: unknown): FileMetadata {
   const item = exact(value, ["kind", "version"]);

@@ -10,6 +10,7 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { ThemeSelect } from "@/features/settings/ThemeSelect";
 import { ProjectsPage, ProjectRoute } from "@/features/workspaces/ProjectsPage";
 import { TerminalsPage } from "@/features/terminal/TerminalsPage";
+import { editorScopes } from "@/features/workspaces/editor-session";
 import { errorMessage } from "@/lib/api/client";
 import { Failure, Loading } from "@/components/Feedback";
 
@@ -33,7 +34,7 @@ function Shell() {
     if (request.current) return;
     const controller = new AbortController(); request.current = controller;
     setPending(true); setError(null);
-    try { await auth.logout(controller.signal); }
+    try { for (const scope of editorScopes.values()) if (!await scope.protect()) throw new Error("草稿保护失败，尚未退出登录，请先导出输入。"); await auth.logout(controller.signal); }
     catch (error: unknown) { if (!controller.signal.aborted) setError(errorMessage(error)); }
     finally { request.current = null; if (!controller.signal.aborted) setPending(false); }
   }

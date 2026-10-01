@@ -123,6 +123,8 @@ func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Eng
 	protected.GET("/projects/:id/folders/:folderId/entries", a.entries)
 	protected.GET("/projects/:id/folders/:folderId/content", a.content)
 	protected.GET("/projects/:id/folders/:folderId/metadata", a.metadata)
+	protected.GET("/projects/:id/folders/:folderId/inspect", a.inspectFile)
+	protected.GET("/projects/:id/folders/:folderId/preview", a.previewFile)
 	protected.GET("/projects/:id/folders/:folderId/download", a.downloadFile)
 	protected.PUT("/projects/:id/folders/:folderId/content", a.saveContent)
 	protected.POST("/projects/:id/file-operations", a.fileOperation)

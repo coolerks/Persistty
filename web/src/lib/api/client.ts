@@ -1,5 +1,5 @@
 import { decodeArchive, decodeDeletePreview, decodeDirectory, decodeEnvelope, decodeError, decodeFileContent, decodeFileListing, decodeFileMetadata, decodeImportResult, decodeList, decodeOperationResult, decodeProject, decodeSession, decodeTerminal, decodeTerminalHistory, decodeUploadState, ProtocolError } from "./decoder";
-import { decodeTerminationBatch, type BatchTarget, type FileVersion } from "./decoder";
+import { decodeTerminationBatch, decodeSaveResult, decodeInspection, type BatchTarget, type FileVersion } from "./decoder";
 
 export type FileOperation = { kind: "create_file" | "create_directory" | "rename" | "copy" | "move" | "delete"; project_version: number; source_folder_id?: string; source_path?: string; target_folder_id?: string; target_path?: string; expected_version?: FileVersion; expected_identity?: string; delete_token?: string };
 export type UploadInput = { project_id: string; folder_id: string; project_version: number; path: string; batch_id: string; size: number; sha256: string; expected_version?: FileVersion };
@@ -27,6 +27,7 @@ async function request<T>(path: string, decode: (value: unknown) => T, options: 
 }
 
 export const api = {
+  inspect: (projectId: string, folderId: string, version: number, path: string, signal: AbortSignal) => request(`/projects/${encodeURIComponent(projectId)}/folders/${encodeURIComponent(folderId)}/inspect?project_version=${version}&path=${encodeURIComponent(path)}`, decodeInspection, { signal }),
   session: (signal: AbortSignal) => request("/auth/session", decodeSession, { signal }),
   login: (password: string, signal: AbortSignal) => request("/auth/login", decodeSession,
     { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }), signal }),
@@ -38,6 +39,8 @@ export const api = {
   entries: (projectId: string, folderId: string, version: number, path: string, cursor: string, signal: AbortSignal) => request(`/projects/${encodeURIComponent(projectId)}/folders/${encodeURIComponent(folderId)}/entries?project_version=${version}&path=${encodeURIComponent(path)}&cursor=${encodeURIComponent(cursor)}`, decodeFileListing, { signal }),
   content: (projectId: string, folderId: string, version: number, path: string, signal: AbortSignal) => request(`/projects/${encodeURIComponent(projectId)}/folders/${encodeURIComponent(folderId)}/content?project_version=${version}&path=${encodeURIComponent(path)}`, decodeFileContent, { signal }),
   metadata: (projectId: string, folderId: string, version: number, path: string, signal: AbortSignal) => request(`/projects/${encodeURIComponent(projectId)}/folders/${encodeURIComponent(folderId)}/metadata?project_version=${version}&path=${encodeURIComponent(path)}`, decodeFileMetadata, { signal }),
+  saveContent: (projectId: string, folderId: string, input: { project_version: number; path: string; expected_version: FileVersion; content: string }, csrf: string, signal: AbortSignal) => request(`/projects/${encodeURIComponent(projectId)}/folders/${encodeURIComponent(folderId)}/content`, decodeSaveResult,
+    { method: "PUT", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify(input), signal }),
   fileOperation: (projectId: string, input: FileOperation, csrf: string, signal: AbortSignal) => request(`/projects/${encodeURIComponent(projectId)}/file-operations`, decodeOperationResult,
     { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify(input), signal }),
   deletePreview: (projectId: string, folderId: string, version: number, path: string, csrf: string, signal: AbortSignal) => request(`/projects/${encodeURIComponent(projectId)}/delete-preview`, decodeDeletePreview,

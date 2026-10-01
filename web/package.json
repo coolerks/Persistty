@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "build": "node scripts/collect-licenses.mjs && tsc --noEmit && vite build",
+    "build": "node scripts/verify-font.mjs && node scripts/collect-licenses.mjs && tsc --noEmit && vite build",
     "prepare:assets": "node scripts/generate-language-metadata.mjs && node scripts/generate-material-icons.mjs",
     "predev": "npm run prepare:assets",
     "prelint": "npm run prepare:assets",

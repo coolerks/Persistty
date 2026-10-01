@@ -2,11 +2,11 @@
 
 ## 1. 范围与触发条件
 
-W04 已实现多文件夹项目、目录选择、文件树/内容、文件操作、上传、下载、ZIP 与文件事件。修改 `internal/storage`、`internal/files`、`internal/transfer`、`internal/httpapi` 或对应 `web/src/features/workspaces` 时适用。终端运行时属 W03，自动保存与草稿属 W05；文件内容入口在 W04 只读。完整字段形状以代码和 [共享 fixture](../../../tests/contracts/workspace-files.json) 同步校验，不把此文当成可跳过测试的替代品。
+W04 已实现多文件夹项目、目录选择、文件树/内容、文件操作、上传、下载、ZIP 与文件事件。修改 `internal/storage`、`internal/files`、`internal/transfer`、`internal/httpapi` 或对应 `web/src/features/workspaces` 时适用。终端运行时属 W03，自动保存与草稿属 W05；文件界面在 W04 只读，W05 已接入既有强版本 PUT；保存与预览补充见 [W05 契约](editor-preview-contract.md)。完整字段形状以代码和 [共享 fixture](../../../tests/contracts/workspace-files.json) 同步校验，不把此文当成可跳过测试的替代品。
 
 ## 2. 签名（API / DB）
 
-所有路径以 `/api/v1` 为前缀。项目：`GET/POST /projects`、`GET/PATCH/DELETE /projects/:id`、`GET /directories?path=<absolute>`。文件：`GET /projects/:id/folders/:folderId/{entries,content,metadata,download}?project_version=<int>&path=<relative>`；`PUT .../content`；`POST /projects/:id/{file-operations,delete-preview}`。传输：`POST /uploads`、`GET/DELETE /uploads/:id`、`PUT /uploads/:id/chunks/:index`、`POST /uploads/:id/complete`、`POST /archives`、`GET/DELETE /archives/:id`、`GET /archives/:id/download`。`GET /events` 为经认证、Origin 校验的 WebSocket。
+所有路径以 `/api/v1` 为前缀。项目：`GET/POST /projects`、`GET/PATCH/DELETE /projects/:id`、`GET /directories?path=<absolute>`。文件：`GET /projects/:id/folders/:folderId/{entries,content,metadata,download}?project_version=<int>&path=<relative>`；`PUT .../content`；W05 新增同路径 GET `inspect/preview`（见补充契约）；`POST /projects/:id/{file-operations,delete-preview}`。传输：`POST /uploads`、`GET/DELETE /uploads/:id`、`PUT /uploads/:id/chunks/:index`、`POST /uploads/:id/complete`、`POST /archives`、`GET/DELETE /archives/:id`、`GET /archives/:id/download`。`GET /events` 为经认证、Origin 校验的 WebSocket。
 
 `0003_folder_roots.sql` 保存 `folder_id,device,inode`；`0004_transfers.sql` 保存 `uploads`、`upload_chunks`、`archives`。上传暂存和 ZIP 文件在私有磁盘目录，不将正文放入 SQLite。迁移校验和不可通过改写已应用 SQL 来修正。
 

@@ -6,7 +6,7 @@
 内置 JetBrains Mono Nerd Font NL：资产任务锁定 Nerd Fonts release、Mono/NL variant、真实 font-family metadata、格式和 glyph 覆盖。自托管 font-face，等待 document.fonts.load/ready 后 Monaco remeasure/xterm fit；fallback 为 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace。不能只设置 font-family 名字却没分发字体。测试 Oh My Zsh/Powerline/Nerd glyph、中英文、宽度对齐。转换 WOFF2/子集不能意外移除 glyph；未授权不能重新许可。
 Material Icon Theme 用锁定上游资源和映射，优先 exact filename -> longest compound suffix -> extension -> language ID -> fallback，folder 独立；处理 Dockerfile/package.json/go.mod/.gitignore/.env/yaml/yml/ts/tsx/d.ts。必要大小写策略及 basename 特例有测试，不仅 extname。icon SVG 作为可信内置资产分发，用户 SVG 安全策略不同。
 
-导入前逐项检查实际版本 LICENSE/NOTICE：字体原始/补丁/图标许可分别核查；第三方资产清单含 source URL、version/checksum、license、修改/转换记录，分发包含必要 copyright/license/notice。项目 MIT 不能覆盖第三方许可。Material 图标已按下文契约分发；Nerd Font 尚未导入，不声称字体 glyph 渲染已通过。来源入口：[Nerd Fonts JetBrainsMono](https://github.com/ryanoasis/nerd-fonts/tree/master/patched-fonts/JetBrainsMono)、[Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)。
+导入前逐项检查实际版本 LICENSE/NOTICE：字体原始/补丁/图标许可分别核查；第三方资产清单含 source URL、version/checksum、license、修改/转换记录，分发包含必要 copyright/license/notice。项目 MIT 不能覆盖第三方许可。Material 图标已按下文契约分发；W05 已分发 Nerd Font，验证范围见下文；真实手机和 shell 主题实际输出矩阵仍需专项验收。来源入口：[Nerd Fonts JetBrainsMono](https://github.com/ryanoasis/nerd-fonts/tree/master/patched-fonts/JetBrainsMono)、[Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)。
 
 测试主题持久/API失败/system event、Monaco/xterm 不丢状态；图标 exact/compound/fallback/目录和 Unicode；生产 build 资产加载路径/许可证随包/字体实际 glyph 截图证据。
 
@@ -45,3 +45,14 @@ basename/关联键小写匹配，显示原名保留；`.env` 的 env 后缀参�
 
 ### 7. 错误与正确示例
 错误：`return '/icons/' + userFilename + '.svg'`。正确：`fileIconURL(fileIconFor({ path, theme }))`，仅映射到受控资源；prepare:assets 先验证完整资源，再构建。
+
+
+## W05 字体分发契约（2026-10-01）
+
+1. 范围：字体升级、替换、加载或 editor/terminal 测量变化时适用。
+2. 签名：在 web/ 运行 `node scripts/verify-font.mjs`，build 先校验字体，再 collect-licenses、类型检查与 Vite 构建。CSS `@font-face` 名为 `Persistty Nerd Mono`，本地资源为 `fonts/JetBrainsMonoNLNerdFontMono-Regular.ttf`。
+3. 契约：锁定 Nerd Fonts v3.5.1 Mono/NL Regular 原始 TTF，未转换/子集。真实 family 为 JetBrainsMonoNL NFM，SHA-256 `d9a80146bbf2ff23b187316a3e82ee2a2ceab8220267fe09ac150ca46ab2c3bd`；source/names/hash 记录在 `web/licenses/jetbrains-mono-nerd-font.json`，原始 SIL OFL 1.1 与汇总许可随构建分发。Monaco fonts.load 后 remeasureFonts/layout；xterm 先 fallback，fonts.load 后更新 options.fontFamily 触发字符服务复测，再 fit，observer 不发送 controller resize。
+4. 矩阵：hash/name/glyph/等宽/许可不符停止构建；字体网络加载失败保留 fallback，不伪报 glyph 通过；异步完成后宿主已卸载不重测已释放 runtime。
+5. 用例：正常本地 TTF 加载后 Nerd glyph 与 ASCII 等宽；基础离线资源可访问；错误只写 family 名未分发，或加载字体后只 fit 却缓存旧字符尺寸。
+6. 测试：verify-font 验 name/cmap/hmtx 中 U+0041、U+E0B0、U+F017、U+F120；生产构建带字体与原许可；editor-recovery 验 fonts.check，terminal-geometry 验字体加载后的 controller/observer 字符几何和连接复用。真实 Oh My Zsh/Powerline/手机软键盘矩阵不从字体表推定通过。
+7. 错误与正确：错误 `terminal.options.fontFamily = "JetBrains Mono Nerd Font"` 但无资源；正确先自托管已校验资源、fonts.load，更新正确别名并触发测量，保留 fallback 与生命周期门禁。

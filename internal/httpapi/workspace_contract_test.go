@@ -84,6 +84,24 @@ func TestWorkspaceContractFixture(t *testing.T) {
 	if archive.Data.Status != "ready" || archive.Data.RelativePath != "空目录" {
 		t.Fatal("archive fixture drift")
 	}
+	var saved struct {
+		Data struct {
+			Version files.Version `json:"version"`
+		} `json:"data"`
+	}
+	decode("saved", &saved)
+	if saved.Data.Version.Identity != content.Data.Version.Identity {
+		t.Fatal("saved fixture drift")
+	}
+	for _, name := range []string{"inspection_text", "inspection_image", "inspection_binary"} {
+		var inspection struct {
+			Data files.Inspection `json:"data"`
+		}
+		decode(name, &inspection)
+		if (name == "inspection_image") != inspection.Data.Previewable || (name == "inspection_text") != inspection.Data.Editable {
+			t.Fatal("inspection fixture drift")
+		}
+	}
 	var conflict errorEnvelope
 	decode("conflict", &conflict)
 	if conflict.Error.Code != "conflict" {

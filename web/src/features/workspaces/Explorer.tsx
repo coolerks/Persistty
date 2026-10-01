@@ -1,3 +1,4 @@
+import { editorScopes } from "./editor-session";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, ClipboardPaste, FilePlus, FolderPlus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -87,7 +88,7 @@ function Directory({ project, folderId, path, depth, actions, onArchive, onFile,
   const [pending, setPending] = useState(false);
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
-  function reload() { request.current?.abort(); request.current = null; setPending(false); setExtra([]); setCursor(undefined); setNextError(null); refreshQuietly(); }
+  function reload() { request.current?.abort(); request.current = null; setPending(false); setExtra([]); setCursor(undefined); setNextError(null); refreshQuietly(); if (depth === 0) void editorScopes.get(project.id)?.refresh(); }
   const eventMode = useFileEvents(project.id, folderId, project.version, path, reload);
   async function next(nextCursor: string) {
     if (pending) return;
@@ -136,15 +137,15 @@ function Directory({ project, folderId, path, depth, actions, onArchive, onFile,
 function TreeEntry({ item, fullPath, depth, project, folderId, actions, onArchive, onFile, epoch, selected, onSelect, selectedFile, reveal, dragOver, drop }: Omit<DirectoryProps, "path"> & { item: FileEntry; fullPath: string; dragOver(event: React.DragEvent): void; drop(event: React.DragEvent, destination: string): void }) {
   const directory = item.kind === "directory";
   const ancestor = directory && reveal?.file?.folderId === folderId && reveal.file.path.startsWith(`${fullPath}/`);
-  const [expanded, setExpanded] = useState(ancestor);
+  const [expanded, setExpanded] = useState(() => ancestor || !!useWorkspaceView.getState().projects[project.id]?.expanded?.[fileKey({ folderId, path: fullPath })]);
   const rowRef = useRef<HTMLButtonElement>(null);
   const selectedEntry = !directory && selectedFile !== null && fileKey(selectedFile) === fileKey({ folderId, path: fullPath });
-  useEffect(() => { if (ancestor) setExpanded(true); }, [ancestor, reveal]);
+  useEffect(() => { if (ancestor) { setExpanded(true); useWorkspaceView.getState().expand(project.id, { folderId, path: fullPath }, true); } }, [ancestor, reveal, project.id, folderId, fullPath]);
   useEffect(() => {
     if (reveal?.file?.folderId === folderId && reveal.file.path === fullPath) rowRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [folderId, fullPath, reveal]);
   const source: EntryRef = { folderId, path: fullPath, kind: item.kind, identity: item.identity };
-  const open = () => { if (directory) { setExpanded(value => !value); onSelect(fullPath); } else { onSelect(fullPath.split("/").slice(0, -1).join("/")); onFile(fullPath); } };
+  const open = () => { if (directory) { setExpanded(!expanded); useWorkspaceView.getState().expand(project.id, { folderId, path: fullPath }, !expanded); onSelect(fullPath); } else { onSelect(fullPath.split("/").slice(0, -1).join("/")); onFile(fullPath); } };
   const row = <Button ref={rowRef} variant="ghost" role="treeitem" aria-expanded={directory ? expanded : undefined} aria-selected={directory ? undefined : selectedEntry} className={`tree-entry ${selectedEntry ? "tree-entry-selected" : ""}`} style={{ paddingLeft: 10 + depth * 16 }} title={item.name} onClick={open}>
     {directory ? expanded ? <ChevronDown className="size-3 shrink-0" /> : <ChevronRight className="size-3 shrink-0" /> : <span className="size-3 shrink-0" />}
     <FileTypeIcon path={fullPath} kind={directory ? "directory" : "file"} expanded={expanded} />

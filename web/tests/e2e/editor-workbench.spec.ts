@@ -65,6 +65,8 @@ test("隔离真实工作台的文件树/标签图标、语言选择、分组及�
   for (const [width, height] of [[1440, 656], [1024, 540], [390, 844], [844, 390]]) {
     await page.setViewportSize({ width: width!, height: height! });
     if (width! <= 760) {
+      await page.getByRole("button", { name: "文件", exact: true }).click();
+      await page.getByRole("treeitem", { name: "config.toml", exact: true }).click();
       await page.getByRole("button", { name: "编辑器", exact: true }).click();
       await expect(page.getByRole("textbox", { name: "config.toml 内容", exact: true })).toBeVisible();
       await expect(page.getByRole("combobox", { name: "语言模式" })).toHaveCount(0);

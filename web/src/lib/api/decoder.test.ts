@@ -1,3 +1,4 @@
+import { decodeInspection, decodeSaveResult } from "./decoder";
 import { describe, expect, it } from "vitest";
 import fixture from "../../../../tests/contracts/foundation.json";
 import workspaceFixture from "../../../../tests/contracts/workspace-files.json";
@@ -57,5 +58,17 @@ describe("W04 共享文件契约", () => {
   it("拒绝不认识的传输状态与缺失的强版本", () => {
     expect(() => decodeUploadState({ ...workspaceFixture.upload.data, status: "done" })).toThrow(ProtocolError);
     expect(() => decodeFileMetadata({ kind: "file", version: { ...workspaceFixture.metadata.data.version, etag: null } })).toThrow(ProtocolError);
+  });
+});
+
+describe("W05 共享保存与预览契约", () => {
+  it("成功保存只返回强版本，内容类型与有界预览独立", () => {
+    expect(decodeEnvelope(workspaceFixture.saved, decodeSaveResult).version.identity).toBe("1:2");
+    expect(decodeEnvelope(workspaceFixture.inspection_image, decodeInspection)).toMatchObject({ previewable: true, editable: false, width: 2, height: 3 });
+    expect(decodeEnvelope(workspaceFixture.inspection_text, decodeInspection).editable).toBe(true);
+    expect(decodeEnvelope(workspaceFixture.inspection_binary, decodeInspection).previewable).toBe(false);
+    expect(() => decodeInspection({ ...workspaceFixture.inspection_image.data, width: -1 })).toThrow(ProtocolError);
+    expect(() => decodeInspection({ ...workspaceFixture.inspection_image.data, width: 8193 })).toThrow(ProtocolError);
+    expect(() => decodeSaveResult({ content: "fake", version: workspaceFixture.saved.data.version })).toThrow(ProtocolError);
   });
 });

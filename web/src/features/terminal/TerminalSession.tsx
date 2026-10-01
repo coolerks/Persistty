@@ -170,7 +170,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     };
     const observer = new ResizeObserver(resize);
     observer.observe(host);
-    void document.fonts.ready.then(() => { if (active) resize(); });
+    void document.fonts.load('13px "Persistty Nerd Mono"').then(() => { if (!active) return; xterm.options.fontFamily = "Persistty Nerd Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"; requestAnimationFrame(() => { if (active) resize(); }); }).catch(() => { /* Keep the available fallback font. */ });
     const themeObserver = new MutationObserver(() => { xterm.options.theme = colors(host); });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     const applyInput = (value: string) => {
@@ -322,6 +322,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     observer.observe(host);
     fit.fit();
     let active = true;
+    void document.fonts.load('13px "Persistty Nerd Mono"').then(() => { if (!active) return; terminal.options.fontFamily = "Persistty Nerd Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"; requestAnimationFrame(() => { if (active && host.clientWidth > 20 && host.clientHeight > 20) fit.fit(); }); }).catch(() => { /* Keep the available fallback font. */ });
     let parsed = false;
     let bottomPixels = 0;
     let scrollFrame = 0;

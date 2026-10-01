@@ -8,6 +8,8 @@ import { useAuth } from "@/features/auth/auth-context";
 
 export type EntryRef = { folderId: string; path: string; kind: FileEntry["kind"]; identity: string };
 export type ClipboardEntry = { source: EntryRef; cut: boolean };
+import { editorScopes } from "./editor-session";
+
 type Naming = { kind: "create_file" | "create_directory" | "rename"; folderId: string; parent: string; source?: EntryRef; name: string };
 
 function join(parent: string, name: string): string { return parent ? `${parent}/${name}` : name; }
@@ -37,6 +39,8 @@ export function useExplorerActions(project: Project, onChanged: (source?: EntryR
     if (pending || !csrf) return false;
     setPending(true); setError(null);
     try {
+      const scope = editorScopes.get(project.id);
+      if (kind !== "copy" && scope && !await scope.protect(source)) throw new Error("草稿保护失败，请先导出未保存输入。");
       const expected_version = source.kind === "file" ? (await api.metadata(project.id, source.folderId, project.version, source.path, new AbortController().signal)).version : undefined;
       const result = await api.fileOperation(project.id, { kind, project_version: project.version, source_folder_id: source.folderId, source_path: source.path, target_folder_id: folderId, target_path: targetPath, expected_identity: source.identity, ...(expected_version ? { expected_version } : {}) }, csrf, new AbortController().signal);
       if (result.state === "partial") {
@@ -45,6 +49,7 @@ export function useExplorerActions(project: Project, onChanged: (source?: EntryR
         return false;
       }
       const target: EntryRef = { ...source, folderId, path: targetPath };
+      if (kind !== "copy") await scope?.relocate(source, target);
       onChanged(source, target, kind);
       if (kind === "move") setClipboard(null);
       return true;
@@ -83,6 +88,8 @@ export function useExplorerActions(project: Project, onChanged: (source?: EntryR
     if (!deleting || !csrf || pending) return;
     setPending(true); setError(null);
     try {
+      const scope = editorScopes.get(project.id);
+      if (scope && !await scope.protect(deleting.source)) throw new Error("草稿保护失败，未执行删除，请先导出输入。");
       const result = await api.fileOperation(project.id, { kind: "delete", project_version: project.version, source_folder_id: deleting.source.folderId, source_path: deleting.source.path, delete_token: deleting.preview.token }, csrf, new AbortController().signal);
       onChanged(deleting.source, undefined, "delete");
       setDeleting(null);
@@ -103,7 +110,7 @@ export function useExplorerActions(project: Project, onChanged: (source?: EntryR
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <DialogFooter><Button variant="outline" disabled={pending} onClick={() => setNaming(null)}>取消</Button><Button disabled={!naming || !validName(naming.name) || pending} onClick={() => void submitNaming()}>确定</Button></DialogFooter>
     </DialogContent></Dialog>
-    <Dialog open={deleting !== null} onOpenChange={open => { if (!open && !pending) setDeleting(null); }}><DialogContent><DialogHeader><DialogTitle>永久删除</DialogTitle><DialogDescription>将永久删除 {deleting?.preview.path}，共 {deleting?.preview.count} 项、{deleting?.preview.bytes} 字节。此操作无法撤销。</DialogDescription></DialogHeader>
+    <Dialog open={deleting !== null} onOpenChange={open => { if (!open && !pending) setDeleting(null); }}><DialogContent><DialogHeader><DialogTitle>永久删除</DialogTitle><DialogDescription>将永久删除 {deleting?.preview.path}，共 {deleting?.preview.count} 项、{deleting?.preview.bytes} 字节。此操作无法撤销。已打开文件的未保存输入会先保留为本地草稿；保存失败时不会删除。</DialogDescription></DialogHeader>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <DialogFooter><Button variant="outline" disabled={pending} onClick={() => setDeleting(null)}>取消</Button><Button variant="destructive" disabled={pending} onClick={() => void confirmDelete()}>永久删除</Button></DialogFooter>
     </DialogContent></Dialog>
