@@ -91,3 +91,10 @@ Terminal “隐藏/分离”只调整 UI。`Close Terminal` 始终 Dialog：`关
 语言入口归底部全工作台状态栏的 EditorLanguageStatus，读取 focused group 与共享 buffer，复用 LanguageSelect/shadcn Select；只显示实际模式，无边框/常驻箭头，hover 和 focus-visible 保留反馈。菜单提供自动及全部语言；不把菜单当前选择写入文件、不重新建立 model。未知格式显示 Plain Text，切换组显示对应模式，多组同文件只保留一个入口。
 
 验收 editor-recovery 浏览器专项：正文修改显示灰点、明确保存后消失、breadcrumb 不显示正常状态、按钮固定且可点击、底部标签与自动检测一致、手动模式同步到原 model、多组入口唯一。应断言 SelectValue 的实际标签，隐藏的 Base UI Icon 默认字符不等于可见标签。
+
+
+### 服务器目录选择的宽度边界（2026-10-01）
+
+DirectoryPicker使用独立directory-picker类，grid列为minmax(0,1fr)，所有直接子项min-width:0；输入flex:1/min-width:0、按钮shrink:0、路径flex:1/min-width:0/truncate并保留title，列表长名字截断。弹窗宽度为min(672px,100vw-2rem)、高度有dvh上限及内部滚动；footer保留官方负margin但不越弹窗边界。不能靠全站overflow:hidden隐藏长路径撑列。
+
+真实浏览器用超长路径/中文目录名，1440与390宽度分别检查document和popup、input/button/ul几何均在边界内，取消零文件/项目写入；嵌套弹窗关闭动画完成后再操作父弹窗，避免测试同时匹配两个“取消”。

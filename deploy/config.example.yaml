@@ -18,7 +18,8 @@ transfer:
   archive_ttl: 1h
 terminal:
   tmux_binary: /usr/bin/tmux
-  shell: /usr/bin/zsh
+  # 不设置 shell 时使用服务用户的登录 shell，检测失败回退 /bin/sh。
+  # shell: /usr/bin/zsh
   socket_path: /var/lib/persistty/tmux.sock
   history_lines: 5000
   restore_lines: 5000

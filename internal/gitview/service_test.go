@@ -59,6 +59,57 @@ func repoID(t *testing.T, s *Service, p storage.Project) string {
 	}
 	return repos.Items[0].ID
 }
+func TestUnbornRepositoryWithoutIndex(t *testing.T) {
+	s, p, root := fixture(t)
+	if err := os.RemoveAll(filepath.Join(root, ".git")); err != nil {
+		t.Fatal(err)
+	}
+	command(t, root, "init", "--quiet", "--initial-branch=main")
+	id := repoID(t, s, p)
+	before := string(command(t, root, "status", "--porcelain=v1", "-z", "--untracked-files=all"))
+	status, err := s.Status(context.Background(), p.ID, p.Version, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Head != "" || status.Branch != "main" || len(status.Changes) != 1 || status.Changes[0].Index != "?" {
+		t.Fatalf("unborn status: %#v", status)
+	}
+	log, err := s.Log(context.Background(), p.ID, p.Version, id, 0)
+	if err != nil || len(log.Items) != 0 {
+		t.Fatalf("unborn log: %#v %v", log, err)
+	}
+	refs, err := s.Refs(context.Background(), p.ID, p.Version, id)
+	if err != nil || len(refs) != 0 {
+		t.Fatalf("unborn refs: %#v %v", refs, err)
+	}
+	comparison, err := s.Compare(context.Background(), p.ID, id, CompareInput{ProjectVersion: p.Version, Path: "file.txt", Kind: "head"})
+	if err != nil || comparison.Original != "" || comparison.Modified != "one\ntwo\n" {
+		t.Fatalf("unborn compare: %#v %v", comparison, err)
+	}
+	if after := string(command(t, root, "status", "--porcelain=v1", "-z", "--untracked-files=all")); after != before {
+		t.Fatal("source status mutated")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".git/index")); !os.IsNotExist(err) {
+		t.Fatal("source index created")
+	}
+	command(t, root, "add", "--", "file.txt")
+	indexBefore, err := os.ReadFile(filepath.Join(root, ".git/index"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	status, err = s.Status(context.Background(), p.ID, p.Version, id)
+	if err != nil || status.Head != "" || len(status.Changes) != 1 || status.Changes[0].Index != "A" {
+		t.Fatalf("staged unborn: %#v %v", status, err)
+	}
+	comparison, err = s.Compare(context.Background(), p.ID, id, CompareInput{ProjectVersion: p.Version, Path: "file.txt", Kind: "staged"})
+	if err != nil || comparison.Original != "" || comparison.Modified != "one\ntwo\n" {
+		t.Fatalf("staged compare: %#v %v", comparison, err)
+	}
+	indexAfter, err := os.ReadFile(filepath.Join(root, ".git/index"))
+	if err != nil || string(indexAfter) != string(indexBefore) {
+		t.Fatal("source index changed")
+	}
+}
 func TestGitStatusComparisonsHistoryAreReadOnly(t *testing.T) {
 	s, p, root := fixture(t)
 	ctx := context.Background()

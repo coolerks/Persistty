@@ -10,7 +10,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 6
+- **Total Sessions**: 7
 - **Last Active**: 2026-10-01
 <!-- @@@/auto:current-status -->
 
@@ -21,7 +21,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~182 | Active |
+| `journal-1.md` | ~214 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 7 | 2026-10-01 | W05/W06 五张截图反馈修正 | - | `main` |
 | 6 | 2026-10-01 | W05/W06 恢复统一验收与两项修正 | - | `main` |
 | 5 | 2026-10-01 | W06 搜索替换与只读 Git 功能交付，实机验收延期 | - | `main` |
 | 4 | 2026-09-30 | 归档七个已完成任务 | `52e7097728bd1619d9e0a4ac98b753916f299d58` | `main` |

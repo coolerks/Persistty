@@ -54,7 +54,7 @@ func TestCreateAndProjectRemovalPreservesTerminal(t *testing.T) {
 		"-c", created.WorkingDirectory, "-x", "80", "-y", "24",
 		"-e", "PERSISTTY_INITIAL_CWD=" + created.WorkingDirectory,
 		"-e", "PERSISTTY_DISPLAY_NAME=终端", "-e", "PERSISTTY_PROJECT_ID=" + project.ID,
-		"/bin/sh"}) {
+		"-e", "SHELL=/bin/sh", "/bin/sh", "-i"}) {
 		t.Fatalf("tmux new-session args = %v", createCall)
 	}
 	if _, err := service.Create(ctx, CreateRequest{ProjectID: project.ID, ProjectVersion: project.Version - 1, Cols: 80, Rows: 24}); !errors.Is(err, ErrInvalidRequest) {

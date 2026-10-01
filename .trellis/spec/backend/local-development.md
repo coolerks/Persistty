@@ -13,7 +13,7 @@ Bash wrapper 定位仓库根，构建并 exec `scripts/dev` Go 启动器；`stop
 ## 3. 契约
 
 - 仅 `development`，后端仅明确 127.0.0.1；前端源设为 `http://127.0.0.1:<port>`，端口默认原配置的 public_origin。Vite 代理环境键为 `PERSISTTY_DEV_API_TARGET`，覆盖旧同名环境值，不修改 Cookie/认证规则。
-- 明确 tmux 路径优先；只有旧默认 `/usr/bin/tmux` 不存在时从 PATH 查找，不静默替换自定义无效路径。shell 默认保留配置，Mac zsh 可用 `--shell /bin/zsh`。依赖缺失报错，不自行安装。
+- 明确 tmux 路径优先；只有旧默认 `/usr/bin/tmux` 不存在时从 PATH 查找，不静默替换自定义无效路径。shell 优先级为显式 `--shell` → 显式 `terminal.shell` → config.Load 检测服务 UID 的登录 shell → `/bin/sh`；不能只用继承的 SHELL 环境决定实际程序。已有 pane 不重启。依赖缺失报错，不自行安装。
 - 原配置及密码不修改/打印。独立 `.cache/dev/run-*`（0700）存运行配置（0600）和本次后端构建，退出删除此目录；真实数据库、上传目录和 socket 不在清理范围。
 - socket 父目录为当前 UID 的私有目录；连接探测带 `-N`。能连接时直接复用；仅 socket 不存在时用固定 `-S/-f start-server` 由 tmux 自行后台化，项目配置禁 exit-empty/exit-unattached，不读取/写入用户 `~/.tmux.conf`。已有不可连接 socket 不删除、不重启 server。
 - 前后端有各自自有进程组；退出或任一服务失败只 TERM/有界 KILL 这两个组并 Wait，绝不将 tmux 放入清理组。配置/端口/依赖预检先于创建持久资源。端口占用不 kill 其他进程。

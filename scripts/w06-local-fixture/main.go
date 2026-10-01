@@ -55,6 +55,31 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	unborn := filepath.Join(root, "unborn")
+	if err := os.Mkdir(unborn, 0700); err != nil {
+		panic(err)
+	}
+	cmd := exec.Command("git", "init", "--quiet", "--initial-branch=main")
+	cmd.Dir = unborn
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1")
+	if err := cmd.Run(); err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile(filepath.Join(unborn, "new.txt"), []byte("尚无提交\n"), 0600); err != nil {
+		panic(err)
+	}
+	if _, err := store.CreateProject(context.Background(), "W06 新仓库验收", []string{unborn}, 0); err != nil {
+		panic(err)
+	}
+	plain := []string{filepath.Join(root, "plain-one"), filepath.Join(root, "plain-two")}
+	for _, path := range plain {
+		if err := os.Mkdir(path, 0700); err != nil {
+			panic(err)
+		}
+	}
+	if _, err := store.CreateProject(context.Background(), "W06 无仓库验收", plain, 0); err != nil {
+		panic(err)
+	}
 	router, err := httpapi.New(cfg, store, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	if err != nil {
 		panic(err)

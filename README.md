@@ -25,7 +25,7 @@ W01/W02/W04 已完成归档，W03 已通过真实 Debian/systemd 和桌面/手�
 ./scripts/dev.sh --help
 ```
 
-Linux 可省略 `--shell`，沿用配置默认 `/bin/sh`。该入口只支持 `development` 模式，不替代 Debian 正式 systemd/Nginx 部署。首次准备配置和依赖、或需要分别启动服务时仍可按下方操作。
+Mac/Linux 均可省略 `--shell`：显式 `terminal.shell` 优先；未设置时检测服务用户的登录 shell，检测失败或路径不可执行才回退 `/bin/sh`。`--shell` 可覆盖本次启动。已运行终端保留原 shell，新配置只影响新终端。该入口只支持 `development` 模式，不替代 Debian 正式 systemd/Nginx 部署。首次准备配置和依赖、或需要分别启动服务时仍可按下方操作。
 
 ```bash
 go build -o persistty ./cmd/persistty

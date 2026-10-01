@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -103,6 +104,9 @@ func (s *Service) discover(ctx context.Context, project string, version int64) (
 			if err == files.ErrTooLarge {
 				truncated = true
 				break
+			}
+			if errors.Is(err, files.ErrUnsupported) {
+				return nil, false, ErrUnavailable
 			}
 			return nil, false, err
 		}
@@ -204,12 +208,20 @@ func (s *Service) build(ctx context.Context, r repository, dir string) (*snapsho
 		relative := path.Join(meta, e.Name)
 		target := filepath.Join(dir, ".git", e.Name)
 		if e.Kind == "directory" {
+			// Git recognises an unborn repository only when its empty metadata
+			// directories exist too, not just when there are objects/ref files.
+			if err = os.MkdirAll(target, 0700); err != nil {
+				return nil, err
+			}
 			err = files.WalkSnapshot(ctx, r.root, relative, s.Config.SearchOptions().MaxEntries, func(p string, entry files.Entry) (bool, error) {
 				tail := strings.TrimPrefix(p, meta+"/")
 				if strings.Contains(tail, "alternates") || strings.Contains(tail, "http-alternates") || strings.HasSuffix(tail, ".promisor") {
 					return false, ErrUnavailable
 				}
 				if entry.Kind == "directory" {
+					if err := os.MkdirAll(filepath.Join(dir, ".git", filepath.FromSlash(tail)), 0700); err != nil {
+						return false, err
+					}
 					return true, nil
 				}
 				if strings.HasPrefix(tail, "info/") && tail != "info/exclude" && tail != "info/attributes" {
@@ -374,6 +386,9 @@ func (s *Service) with(ctx context.Context, project string, version int64, id st
 	defer clean()
 	snap, err := s.build(ctx, r, dir)
 	if err != nil {
+		if errors.Is(err, files.ErrUnsupported) {
+			return ErrUnavailable
+		}
 		return err
 	}
 	if err = run(snap); err != nil {

@@ -8,7 +8,7 @@ CLI：`persistty serve --config /etc/persistty/config.yaml`；`persistty passwor
 HTTP 登录 `POST /api/v1/auth/login` body `{"password":"..."}`；登出 `POST /api/v1/auth/logout`；状态 `GET /api/v1/auth/session`。成功只返回 session 状态和 CSRF token；session secret 只在 Cookie。
 
 ## 3. 契约
-下方为 W01 基础配置片段；完整可解析字段以 [配置模板](../../../deploy/config.example.yaml)为准。W04 传输字段已实现，W03 终端字段为 `socket_path/tmux_binary/shell/history_lines/restore_lines/history_bytes/termination_seconds`：默认 `/usr/bin/tmux`、`/bin/sh`、5000 行、5000 行、8 MiB、10 秒；socket 默认在数据库父目录。history 为 100..50000 行，restore 为 100..history，history_bytes 为 1..64 MiB，倒计时为 1..120 秒，路径必须规范绝对且不能互相/与存储重合。启动校验配置路径形状，终端操作时验证依赖/server 可用；缺 server 不从 Web 隐式启动，见 [W03 契约](terminal-runtime-contract.md)。其余已批准默认值为文本8MiB、预览16MiB、单文件上传256MiB、批次1GiB、暂存2GiB。
+下方为 W01 基础配置片段；完整可解析字段以 [配置模板](../../../deploy/config.example.yaml)为准。W04 传输字段已实现，W03 终端字段为 `socket_path/tmux_binary/shell/history_lines/restore_lines/history_bytes/termination_seconds`：默认 `/usr/bin/tmux`、服务 UID 的登录 shell（检测失败回退 `/bin/sh`）、5000 行、5000 行、8 MiB、10 秒；socket 默认在数据库父目录。history 为 100..50000 行，restore 为 100..history，history_bytes 为 1..64 MiB，倒计时为 1..120 秒，路径必须规范绝对且不能互相/与存储重合。启动校验配置路径形状，终端操作时验证依赖/server 可用；缺 server 不从 Web 隐式启动，见 [W03 契约](terminal-runtime-contract.md)。其余已批准默认值为文本8MiB、预览16MiB、单文件上传256MiB、批次1GiB、暂存2GiB。
 
 ```yaml
 server:

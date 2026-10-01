@@ -84,7 +84,6 @@ func Load(path string) (Config, error) {
 	cfg.Transfer.UploadTTL = "24h"
 	cfg.Transfer.ArchiveTTL = "1h"
 	cfg.Terminal.TmuxBinary = "/usr/bin/tmux"
-	cfg.Terminal.Shell = "/bin/sh"
 	cfg.Terminal.HistoryLines = 5000
 	cfg.Terminal.RestoreLines = 5000
 	cfg.Terminal.HistoryBytes = 8 << 20
@@ -100,6 +99,9 @@ func Load(path string) (Config, error) {
 	var extra any
 	if err = decoder.Decode(&extra); err != io.EOF {
 		return cfg, errors.New("配置只能包含一个文档")
+	}
+	if cfg.Terminal.Shell == "" {
+		cfg.Terminal.Shell = defaultShell()
 	}
 	return cfg, cfg.Validate()
 }

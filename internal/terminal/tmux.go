@@ -129,7 +129,8 @@ func (t *Tmux) Create(ctx context.Context, name, cwd, displayName, projectID str
 		"-x", strconv.Itoa(cols), "-y", strconv.Itoa(rows),
 		"-e", "PERSISTTY_INITIAL_CWD="+cwd,
 		"-e", "PERSISTTY_DISPLAY_NAME="+displayName,
-		"-e", "PERSISTTY_PROJECT_ID="+projectID, t.Shell)
+		"-e", "PERSISTTY_PROJECT_ID="+projectID,
+		"-e", "SHELL="+t.Shell, t.Shell, "-i")
 	if err != nil {
 		return fmt.Errorf("tmux create session: %w", ErrUnavailable)
 	}

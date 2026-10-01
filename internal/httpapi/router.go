@@ -289,7 +289,7 @@ func (a *api) error(c *gin.Context, err error) {
 	case errors.Is(err, toolrunner.ErrUnavailable):
 		a.fail(c, 503, "tool_unavailable", "Git/rg 工具不可用或缺少必要能力。")
 	case errors.Is(err, gitview.ErrUnavailable):
-		a.fail(c, 503, "repository_unavailable", "仓库含不支持或不安全的元数据，无法读取。")
+		a.fail(c, 503, "repository_unavailable", "仓库含当前不支持或无法安全读取的文件、元数据或对象。")
 	case errors.Is(err, toolrunner.ErrCapacity):
 		c.Header("Retry-After", "5")
 		a.fail(c, 429, "capacity_exceeded", "工具或快照额度已用满，请释放旧预览后重试。")

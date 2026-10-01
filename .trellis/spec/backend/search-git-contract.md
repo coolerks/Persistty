@@ -86,3 +86,12 @@ Git每次读请求生成独立快照，不提供持久 snapshot_id；一个响�
 ## 7. 错误与正确示例
 
 错误：直接 `git -C 用户路径 diff`，或用rg offset配新读取版本执行替换；取消后重新POST形成第二次写入。正确：安全句柄→私有快照→固定CLI参数→与原版本绑定的预览→目标buffer保护→WithRegisteredFolder+Save复验→保留首次逐文件结果。
+
+
+## 无提交仓库与快照目录（2026-10-01）
+
+元数据snapshot必须创建白名单目录本身及有界子目录，包含空的objects/refs/heads；只复制叶文件会让 `git init` 无commit、无index仓库失去Git仓库身份。无HEAD返回真实branch、`head=""`、未跟踪/已暂存新增项；历史与refs为空，HEAD/暂存比较以空原内容为基线。禁止通过隐式commit/index或伪造对象“修复”源仓库。
+
+仓库扫描或snapshot遇到files.ErrUnsupported归Git领域ErrUnavailable，HTTP为503 repository_unavailable，提示无法安全读取的文件/元数据/对象；不能显示文件编辑的“此文件类型暂不支持”，也不能伪装空仓库。非法UTF-8文件名测试为Linux专属，macOS/APFS不能创建该fixture；未实际运行不算通过。
+
+回归 `TestUnbornRepositoryWithoutIndex` 从真实init开始，无index时状态/空历史/空refs/比较准确且源无新增index；stage后新增状态和空树比较正确、原index字节不变。既有缺对象/恶意配置/链接边界测试继续必需。

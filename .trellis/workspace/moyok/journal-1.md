@@ -180,3 +180,35 @@ W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控�
 ### Next Steps
 
 - 获得 .env 指定 Debian 目标及测试产物传输授权后继续真实专项；协调手机、触控板及 shell 主题操作，排除 Firefox 启动环境阻塞。
+
+
+## Session 7: W05/W06 五张截图反馈修正
+<!-- trellis-session: v=2 fp=bef5a72ab50531fd -->
+
+**Date**: 2026-10-01
+**Task**: W05/W06 五张截图反馈修正
+**Branch**: `main`
+
+### Summary
+
+完成目录溢出、比较全屏/行内、默认账户 shell、无仓库禁用及无提交 Git 快照；本机回归通过。
+
+### Main Changes
+
+- 复用 shadcn 和同一 Monaco 实例；Git 空 metadata 目录保留，shell 按服务 UID 检测并仅影响新 pane。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] Go test/vet/race、前端134项/lint/typecheck/build、Chromium10项及最终Chromium/WebKit各4项通过；Linux专属测试仅编译。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 重启后端后新建终端应用默认 shell；Debian目标授权、真实手机与触控板验收待补齐，任务不归档。

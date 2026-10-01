@@ -6,7 +6,7 @@ W06前端归 `features/search/SearchPanel`、`features/git/GitPanel`，由 Proje
 
 ## 2. 签名
 
-`SearchPanel({project,mobile,intent,visible,onOpen})`；`SearchIntent={folderId,path,replace,id}`。`GitPanel({project,mobile,visible})`。`ReadOnlyComparison({original,modified,path,mobile})`：桌面懒加载只读DesktopDiff，手机分区显示原/新文本。`EditorScope.prepareReplacement(files)` 返回 `{protectedIDs,release()}`；FileBuffer.holdReplacement(version) 成功返回一次性释放函数，否则null。API和严格解码分别在 `lib/api/search-git-client.ts`、`search-git-decoder.ts`。
+`SearchPanel({project,mobile,intent,visible,onOpen})`；`SearchIntent={folderId,path,replace,id}`。`GitPanel({project,mobile,visible})`。`ReadOnlyComparison({original,modified,path,mobile,sideBySide?})`：桌面懒加载只读DesktopDiff，手机分区显示原/新文本。`EditorScope.prepareReplacement(files)` 返回 `{protectedIDs,release()}`；FileBuffer.holdReplacement(version) 成功返回一次性释放函数，否则null。API和严格解码分别在 `lib/api/search-git-client.ts`、`search-git-decoder.ts`。
 
 ## 3. 状态与行为契约
 
@@ -37,3 +37,12 @@ Git总变更用total_paths，暂存/未暂存用porcelain字段。历史下一�
 ## 7. 错误与正确
 
 错误：批量暂停整个项目、替换后setValue覆盖buffer、选中Git面板仓库后重算所有文件HEAD。正确：目标buffer独立hold→后端版本复验→释放时刷新/保留新输入；文件所属仓库baseline与面板选择各自管理。
+
+
+## 截图反馈：仓库选择与比较（2026-10-01）
+
+GitPanel发现中或仓库列表为空时禁用Select，显示查找中/未发现Git仓库，空列表不弹空Popup；加载失败显示错误，不伪装空结果。刷新同时重新发现仓库，终端中初始化新仓库后无需切页才能更新；无本地refs禁用引用选择，无历史明确提示尚无提交。
+
+只读比较复用shadcn Dialog/Tabs/Button与lucide全屏图标。每次新比较默认普通窗口、并排，桌面提供并排/行内Tabs和全屏/退出全屏；mobile保持前/后只读文本并可全屏。`ReadOnlyComparison`新增可选sideBySide（默认true），DesktopDiff以updateOptions(renderSideBySide,useInlineViewWhenSpaceIsLimited:false)切换，不重建editor/models/viewModel；使用现有languageForFile语法识别。大小变化由automaticLayout处理，关闭仍按生命周期owner释放。
+
+Fullscreen只改变本弹窗布局到100vw/100dvh，内容区内部滚动，标题/控制/关闭保留；不调用Git写操作、保存/重建编辑buffer或终端。`screenshot-adjustments.spec.ts`真实后端验无仓库、多根、无提交、空引用、全屏与模式切换/默认重置/关闭无pageerror和零写；原editor-recovery继续验草稿/model/undo/恢复。

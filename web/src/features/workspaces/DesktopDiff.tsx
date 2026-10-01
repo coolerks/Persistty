@@ -3,7 +3,7 @@ import * as monaco from "monaco-editor";
 import "./DesktopEditor";
 import { useEffectiveTheme } from "@/features/settings/use-effective-theme";
 import { editorText } from "./editor-text";
-export default function DesktopDiff({ original, modified, language }: { original: string; modified: string; language: string }) {
+export default function DesktopDiff({ original, modified, language, sideBySide = true }: { original: string; modified: string; language: string; sideBySide?: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<{ editor: monaco.editor.IStandaloneDiffEditor; original: monaco.editor.ITextModel; modified: monaco.editor.ITextModel } | null>(null);
   const initial = useRef({ original, modified, language });
@@ -25,5 +25,6 @@ export default function DesktopDiff({ original, modified, language }: { original
     monaco.editor.setModelLanguage(current.original, language); monaco.editor.setModelLanguage(current.modified, language);
   }, [original, modified, language]);
   useEffect(() => { monaco.editor.setTheme(theme); }, [theme]);
+  useEffect(() => { view.current?.editor.updateOptions({ renderSideBySide: sideBySide, useInlineViewWhenSpaceIsLimited: false }); }, [sideBySide]);
   return <div ref={host} className="h-full min-h-0" />;
 }

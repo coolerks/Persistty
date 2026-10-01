@@ -106,3 +106,12 @@ v3 新增严格文本帧 `{type:"device_attributes",kind:"primary"|"secondary"}`
 错误：只读 attach 的 DA 应答经二进制 Input 写到 owner。正确：公开 parser 截获查询 → 固定 kind 文本帧 → 当前 viewer 的只读 attach；普通输入和粘贴保持原样，不用正则删除正文中的数字/ANSI。
 
 尺寸同步补充门禁：`device_attributes_integration_test.go` 的自有真实 tmux/PTY fixture 验 140x12→100x30→160x10 各 attach ioctl 网格与真实 pane 相等、pane PID 保持、迟加入 observer 继承当前网格、observer resize 拒绝、全端收到 resized、pane 输入仍仅显式 x。浏览器观察端跟随 ready/resized 且容器缩放不改网格。该本机集成不代替 Debian/systemd 或真实触控板手感验收。
+
+
+## 默认 shell 选择（2026-10-01 截图反馈）
+
+用户授权修正新终端默认 shell。`config.Load` 在 `terminal.shell` 未配置或为空时读取实际服务 UID 账户：Linux 固定 `/usr/bin/getent passwd <uid>`，Darwin 使用 UID lookup 后固定 `/usr/bin/dscl . -read /Users/<account> UserShell`。命令限2秒、stdout8KiB、stderr丢弃，不能将账户输出/环境记录日志；返回规范绝对普通可执行文件才接受，失败回退 `/bin/sh`。显式 YAML 路径保持原验证语义，开发 `--shell` 优先；不能把环境 SHELL 当账户真相。
+
+`Tmux.Create` 用独立 argv `<shell>, -i` 启动交互 shell，`-e SHELL=<shell>` 保持 pane 环境一致，避免 tmux 将单个 command 字符串重新交给 sh 解释。已有 tmux server、会话、PID 和任务不因配置/网页变化重启；恢复不执行创建。
+
+正常：服务账户 zsh、配置未填时新 pane 为 zsh；基础：lookup不可用回退sh；错误：`echo $SHELL` 是zsh但实际固定运行sh，或自动结束旧pane“应用”配置。`shell_test.go` 验账户字段/UID/路径/不可执行/环境不决定/显式覆盖；`shell_integration_test.go` 用自有私有tmux/socket、隔离HOME/ZDOTDIR，验sh/bash/zsh实际pane程序与SHELL，一律精确清理。macOS的sh基于bash，tmux可显示bash进程名；不能把此进程别名判为配置选错。此本机证明不代替Debian/systemd验收。
