@@ -48,7 +48,7 @@
     "tests/fixtures/search-git.json",
     "scripts/w06-local-fixture"
   ],
-  "notes": "2026-10-01 用户明确回复开始实施后 task.py start；主会话单代理 inline 完成 W06 搜索替换、只读 Git 和 HEAD 行标记。开发门禁及本地真实 fixture 浏览器回归通过，见 implementation-report.md。W05/W06 实机统一验收延期，任务保持 in_progress，不提交、推送或归档。 2026-10-01 用户要求恢复 W05/W06 验收；本地主会话已修复触屏横屏/替换默认焦点，实际结果见 acceptance-report.md。Debian 本轮上传被自动审批拒绝，等待明确目标与载荷授权；实机手机/触控板未验收。 2026-10-01 五张截图反馈 F01–F05 已修正并通过本机回归，见 screenshot-adjustments.md；账户默认 shell 仅影响新终端，实机验收状态不变。",
+  "notes": "2026-10-01 用户明确回复开始实施后 task.py start；主会话单代理 inline 完成 W06 搜索替换、只读 Git 和 HEAD 行标记。开发门禁及本地真实 fixture 浏览器回归通过，见 implementation-report.md。W05/W06 实机统一验收延期，任务保持 in_progress，不提交、推送或归档。 2026-10-01 用户要求恢复 W05/W06 验收；本地主会话已修复触屏横屏/替换默认焦点，实际结果见 acceptance-report.md。Debian 本轮上传被自动审批拒绝，等待明确目标与载荷授权；实机手机/触控板未验收。 2026-10-01 五张截图反馈 F01–F05 已修正并通过本机回归，见 screenshot-adjustments.md；账户默认 shell 仅影响新终端，实机验收状态不变。 2026-10-01 Git延迟/持续轮询/429反馈已修复，本机Halo只读复测及相关安全回归见 performance-adjustments.md，实机验收状态不变。",
   "meta": {
     "acceptance": {
       "state": "in_progress",
@@ -80,6 +80,12 @@
         "F05"
       ],
       "updatedAt": "2026-10-01"
+    },
+    "performanceFeedback": {
+      "state": "implemented",
+      "updatedAt": "2026-10-01",
+      "report": "performance-adjustments.md",
+      "reason": "移除固定轮询，Git快照按语义缩小，Halo真实仓库只读性能复测及本机回归通过"
     }
   }
 }

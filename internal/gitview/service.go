@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -27,6 +29,8 @@ type Service struct {
 	Runner *toolrunner.Runner
 	Config config.Config
 	key    [32]byte
+	mu     sync.Mutex
+	known  map[string]repository
 }
 type repository struct {
 	public   Repository
@@ -34,16 +38,17 @@ type repository struct {
 	identity string
 }
 type snapshot struct {
-	dir      string
-	repo     repository
-	versions map[string]files.Version
-	metadata map[string]files.Version
-	head     string
-	branch   string
+	dir        string
+	repo       repository
+	versions   map[string]files.Version
+	metadata   map[string]files.Version
+	head       string
+	branch     string
+	directPath string
 }
 
 func New(store *storage.Store, r *toolrunner.Runner, cfg config.Config) *Service {
-	s := &Service{Store: store, Runner: r, Config: cfg}
+	s := &Service{Store: store, Runner: r, Config: cfg, known: map[string]repository{}}
 	if _, err := rand.Read(s.key[:]); err != nil {
 		panic("random source unavailable")
 	}
@@ -75,18 +80,7 @@ func (s *Service) discover(ctx context.Context, project string, version int64) (
 				if repoPath == "." {
 					repoPath = ""
 				}
-				h := hmac.New(sha256.New, s.key[:])
-				fmt.Fprintf(h, "%s:%d:%s", project, version, e.Identity)
-				item := Repository{ID: hex.EncodeToString(h.Sum(nil)[:16]), FolderID: folder.ID, Path: repoPath, Name: filepath.Base(root.Path)}
-				if repoPath != "" {
-					item.Name += "/" + repoPath
-				}
-				if e.Kind == "directory" {
-					item.State = "available"
-				} else {
-					item.State = "unavailable"
-					item.Reason = "根外或链接形式的 Git 元数据尚未注册。"
-				}
+				item := s.repository(project, version, root, repoPath, e).public
 				result = append(result, repository{item, root, e.Identity})
 				if len(result) > 100 {
 					return false, files.ErrTooLarge
@@ -115,7 +109,89 @@ func (s *Service) discover(ctx context.Context, project string, version int64) (
 		result = result[:100]
 	}
 	sort.SliceStable(result, func(i, j int) bool { return result[i].public.Name < result[j].public.Name })
+	s.mu.Lock()
+	if len(s.known)+len(result) > 1000 {
+		s.known = map[string]repository{}
+	}
+	for _, r := range result {
+		s.known[r.public.ID] = r
+	}
+	s.mu.Unlock()
 	return result, truncated, nil
+}
+func (s *Service) repository(project string, version int64, root storage.RegisteredFolder, repoPath string, e files.Entry) repository {
+	h := hmac.New(sha256.New, s.key[:])
+	fmt.Fprintf(h, "%s:%d:%s", project, version, e.Identity)
+	item := Repository{ID: hex.EncodeToString(h.Sum(nil)[:16]), FolderID: root.FolderID, Path: repoPath, Name: filepath.Base(root.Path), State: "available"}
+	if repoPath != "" {
+		item.Name += "/" + repoPath
+	}
+	if e.Kind != "directory" {
+		item.State = "unavailable"
+		item.Reason = "根外或链接形式的 Git 元数据尚未注册。"
+	}
+	return repository{item, root, e.Identity}
+}
+
+// Only ancestors of the requested file can own its baseline. Examine each
+// registered containing root so overlapping roots still select the innermost repo.
+func (s *Service) baselineRepository(ctx context.Context, project string, version int64, absolute string) (*repository, error) {
+	p, err := s.Store.Project(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+	if p.Version != version {
+		return nil, storage.ErrConflict
+	}
+	var selected *repository
+	selectedDepth := -1
+	for _, folder := range p.Folders {
+		rel, err := filepath.Rel(folder.Path, absolute)
+		if err != nil || !files.ValidRelative(filepath.ToSlash(rel), false) {
+			continue
+		}
+		root, err := s.Store.RegisteredFolder(ctx, project, folder.ID, version)
+		if err != nil {
+			return nil, err
+		}
+		directory := path.Dir(filepath.ToSlash(rel))
+		if directory == "." {
+			directory = ""
+		}
+		for {
+			entries, err := files.SnapshotEntries(ctx, root, directory)
+			if err != nil && !os.IsNotExist(err) {
+				return nil, err
+			}
+			for _, e := range entries {
+				if e.Name != ".git" {
+					continue
+				}
+				repoRoot := filepath.Join(root.Path, filepath.FromSlash(directory))
+				if len(repoRoot) > selectedDepth {
+					r := s.repository(project, version, root, directory, e)
+					selected = &r
+					selectedDepth = len(repoRoot)
+				}
+			}
+			if directory == "" {
+				break
+			}
+			directory = path.Dir(directory)
+			if directory == "." {
+				directory = ""
+			}
+		}
+	}
+	if selected != nil {
+		s.mu.Lock()
+		if len(s.known) >= 1000 {
+			s.known = map[string]repository{}
+		}
+		s.known[selected.public.ID] = *selected
+		s.mu.Unlock()
+	}
+	return selected, nil
 }
 func (s *Service) Repositories(ctx context.Context, project string, version int64) (Repositories, error) {
 	repos, truncated, err := s.discover(ctx, project, version)
@@ -126,6 +202,29 @@ func (s *Service) Repositories(ctx context.Context, project string, version int6
 	return result, err
 }
 func (s *Service) find(ctx context.Context, project string, version int64, id string) (repository, error) {
+	s.mu.Lock()
+	cached, ok := s.known[id]
+	s.mu.Unlock()
+	if ok && cached.root.ProjectID == project && cached.root.ProjectVersion == version {
+		root, err := s.Store.RegisteredFolder(ctx, project, cached.public.FolderID, version)
+		if err != nil {
+			return repository{}, err
+		}
+		cached.root = root
+		entries, err := files.SnapshotEntries(ctx, root, cached.public.Path)
+		if err != nil {
+			return repository{}, err
+		}
+		for _, e := range entries {
+			if e.Name == ".git" && e.Identity == cached.identity {
+				if e.Kind != "directory" || cached.public.State != "available" {
+					return repository{}, ErrUnavailable
+				}
+				return cached, nil
+			}
+		}
+		return repository{}, storage.ErrNotFound
+	}
 	items, _, err := s.discover(ctx, project, version)
 	if err != nil {
 		return repository{}, err
@@ -145,7 +244,26 @@ func read(ctx context.Context, root storage.RegisteredFolder, relative string, l
 	v, mode, err := files.CopySnapshot(ctx, root, relative, &b, limit)
 	return b.Bytes(), v, mode, err
 }
-func (s *Service) build(ctx context.Context, r repository, dir string) (*snapshot, error) {
+
+type snapshotScope struct {
+	worktree bool
+	file     string
+	kind     string
+}
+
+func worktreePath(p string) bool {
+	if !files.ValidRelative(p, false) {
+		return false
+	}
+	for _, part := range strings.Split(p, "/") {
+		if strings.EqualFold(part, ".git") {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Service) build(ctx context.Context, r repository, dir string, scope snapshotScope) (*snapshot, error) {
 	snap := &snapshot{dir: dir, repo: r, versions: map[string]files.Version{}, metadata: map[string]files.Version{}}
 	var size int64
 	limit := s.Config.GitOptions().MaxBytes
@@ -160,7 +278,7 @@ func (s *Service) build(ctx context.Context, r repository, dir string) (*snapsho
 	if err = os.MkdirAll(filepath.Join(dir, ".git"), 0700); err != nil {
 		return nil, err
 	}
-	copyOne := func(relative, target string, e files.Entry) error {
+	copyOne := func(relative, target string, e files.Entry, copy files.SnapshotCopy) error {
 		if e.Kind != "file" {
 			return ErrUnavailable
 		}
@@ -177,7 +295,14 @@ func (s *Service) build(ctx context.Context, r repository, dir string) (*snapsho
 		if err != nil {
 			return err
 		}
-		v, mode, copyErr := files.CopySnapshot(ctx, r.root, relative, destination, limit-size)
+		var v files.Version
+		var mode os.FileMode
+		var copyErr error
+		if copy != nil {
+			v, mode, copyErr = copy(destination, limit-size)
+		} else {
+			v, mode, copyErr = files.CopySnapshot(ctx, r.root, relative, destination, limit-size)
+		}
 		closeErr := destination.Close()
 		if copyErr != nil {
 			return copyErr
@@ -213,7 +338,7 @@ func (s *Service) build(ctx context.Context, r repository, dir string) (*snapsho
 			if err = os.MkdirAll(target, 0700); err != nil {
 				return nil, err
 			}
-			err = files.WalkSnapshot(ctx, r.root, relative, s.Config.SearchOptions().MaxEntries, func(p string, entry files.Entry) (bool, error) {
+			err = files.WalkSnapshotWithCopy(ctx, r.root, relative, s.Config.SearchOptions().MaxEntries, func(p string, entry files.Entry, copy files.SnapshotCopy) (bool, error) {
 				tail := strings.TrimPrefix(p, meta+"/")
 				if strings.Contains(tail, "alternates") || strings.Contains(tail, "http-alternates") || strings.HasSuffix(tail, ".promisor") {
 					return false, ErrUnavailable
@@ -227,13 +352,13 @@ func (s *Service) build(ctx context.Context, r repository, dir string) (*snapsho
 				if strings.HasPrefix(tail, "info/") && tail != "info/exclude" && tail != "info/attributes" {
 					return false, nil
 				}
-				return false, copyOne(p, filepath.Join(dir, ".git", filepath.FromSlash(tail)), entry)
+				return false, copyOne(p, filepath.Join(dir, ".git", filepath.FromSlash(tail)), entry, copy)
 			})
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			if err = copyOne(relative, target, e); err != nil {
+			if err = copyOne(relative, target, e, nil); err != nil {
 				return nil, err
 			}
 		}
@@ -290,55 +415,20 @@ func (s *Service) build(ctx context.Context, r repository, dir string) (*snapsho
 			safe[k] = v
 		}
 	}
-	if err = os.WriteFile(raw, []byte("[core]\nrepositoryformatversion = 0\nbare = false\nsymlinks = false\n"), 0600); err != nil {
+	var sanitized strings.Builder
+	keys := make([]string, 0, len(safe))
+	for k := range safe {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		section, name, _ := strings.Cut(k, ".")
+		fmt.Fprintf(&sanitized, "[%s]\n%s = %s\n", section, name, safe[k])
+	}
+	if err = os.WriteFile(raw, []byte(sanitized.String()), 0600); err != nil {
 		return nil, err
 	}
-	for k, v := range safe {
-		if _, err = s.Runner.GitRun(ctx, neutral, "config", "--file", raw, k, v); err != nil {
-			return nil, err
-		}
-	}
-	err = files.WalkSnapshot(ctx, r.root, r.public.Path, s.Config.SearchOptions().MaxEntries, func(relative string, e files.Entry) (bool, error) {
-		tail := strings.TrimPrefix(relative, r.public.Path)
-		tail = strings.TrimPrefix(tail, "/")
-		if e.Name == ".git" {
-			return false, nil
-		}
-		target := filepath.Join(dir, filepath.FromSlash(tail))
-		if e.Kind == "directory" {
-			if err := os.MkdirAll(target, 0700); err != nil {
-				return false, err
-			}
-			return true, nil
-		}
-		if e.Size > limit-size {
-			return false, files.ErrTooLarge
-		}
-		if e.Kind == "unsupported" {
-			link, err := files.SnapshotLink(r.root, relative)
-			if err != nil {
-				return false, ErrUnavailable
-			}
-			if !utf8.ValidString(link) {
-				return false, ErrUnavailable
-			}
-			size += int64(len(link))
-			return false, os.WriteFile(target, []byte(link), 0600)
-		}
-		b, v, mode, err := read(ctx, r.root, relative, limit-size)
-		if err != nil {
-			return false, err
-		}
-		size += int64(len(b))
-		snap.versions[tail] = v
-		if e.Name == ".gitattributes" && bytes.Contains(b, []byte("filter=")) {
-			return false, ErrUnavailable
-		}
-		return false, os.WriteFile(target, b, 0600|(mode&0111))
-	})
-	if err != nil {
-		return nil, err
-	}
+
 	head, err := s.Runner.GitRun(ctx, dir, "rev-parse", "--verify", "HEAD^{commit}")
 	if err == nil {
 		snap.head = strings.TrimSpace(string(head))
@@ -365,9 +455,103 @@ func (s *Service) build(ctx context.Context, r repository, dir string) (*snapsho
 	if err == nil {
 		snap.branch = strings.TrimSpace(string(branch))
 	}
+	if scope.kind == "head" || scope.kind == "unstaged" {
+		revision := snap.head
+		if scope.kind == "unstaged" {
+			revision = ":"
+		}
+		object, e := s.blobObject(ctx, snap, revision, scope.file)
+		if e != nil {
+			return nil, e
+		}
+		if object != "" {
+			scope.worktree = false
+			snap.directPath = scope.file
+		} else {
+			scope.worktree = true
+		}
+	}
+
+	if scope.worktree {
+		err = files.WalkSnapshotWithCopy(ctx, r.root, r.public.Path, s.Config.SearchOptions().MaxEntries, func(relative string, e files.Entry, copy files.SnapshotCopy) (bool, error) {
+			tail := strings.TrimPrefix(relative, r.public.Path)
+			tail = strings.TrimPrefix(tail, "/")
+			if e.Name == ".git" {
+				return false, nil
+			}
+			if strings.EqualFold(e.Name, ".git") {
+				return false, ErrUnavailable
+			}
+			target := filepath.Join(dir, filepath.FromSlash(tail))
+			if e.Kind == "directory" {
+				if err := os.MkdirAll(target, 0700); err != nil {
+					return false, err
+				}
+				return true, nil
+			}
+			if e.Size > limit-size {
+				return false, files.ErrTooLarge
+			}
+			if e.Kind == "unsupported" {
+				link, err := files.SnapshotLink(r.root, relative)
+				if err != nil {
+					return false, ErrUnavailable
+				}
+				if !utf8.ValidString(link) {
+					return false, ErrUnavailable
+				}
+				size += int64(len(link))
+				return false, os.WriteFile(target, []byte(link), 0600)
+			}
+			var content bytes.Buffer
+			v, mode, err := copy(&content, limit-size)
+			b := content.Bytes()
+			if err != nil {
+				return false, err
+			}
+			size += int64(len(b))
+			snap.versions[tail] = v
+			if e.Name == ".gitattributes" && bytes.Contains(b, []byte("filter=")) {
+				return false, ErrUnavailable
+			}
+			return false, os.WriteFile(target, b, 0600|(mode&0111))
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else if scope.file != "" {
+		relative := path.Join(r.public.Path, scope.file)
+		b, v, mode, e := read(ctx, r.root, relative, min(limit-size, 8<<20))
+		if e == nil {
+			target := filepath.Join(dir, filepath.FromSlash(scope.file))
+			if e = os.MkdirAll(filepath.Dir(target), 0700); e != nil {
+				return nil, e
+			}
+			if e = os.WriteFile(target, b, 0600|(mode&0111)); e != nil {
+				return nil, e
+			}
+			snap.versions[scope.file] = v
+		} else if !os.IsNotExist(e) {
+			link, linkErr := files.SnapshotLink(r.root, relative)
+			if linkErr != nil || !utf8.ValidString(link) {
+				return nil, e
+			}
+			if int64(len(link)) > limit-size {
+				return nil, files.ErrTooLarge
+			}
+			target := filepath.Join(dir, filepath.FromSlash(scope.file))
+			if err = os.MkdirAll(filepath.Dir(target), 0700); err != nil {
+				return nil, err
+			}
+			if err = os.WriteFile(target, []byte(link), 0600); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return snap, nil
 }
-func (s *Service) with(ctx context.Context, project string, version int64, id string, run func(*snapshot) error) error {
+func (s *Service) with(ctx context.Context, project string, version int64, id string, scope snapshotScope, run func(*snapshot) error) error {
 	release, err := s.Runner.Acquire(ctx)
 	if err != nil {
 		return err
@@ -384,7 +568,7 @@ func (s *Service) with(ctx context.Context, project string, version int64, id st
 		return err
 	}
 	defer clean()
-	snap, err := s.build(ctx, r, dir)
+	snap, err := s.build(ctx, r, dir, scope)
 	if err != nil {
 		if errors.Is(err, files.ErrUnsupported) {
 			return ErrUnavailable
@@ -396,7 +580,7 @@ func (s *Service) with(ctx context.Context, project string, version int64, id st
 	}
 	// Return no mixed snapshot if tracked metadata changed while the command ran.
 	for relative, before := range snap.metadata {
-		_, after, _, e := read(ctx, r.root, relative, s.Config.GitOptions().MaxBytes)
+		after, _, e := files.CopySnapshot(ctx, r.root, relative, io.Discard, s.Config.GitOptions().MaxBytes)
 		if e != nil {
 			return e
 		}
@@ -411,6 +595,9 @@ func (s *Service) with(ctx context.Context, project string, version int64, id st
 	if p.Version != version {
 		return storage.ErrConflict
 	}
+	if _, err = s.find(ctx, project, version, id); err != nil {
+		return err
+	}
 	return nil
 }
 func objectID(value string) bool {
@@ -422,7 +609,7 @@ func objectID(value string) bool {
 }
 func (s *Service) Status(ctx context.Context, project string, version int64, id string) (Status, error) {
 	out := Status{RepoID: id, Changes: []Change{}, TotalPaths: []string{}}
-	err := s.with(ctx, project, version, id, func(v *snapshot) error {
+	err := s.with(ctx, project, version, id, snapshotScope{worktree: true}, func(v *snapshot) error {
 		out.Head = v.head
 		out.Branch = v.branch
 		b, err := s.Runner.GitRun(ctx, v.dir, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignore-submodules=all")
@@ -517,7 +704,7 @@ func (s *Service) refs(ctx context.Context, v *snapshot) ([]Ref, error) {
 }
 func (s *Service) Refs(ctx context.Context, project string, version int64, id string) ([]Ref, error) {
 	result := []Ref{}
-	err := s.with(ctx, project, version, id, func(v *snapshot) error { var err error; result, err = s.refs(ctx, v); return err })
+	err := s.with(ctx, project, version, id, snapshotScope{}, func(v *snapshot) error { var err error; result, err = s.refs(ctx, v); return err })
 	return result, err
 }
 func parseCommits(b []byte) ([]Commit, error) {
@@ -553,7 +740,7 @@ func (s *Service) LogAt(ctx context.Context, project string, version int64, id s
 	if offset < 0 || offset > 10000 || head != "" && !objectID(head) {
 		return out, ErrInvalid
 	}
-	err := s.with(ctx, project, version, id, func(v *snapshot) error {
+	err := s.with(ctx, project, version, id, snapshotScope{}, func(v *snapshot) error {
 		revision := head
 		if revision == "" {
 			revision = v.head
@@ -633,7 +820,7 @@ func (s *Service) detail(ctx context.Context, v *snapshot, id, parent string) (D
 }
 func (s *Service) Detail(ctx context.Context, project string, version int64, repo, id, parent string) (Detail, error) {
 	var out Detail
-	err := s.with(ctx, project, version, repo, func(v *snapshot) error { var err error; out, err = s.detail(ctx, v, id, parent); return err })
+	err := s.with(ctx, project, version, repo, snapshotScope{}, func(v *snapshot) error { var err error; out, err = s.detail(ctx, v, id, parent); return err })
 	return out, err
 }
 
@@ -690,6 +877,9 @@ func (s *Service) blob(ctx context.Context, v *snapshot, revision, p string) ([]
 	return b, err
 }
 func (s *Service) originalPath(ctx context.Context, v *snapshot, kind, p string) (string, error) {
+	if v.directPath == p {
+		return p, nil
+	}
 	if kind != "head" && kind != "staged" && kind != "unstaged" {
 		return p, nil
 	}
@@ -738,10 +928,14 @@ func (s *Service) originalPath(ctx context.Context, v *snapshot, kind, p string)
 }
 func (s *Service) Compare(ctx context.Context, project, repo string, input CompareInput) (Comparison, error) {
 	out := Comparison{RepoID: repo, Path: input.Path}
-	if !files.ValidRelative(input.Path, false) {
+	if !worktreePath(input.Path) {
 		return out, ErrInvalid
 	}
-	err := s.with(ctx, project, input.ProjectVersion, repo, func(v *snapshot) error {
+	scope := snapshotScope{kind: input.Kind}
+	if input.Kind == "head" || input.Kind == "unstaged" || input.Kind == "reference" {
+		scope.file = input.Path
+	}
+	err := s.with(ctx, project, input.ProjectVersion, repo, scope, func(v *snapshot) error {
 		revision := v.head
 		modifiedRevision := ""
 		switch input.Kind {
@@ -813,29 +1007,19 @@ func (s *Service) Compare(ctx context.Context, project, repo string, input Compa
 }
 func (s *Service) Baseline(ctx context.Context, project string, version int64, folder, relative string) (Baseline, error) {
 	out := Baseline{State: "no_repository"}
-	if !files.ValidRelative(relative, false) {
+	if !worktreePath(relative) {
 		return out, ErrInvalid
-	}
-	repos, _, err := s.discover(ctx, project, version)
-	if err != nil {
-		return out, err
 	}
 	folderRoot, err := s.Store.RegisteredFolder(ctx, project, folder, version)
 	if err != nil {
 		return out, err
 	}
 	absolute := filepath.Join(folderRoot.Path, filepath.FromSlash(relative))
-	var selected *repository
-	selectedDepth := -1
-	for i := range repos {
-		r := &repos[i]
-		repoRoot := filepath.Join(r.root.Path, filepath.FromSlash(r.public.Path))
-		rel, err := filepath.Rel(repoRoot, absolute)
-		if err == nil && files.ValidRelative(filepath.ToSlash(rel), false) && len(repoRoot) > selectedDepth {
-			selected = r
-			selectedDepth = len(repoRoot)
-		}
+	selected, err := s.baselineRepository(ctx, project, version, absolute)
+	if err != nil {
+		return out, err
 	}
+
 	if selected == nil {
 		return out, nil
 	}
@@ -849,7 +1033,7 @@ func (s *Service) Baseline(ctx context.Context, project string, version int64, f
 	}
 	p = filepath.ToSlash(p)
 	out.RepoID = selected.public.ID
-	err = s.with(ctx, project, version, selected.public.ID, func(v *snapshot) error {
+	err = s.with(ctx, project, version, selected.public.ID, snapshotScope{file: p}, func(v *snapshot) error {
 		out.Head = v.head
 		if v.head == "" {
 			out.State = "untracked"

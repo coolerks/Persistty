@@ -63,3 +63,7 @@
 ## 后续截图反馈修正
 
 用户随后以五张截图授权修正目录对话框、比较全屏/行内、默认shell、无仓库选择及无提交仓库。最新结果见[截图修正记录](screenshot-adjustments.md)；此前的本机报告是当时结果，不能替代本批回归。实机验收条件仍待补齐。
+
+## Git 延迟与重复请求反馈（2026-10-01）
+
+本机性能修复与安全/浏览器回归见 [performance-adjustments.md](performance-adjustments.md)。本次修复不改变上文真实Debian与实机验收的待办状态。

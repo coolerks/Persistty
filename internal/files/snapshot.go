@@ -113,17 +113,50 @@ func SnapshotLink(root storage.RegisteredFolder, relative string) (string, error
 }
 
 func WalkSnapshot(ctx context.Context, root storage.RegisteredFolder, start string, maxEntries int, visit func(string, Entry) (bool, error)) error {
+	return WalkSnapshotWithCopy(ctx, root, start, maxEntries, func(p string, entry Entry, _ SnapshotCopy) (bool, error) { return visit(p, entry) })
+}
+
+// SnapshotCopy is scoped to the current visit. It reads through the enumerated
+// no-follow parent handle; the walker revalidates that directory before return.
+type SnapshotCopy func(io.Writer, int64) (Version, os.FileMode, error)
+
+func WalkSnapshotWithCopy(ctx context.Context, root storage.RegisteredFolder, start string, maxEntries int, visit func(string, Entry, SnapshotCopy) (bool, error)) error {
+	if !ValidRelative(start, true) {
+		return ErrInvalidPath
+	}
 	count := 0
 	var walk func(string, int) error
 	walk = func(relative string, depth int) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if depth > 32 {
 			return ErrTooLarge
 		}
-		entries, err := SnapshotEntries(ctx, root, relative)
+		p := relative
+		if p == "" {
+			p = "."
+		}
+		dir, err := openMutationParent(root, p)
 		if err != nil {
 			return err
 		}
-		for _, entry := range entries {
+		defer dir.Close()
+		entries, err := dir.ReadDir(10001)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if len(entries) > 10000 {
+			return ErrTooLarge
+		}
+		snap, err := snapshotEntries(dir, entries)
+		if err != nil {
+			return err
+		}
+		for _, entry := range snap.items {
+			if !ValidRelative(entry.Name, false) {
+				return ErrUnsupported
+			}
 			count++
 			if count > maxEntries {
 				return ErrTooLarge
@@ -132,7 +165,38 @@ func WalkSnapshot(ctx context.Context, root storage.RegisteredFolder, start stri
 				return err
 			}
 			p := path.Join(relative, entry.Name)
-			descend, e := visit(p, entry)
+			copyLeaf := func(w io.Writer, limit int64) (Version, os.FileMode, error) {
+				if err := ctx.Err(); err != nil {
+					return Version{}, 0, err
+				}
+				file, err := snapshotLeaf(dir, entry.Name)
+				if err != nil {
+					return Version{}, 0, err
+				}
+				defer file.Close()
+				before, err := file.Stat()
+				if err != nil {
+					return Version{}, 0, err
+				}
+				v, err := copyOpenedVerified(ctx, file, w, limit)
+				if err != nil {
+					return Version{}, 0, err
+				}
+				next, err := snapshotLeaf(dir, entry.Name)
+				if err != nil {
+					return Version{}, 0, err
+				}
+				defer next.Close()
+				after, err := next.Stat()
+				if err != nil {
+					return Version{}, 0, err
+				}
+				if !os.SameFile(before, after) {
+					return Version{}, 0, ErrConflict
+				}
+				return v, before.Mode().Perm(), nil
+			}
+			descend, e := visit(p, entry, copyLeaf)
 			if e != nil {
 				return e
 			}
@@ -142,7 +206,10 @@ func WalkSnapshot(ctx context.Context, root storage.RegisteredFolder, start stri
 				}
 			}
 		}
-		return nil
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return verifyDirectorySnapshot(root, p, dir, snap)
 	}
 	return walk(start, 0)
 }

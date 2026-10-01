@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"golang.org/x/sys/unix"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,6 +14,34 @@ import (
 type changingWriter struct {
 	buffer bytes.Buffer
 	change func()
+}
+
+func TestBatchSnapshotRevalidatesParentAndRejectsLeafLinks(t *testing.T) {
+	root, base := rootFixture(t)
+	out := filepath.Join(base, "outside")
+	os.Mkdir(out, 0700)
+	os.WriteFile(filepath.Join(out, "file"), []byte("outside sentinel"), 0600)
+	os.Mkdir(filepath.Join(root.Path, "dir"), 0700)
+	os.WriteFile(filepath.Join(root.Path, "dir/file"), []byte("inside"), 0600)
+	w := &changingWriter{change: func() {
+		os.Rename(filepath.Join(root.Path, "dir"), filepath.Join(root.Path, "old"))
+		os.Symlink(out, filepath.Join(root.Path, "dir"))
+	}}
+	err := WalkSnapshotWithCopy(context.Background(), root, "dir", 10, func(_ string, _ Entry, copy SnapshotCopy) (bool, error) { _, _, err := copy(w, 100); return false, err })
+	if err == nil || bytes.Contains(w.buffer.Bytes(), []byte("outside sentinel")) {
+		t.Fatal("accepted replacement or read outside", err)
+	}
+	os.Symlink(filepath.Join(out, "file"), filepath.Join(root.Path, "leaf"))
+	err = WalkSnapshotWithCopy(context.Background(), root, "", 10, func(p string, e Entry, copy SnapshotCopy) (bool, error) {
+		if p != "leaf" {
+			return false, nil
+		}
+		_, _, err := copy(io.Discard, 100)
+		return false, err
+	})
+	if err == nil {
+		t.Fatal("followed leaf link")
+	}
 }
 
 func (w *changingWriter) Write(b []byte) (int, error) {

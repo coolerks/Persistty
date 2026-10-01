@@ -212,3 +212,37 @@ W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控�
 ### Next Steps
 
 - 重启后端后新建终端应用默认 shell；Debian目标授权、真实手机与触控板验收待补齐，任务不归档。
+
+
+## Session 8: W06 Git 延迟与轮询修复
+<!-- trellis-session: v=2 fp=08bcbdf1daf38d1c -->
+
+**Date**: 2026-10-01
+**Task**: W06 Git 延迟与轮询修复
+**Branch**: `main`
+
+### Summary
+
+按语义收窄安全快照，优化Darwin批量句柄，移除Git定时轮询与共享串行基线。Halo本机只读复测与Chromium/WebKit回归通过。
+
+### Main Changes
+
+- Git基线与历史/详情/比较不再复制无关工作树；已发现仓库位置仍每次校验身份与版本
+- 基线请求共享/串行、焦点冷却、失败不自动轮询；刷新发现世代去重
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] go test/vet 全量通过；全量race与最终files/gitview race通过
+- [OK] 前端 lint/typecheck、137单测、build；Chromium11与WebKit5通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- W05/W06真实Debian与手机/触控板等验收仍待完成，详见任务验收报告

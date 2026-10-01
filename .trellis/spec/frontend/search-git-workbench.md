@@ -18,7 +18,7 @@ Search与Git面板隐藏后保留当前会话表单状态；route/配置/认证�
 
 替换保护仅影响目标真实identity及alias。dirty/saving/暂停/冲突/加载/版本不同均跳过；成功持有期间禁自动及显式保存。新输入继续写入草稿；释放后干净buffer刷新，新输入保留且暂停，不让旧autosave覆盖新磁盘。其他文件的autosave继续。
 
-Git面板仓库选择不控制文件的baseline。HEAD baseline按对应文件获取，输入只重算行标记，不因每次按键读Git；保存etag变化、focus/online/15秒轮询刷新，迟到响应按key抛弃。tracked基线与buffer比较，未跟踪/基线不可用显示文字；不把baseline写进buffer。行比较先裁剪共同前后文，LCS≤250000格/20000行，超限以变化区间有界标记；删除锚定现有行。decorations独立collection，theme使用语义色，原model/undo保持。
+Git面板仓库选择不控制文件的baseline。HEAD baseline按对应文件获取，输入只重算行标记，不因每次按键读Git；保存etag变化、手动Git刷新、可见后的focus/online刷新，取消固定轮询，迟到响应按key抛弃。tracked基线与buffer比较，未跟踪/基线不可用显示文字；不把baseline写进buffer。行比较先裁剪共同前后文，LCS≤250000格/20000行，超限以变化区间有界标记；删除锚定现有行。decorations独立collection，theme使用语义色，原model/undo保持。
 
 Git总变更用total_paths，暂存/未暂存用porcelain字段。历史下一页发送首屏head以冻结遍历；刷新才读取新HEAD。比较默认磁盘，可明确选择打开比较时的编辑器快照，界面标明二者。所有比较model关闭后释放；不通过比较窗口保存文件。
 
@@ -46,3 +46,11 @@ GitPanel发现中或仓库列表为空时禁用Select，显示查找中/未发�
 只读比较复用shadcn Dialog/Tabs/Button与lucide全屏图标。每次新比较默认普通窗口、并排，桌面提供并排/行内Tabs和全屏/退出全屏；mobile保持前/后只读文本并可全屏。`ReadOnlyComparison`新增可选sideBySide（默认true），DesktopDiff以updateOptions(renderSideBySide,useInlineViewWhenSpaceIsLimited:false)切换，不重建editor/models/viewModel；使用现有languageForFile语法识别。大小变化由automaticLayout处理，关闭仍按生命周期owner释放。
 
 Fullscreen只改变本弹窗布局到100vw/100dvh，内容区内部滚动，标题/控制/关闭保留；不调用Git写操作、保存/重建编辑buffer或终端。`screenshot-adjustments.spec.ts`真实后端验无仓库、多根、无提交、空引用、全屏与模式切换/默认重置/关闭无pageerror和零写；原editor-recovery继续验草稿/model/undo/恢复。
+
+## Git 加载与背景请求（2026-10-01）
+
+GitPanel 只在打开、切换视图/仓库或明确刷新时读取；不以固定timer或focus反复全量status。刷新先重新发现仓库，再读取当前视图，发现世代包含project/version/revision，不能先给旧仓库再发一轮请求；切换视图中止旧请求，迟到结果不能更新新视图，失败保留错误且不自动重试。
+
+`baseline-requests.ts` 只共享活跃订阅的相同project/version/folder/path/文件etag键。跨组/StrictMode并发合并，背景基线串行最多一个；保存版本变化读取新基线，focus/online/visibility有30秒冷却（失败同样冷却），隐藏页面不发起请求，没有固定timer。手动Git刷新成功后明确刷新基线，一次刷新revision只通知一次。最后订阅卸载取消、移除排队任务和内存结果；不持久化正文或跨认证复用。Git状态需要用户打开视图或点击刷新更新，不能误宣称实时Git事件订阅。
+
+验证 `use-git-baseline.test.tsx` 的共用、串行、取消/迟到、冷却、失败和保存变化；`git-requests.spec.ts` 用真实隔离后端和浏览器时钟证明两分钟静置没有baseline/status轮询、明确刷新只一轮，并验证慢status时切历史仍可完成。

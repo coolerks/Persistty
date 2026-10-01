@@ -16,6 +16,7 @@ import { errorMessage } from "@/lib/api/client";
 import { searchGitAPI, type GitCompareInput } from "@/lib/api/search-git-client";
 import type { Project } from "@/lib/api/decoder";
 import type { Repository } from "@/lib/api/search-git-decoder";
+import { refreshGitBaselines } from "./baseline-requests";
 export function GitPanel({ project, mobile, visible }: { project: Project; mobile: boolean; visible: boolean }) {
   const auth = useAuth(), scope = useEditorScope();
   const csrf = auth.state.status === "authenticated" ? auth.state.session.csrf_token : "";
@@ -29,31 +30,33 @@ export function GitPanel({ project, mobile, visible }: { project: Project; mobil
   const [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null), [tab, setTab] = useState("changes"), [changeKind, setChangeKind] = useState("head");
   const [discovering, setDiscovering] = useState(true);
   const [discoveryRevision, setDiscoveryRevision] = useState(0);
+  const discoveryKey = JSON.stringify([project.id, project.version, discoveryRevision]);
+  const [discoveredKey, setDiscoveredKey] = useState("");
+  const baselineRevision = useRef(0);
   const [fullscreen, setFullscreen] = useState(false), [comparisonMode, setComparisonMode] = useState("side-by-side");
   const controller = useRef<AbortController | null>(null);
   const repository = repositories.find(item => item.id === repoID);
   const run = useCallback(async (work: (signal: AbortSignal) => Promise<void>) => {
     controller.current?.abort(); const current = new AbortController(); controller.current = current; setPending(true); setError(null);
-    try { await work(current.signal); } catch (cause) { if (!current.signal.aborted) setError(errorMessage(cause)); }
+    try { await work(current.signal); return !current.signal.aborted; } catch (cause) { if (!current.signal.aborted) setError(errorMessage(cause)); return false; }
     finally { if (!current.signal.aborted) setPending(false); }
   }, []);
   useEffect(() => {
     if (!visible) { controller.current?.abort(); setPending(false); return; }
     const discovery = new AbortController(); setDiscovering(true); setError(null);
     void searchGitAPI.repositories(project.id, project.version, discovery.signal).then(result => {
-      if (discovery.signal.aborted) return; setRepositories(result.items); setRepoID(previous => result.items.some(item => item.id === previous) ? previous : result.items[0]?.id ?? "");
+      if (discovery.signal.aborted) return; setDiscoveredKey(discoveryKey); setRepositories(result.items); setRepoID(previous => result.items.some(item => item.id === previous) ? previous : result.items[0]?.id ?? "");
       if (result.truncated) setError("仓库列表已截断，请缩小项目范围。");
     }).catch(cause => { if (!discovery.signal.aborted) setError(errorMessage(cause)); }).finally(() => { if (!discovery.signal.aborted) setDiscovering(false); });
     return () => { discovery.abort(); controller.current?.abort(); };
-  }, [project.id, project.version, visible, discoveryRevision]);
+  }, [project.id, project.version, visible, discoveryRevision, discoveryKey]);
   const refresh = useCallback(async (signal: AbortSignal) => {
     if (!repoID || repository?.state !== "available") return;
     if (tab === "changes") { const result = await searchGitAPI.status(project.id, project.version, repoID, signal); if (!signal.aborted) setStatus(result); }
     else if (tab === "history") { const result = await searchGitAPI.log(project.id, project.version, repoID, 0, signal); if (!signal.aborted) { setHistory(result); setDetail(null); } }
     else { const result = await searchGitAPI.refs(project.id, project.version, repoID, signal); if (!signal.aborted) { setRefs(result.items); setReference(previous => result.items.some(item => item.name === previous) ? previous : result.items[0]?.name ?? ""); } }
   }, [project.id, project.version, repoID, repository?.state, tab]);
-  useEffect(() => { setComparison(null); setStatus(null); setHistory(null); setDetail(null); setRefs([]); if (visible && repoID && repository?.state === "available") void run(refresh); return () => controller.current?.abort(); }, [refresh, visible, run, repoID, repository?.state, discoveryRevision]);
-  useEffect(() => { if (!visible || tab !== "changes" || !repoID) return; const update = () => { if (document.visibilityState === "visible" && !controller.current?.signal.aborted && !pending) void run(refresh); }; const timer = setInterval(update, 15000); window.addEventListener("focus", update); window.addEventListener("online", update); return () => { clearInterval(timer); window.removeEventListener("focus", update); window.removeEventListener("online", update); }; }, [visible, tab, repoID, pending, run, refresh]);
+  useEffect(() => { setPending(false); setComparison(null); setStatus(null); setHistory(null); setDetail(null); setRefs([]); if (visible && discoveredKey === discoveryKey && repoID && repository?.state === "available") void run(refresh).then(success => { if (success && discoveryRevision > baselineRevision.current) { baselineRevision.current = discoveryRevision; refreshGitBaselines(project.id); } }); return () => controller.current?.abort(); }, [refresh, visible, run, repoID, repository?.state, discoveryRevision, discoveredKey, discoveryKey, project.id]);
   const repositoryRoot = repository ? `${project.folders.find(item => item.id === repository.folder_id)?.path}/${repository.path ? repository.path + "/" : ""}` : "";
   const comparableBuffers = [...new Set(scope.buffers.values())].flatMap(buffer => {
     if (!repositoryRoot || buffer.state.status !== "ready") return [];

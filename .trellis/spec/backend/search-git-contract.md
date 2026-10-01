@@ -42,7 +42,7 @@ replacement≤4096字节，不能含NUL。preview file 为 `{id,folder_id,path,v
 
 ### Git 与工具隔离
 
-源目录由注册 root identity 和 no-follow 目录/叶句柄读取，枚举/文件读取后复验；不允许通过“校验后 os.Open 绝对路径”重新打开。CLI 只读0700私有 staging；不能把 cwd 当文件沙箱，也不能通过输出过滤补救根外读取。Git metadata 源不写入；只复制 HEAD/index/refs/packed-refs/objects/shallow/白名单 info 与 sharedindex，逐文件版本复验。对象/元数据合计默认512MiB，元数据流式拷贝；完整工作树受同一上限约束，不静默遗漏 tracked 文件。仓库发现最多100个，重叠真实 `.git` identity 去重。
+源目录由注册 root identity 和 no-follow 目录/叶句柄读取，枚举/文件读取后复验；不允许通过“校验后 os.Open 绝对路径”重新打开。CLI 只读0700私有 staging；不能把 cwd 当文件沙箱，也不能通过输出过滤补救根外读取。Git metadata 源不写入；只复制 HEAD/index/refs/packed-refs/objects/shallow/白名单 info 与 sharedindex，逐文件版本复验。对象/元数据合计默认512MiB，元数据流式拷贝；状态及需要改名识别的比较复制完整工作树，受同一上限约束，不静默遗漏 tracked 文件；历史/引用/提交详情/暂存与提交比较只复制元数据，baseline/本地引用与普通 HEAD/未暂存比较只补目标文件。仓库发现最多100个，重叠真实 `.git` identity 去重。
 
 Git `.git` 文件/链接、commondir/gitdir、alternates/http-alternates、promisor、未知 extensions、外部 filter 配置或属性先不可用。外部工作树 symlink 只读取 link 文本、在 staging 作为普通文件配合 `core.symlinks=false`，不读取目标。config 用 `--no-includes --file` 显式解析后重写允许 core/objectformat 设置；忽略 include、helpers、hooks、fsmonitor、pager、diff driver。命令为固定参数列表，无 shell；环境不继承 Git/rg/凭证配置，设置 `GIT_NO_LAZY_FETCH=1,GIT_OPTIONAL_LOCKS=0,GIT_TERMINAL_PROMPT=0` 及禁全局/系统配置，禁止联网补对象。git 使用 no-pager、no-ext-diff、no-textconv；stdout32MiB/stderr64KiB，stderr不进入HTTP/日志。并发最多2个任务，默认15秒，取消杀死自己的进程组，退出清理自己 staging。
 
@@ -95,3 +95,12 @@ Git每次读请求生成独立快照，不提供持久 snapshot_id；一个响�
 仓库扫描或snapshot遇到files.ErrUnsupported归Git领域ErrUnavailable，HTTP为503 repository_unavailable，提示无法安全读取的文件/元数据/对象；不能显示文件编辑的“此文件类型暂不支持”，也不能伪装空仓库。非法UTF-8文件名测试为Linux专属，macOS/APFS不能创建该fixture；未实际运行不算通过。
 
 回归 `TestUnbornRepositoryWithoutIndex` 从真实init开始，无index时状态/空历史/空refs/比较准确且源无新增index；stage后新增状态和空树比较正确、原index字节不变。既有缺对象/恶意配置/链接边界测试继续必需。
+
+## Git 请求成本与安全快照范围（2026-10-01）
+
+- 不以放宽并发/超时解决重复快照。Repositories 仍重新发现仓库；Service 仅保存最多1000项 opaque ID 到已发现位置的映射，满时清空；find 每次复验项目/文件夹版本、注册 root 和 `.git` identity，响应后再复验。映射不缓存状态、历史、正文或授权，未知ID回到有界发现，不能按客户端绝对路径执行Git。
+- Baseline 只检查请求文件的祖先目录；对所有包含该真实路径的注册根分别检查，选最内层仓库，保留重叠根语义。已删除的祖先可向上继续；链接/不安全父目录不能跳过安全失败。
+- 每请求独立0700 staging、白名单元数据/对象拷贝与完整版本复验不变。对象读取无须复制无关工作树。HEAD/未暂存目标在原边存在时只取该文件，直接按原路径比较；新增/潜在改名目标仍用完整工作树识别改名。过滤器配置仍拒绝，普通配置只解析一次并以验证过的枚举值生成私有安全config。
+- 目标工作树路径不能含任意大小写的 `.git` 组件，不能覆盖 staging 元数据；完整工作树遍历跳过真实 `.git`，遇到大小写别名拒绝读取。单文件快照同样计算剩余字节预算；链接仍只复制 link 文本。
+- metadata 复验流式写向 io.Discard，不能为丢弃的对象内容分配整包正文内存。源 HEAD/index/config 保持不变，不将源仓库交给 CLI，不建立跨请求正文/对象缓存，不使用源硬链接。
+- 回归：`snapshot_scope_test.go` 用超过快照预算的无关大文件证明历史/详情/baseline/普通比较可用，而status不能静默省略文件；验证旧ID不能接受替换后的 `.git`、不可用仓库保留领域错误、保留元数据路径被拒绝。`performance_test.go` 以显式 PERSISTTY_GIT_PERF_ROOT 启用真实本机只读复测，所有CLI仍只执行于私有快照，断言源 HEAD/index/config hash 不变；耗时日志不含正文。

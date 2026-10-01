@@ -1,0 +1,45 @@
+import { expect, test } from "@playwright/test";
+
+test("Git 静置无轮询，刷新一次，慢状态请求可切到历史", async ({ page }) => {
+  const project = process.env.PERSISTTY_E2E_W06_PROJECT;
+  test.skip(!project || !process.env.PERSISTTY_E2E_W06_ROOT?.startsWith("/private/tmp/persistty-w06-browser-"), "仅使用专属合成项目");
+  const requests = { baseline: 0, status: 0, repositories: 0, log: 0 };
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => {
+    const path = new URL(request.url()).pathname;
+    if (path.endsWith("/git-baseline")) requests.baseline++;
+    if (path.endsWith("/status") && path.includes("/repositories/")) requests.status++;
+    if (path.endsWith("/repositories")) requests.repositories++;
+    if (path.endsWith("/log")) requests.log++;
+  });
+  await page.goto(`/projects/${project}`);
+  await page.getByLabel("访问密码").fill(process.env.PERSISTTY_E2E_PASSWORD!);
+  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "W06 本地开发检查" })).toBeVisible();
+  await page.getByRole("treeitem", { name: "sample.txt", exact: true }).click();
+  await expect(page.getByText(/^HEAD [a-f0-9]{8}$/)).toBeVisible();
+  await page.getByRole("button", { name: "只读 Git", exact: true }).click();
+  const panel = page.getByRole("region", { name: "只读 Git" });
+  await expect(panel.getByRole("button", { name: "刷新", exact: true })).toBeEnabled();
+  expect(requests).toMatchObject({ status: 1, baseline: 1, repositories: 1 });
+  await page.clock.install();
+  await page.clock.fastForward(120000);
+  expect(requests).toMatchObject({ status: 1, baseline: 1, repositories: 1 });
+  const refreshed = page.waitForResponse(response => /\/repositories\/[^/]+\/status\?/.test(response.url()) && response.ok());
+  await panel.getByRole("button", { name: "刷新", exact: true }).click(); await refreshed;
+  await expect.poll(() => requests.baseline).toBe(2);
+  expect(requests.status).toBe(2); expect(requests.repositories).toBe(2);
+  await page.clock.resume();
+  let release: () => void = () => {};
+  let started: () => void = () => {};
+  const barrier = new Promise<void>(resolve => { release = resolve; });
+  const queued = new Promise<void>(resolve => { started = resolve; });
+  await page.route("**/repositories/*/status?*", async route => { started(); await barrier; await route.continue().catch(() => {}); });
+  await panel.getByRole("button", { name: "刷新", exact: true }).click(); await queued;
+  await panel.getByRole("tab", { name: "历史", exact: true }).click();
+  await expect(panel.getByRole("button", { name: /^initial/ })).toBeVisible();
+  release();
+  expect(requests.log).toBe(1); await expect(panel.getByRole("alert")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
