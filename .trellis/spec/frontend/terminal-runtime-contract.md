@@ -18,6 +18,7 @@ scope 新动作：`takeover(terminal)`、`inputIntent(id)`、`close(terminals)`�
 - 历史 `capture-pane -p -e` 快照为 LF 分行，独立只读 xterm 必须 `convertEol:true`，保留 ANSI/Unicode，避免逐行列坐标累积；实时 PTY 仍 `convertEol:false`。历史主题变化同步独立实例，不重建 live DOM/WS。
 - 普通/观察端垂直滚轮在宿主 DOM capture 阶段截获，阻止 xterm 在零 scrollback 时转成上下方向键；向上滚读取独立有界历史。仅首次进入清旧快照并请求，不能让已隐藏 live 上锁定的连续惯性事件反复清 historyBytes。等待 HTTP/解析/viewport 尺寸同步期间保留 live 画面并累加像素位移，历史模式（含加载/失败）不向 shell 发送键盘、粘贴、鼠标或手机快捷键。
 - 历史纵向事件交给 xterm 原生 viewport，保留小数位移与触控板分类，`smoothScrollDuration:120` 用于物理滚轮；不要把每个小于一行的事件强制放大为 `scrollLines(±1)`。锁定 live target 的事件以归一化像素转交同一历史 DOM；Chromium 合成 WheelEvent 的零值 legacy wheelDelta 字段须在转交事件上置 undefined，避免 xterm 优先读零而忽略 deltaY。首位移在 write callback 后等待 viewport 渲染同步，再转交；callback/rAF 随实例清理，不访问 `_core`。
+- 历史响应 history_size 为 0、returned_lines 为 0 或解码字节仅为空白时，不能挂载空历史并隐藏 live；清除首位移、退出历史模式并在原实时画面显示“暂无历史输出”。空态提示 pointer-events:none，不遮挡首行输入点击；控制端明确输入后清除提示。capture-pane 可能在无 scrollback 时返回一个 LF，Uint8Array(0) 本身也为 truthy，不能依对象真假判断有效历史。该分支不重连、接管、创建会话或发送输入；慢请求、异常仍沿原 live 保留策略。
 - 历史在底部继续向下累计一行位移才回实时，微小噪声不切模式；水平主轴（含 ±0.25px 纵向噪声）阻止默认滚动且不清内容、不请求、不切历史。历史错误保留原 live 实例与可返回/刷新入口；终端宿主 overflow:clip、overscroll-behavior:none，只允许内部 viewport 纵向滚动，不引入外层水平滚动或导航。
 - tmux 外层 alternate buffer 不代表 pane 是 TUI。只有当前 controller 的显式 `mouseTrackingMode !== "none"` 才将普通滚轮交给应用鼠标协议；Shift+wheel 强制查看历史，observer 不发鼠标报告。Ctrl+wheel 保留浏览器缩放且阻止 xterm 转输入；纯横向滚轮不触发历史。不要仅使用 xterm custom wheel handler，它不覆盖显式 mouse tracking 路径。
 - xterm onData 同时含用户输入与自动设备应答。live 实例用公开 parser.registerCsiHandler 对 `{final:"c"}` / `{prefix:">",final:"c"}` 消费 DA1/DA2，首参数为 0 时调用 `TerminalSocket.sendDeviceAttributes("primary"|"secondary")`，阻止默认 onData 应答误入 owner shell。参数大于 0 与原实现一样消费但不回答，分帧序列由原 parser 处理。handler 随 live 实例释放，不因 role 变化重建。
@@ -86,3 +87,5 @@ UI 调整新增 provider 部分接管失败零 POST、共享 v3 fixture、改名
 ## 7. 错误与正确示例
 
 错误：`useEffect(() => new Terminal(), [host])`，cleanup 断连，再用 `wasController` 自动接管。正确：provider 以 terminal ID 保留 runtime，host 只 append/remove 固定 element；连接断开后只按服务器 ready/control 恢复权限，不绕过显式接管。
+
+2026-10-01 截图回归增加零字节/无 scrollback 的 LF/仅空白三种空态与短历史重复切换，均保持 live 内容、单 WS 和零输入。真实 Debian 隔离实例的 w05-feedback-live 同时验新会话空历史与明确输出 120 行后长历史切换；合成滚轮不能代替真实触控板手感或手机软键盘验收。

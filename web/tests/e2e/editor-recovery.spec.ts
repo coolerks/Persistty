@@ -30,7 +30,7 @@ async function edit(page: Page, text: string, path = "one.txt") {
 test("自动保存保留 BOM/换行，四组与设备记录恢复、移动保持 model/undo", async ({ page }) => {
   await page.setViewportSize({ width: 1800, height: 1000 }); const h = await fixture(page); await page.goto(url);
   await page.getByRole("treeitem", { name: "one.txt", exact: true }).click(); await edit(page, "one\nTWO\nthree");
-  await expect.poll(() => h.puts.length).toBe(1); expect(h.puts[0]?.content).toBe("\uFEFFone\r\nTWO\nthree"); await expect(page.getByText("已保存", { exact: true })).toBeVisible();
+  await expect.poll(() => h.puts.length).toBe(1); expect(h.puts[0]?.content).toBe("\uFEFFone\r\nTWO\nthree"); await expect(page.locator(".file-editor [role=status]").first()).toHaveText("已保存");
   const id = await page.evaluate(() => window.editorRecovery.monaco.editor.getModels()[0]?.id);
   await page.getByRole("button", { name: "向右拆分编辑器", exact: true }).last().click();
   await page.getByRole("button", { name: "向右拆分编辑器", exact: true }).last().click();
@@ -49,7 +49,7 @@ test("409 与真实 IndexedDB 草稿刷新后零自动 PUT，desktop diff 后明
   h.files.set("one.txt", { content: "external", revision: 5 }); await page.reload(); await expect(page.getByText(/此文件有 1 份本地草稿/)).toBeVisible(); expect(h.puts).toHaveLength(1);
   await page.getByRole("button", { name: "查看草稿 1", exact: true }).click(); await expect(page.getByRole("dialog")).toBeVisible(); await expect(page.getByRole("dialog").locator(".monaco-diff-editor")).toBeVisible();
   await page.getByRole("button", { name: "恢复到编辑器", exact: true }).click(); await expect(page.getByText("已暂停自动保存", { exact: true })).toBeVisible(); await page.waitForTimeout(1200); expect(h.puts).toHaveLength(1);
-  h.reject(false); await page.getByRole("button", { name: "保存恢复内容", exact: true }).click(); await expect(page.getByText("已保存", { exact: true })).toBeVisible(); expect(h.puts).toHaveLength(2); expect(h.puts[1]?.expected_version.etag).toBe("one.txt:5"); expect(h.files.get("one.txt")?.content).toBe("\uFEFFmine"); expect(h.errors).toEqual([]);
+  h.reject(false); await page.getByRole("button", { name: "保存恢复内容", exact: true }).click(); await expect(page.locator(".file-editor [role=status]").first()).toHaveText("已保存"); expect(h.puts).toHaveLength(2); expect(h.puts[1]?.expected_version.etag).toBe("one.txt:5"); expect(h.files.get("one.txt")?.content).toBe("\uFEFFmine"); expect(h.errors).toEqual([]);
 });
 test("终端多组与上下位置恢复不创建、终止或写终端输入", async ({ page }) => {
   await page.setViewportSize({ width: 1800, height: 1000 }); const h = await fixture(page); await page.goto(url); await page.locator('[data-terminal-id="ended"]').click({ button: "right" }); await page.getByRole("menuitem", { name: "移到上方第 3 组", exact: true }).click();
@@ -81,4 +81,35 @@ test("手机基线变化的草稿只能保留或导出，不恢复或自动写�
   await expect(page.getByRole("button", { name: "恢复到编辑器", exact: true })).toHaveCount(0);
   await expect(page.locator(".monaco-diff-editor")).toHaveCount(0); await page.waitForTimeout(1200);
   expect(h.puts).toHaveLength(1); expect(h.errors).toEqual([]);
+});
+
+test("标签灰点、固定右侧文件操作与底部无边框语言入口", async ({ page }, testInfo) => {
+  const h = await fixture(page);
+  h.files.set("Sample.java", { content: "public class Sample {}", revision: 1 });
+  for (let i = 0; i < 8; i++) h.files.set(`long-filename-for-tabs-${i}.txt`, { content: "text", revision: 1 });
+  await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(url);
+  await page.getByRole("treeitem", { name: "Sample.java", exact: true }).click();
+  const language = page.locator(".workbench-status").getByRole("combobox", { name: "语言模式" });
+  await expect(language.locator("[data-slot=select-value]")).toHaveText("Java");
+  expect(await language.evaluate(element => getComputedStyle(element).borderWidth)).toBe("0px");
+  await expect(page.locator(".editor-breadcrumb")).not.toContainText("已保存");
+  await expect(page.locator(".editor-breadcrumb").getByRole("combobox")).toHaveCount(0);
+  await expect(page.locator(".editor-tab-actions").getByRole("button", { name: "刷新文件", exact: true })).toBeVisible();
+  await edit(page, "public class Sample { int n; }", "Sample.java"); await page.mouse.move(0, 0);
+  const dot = page.getByRole("img", { name: "未保存", exact: true }); await expect(dot).toBeVisible();
+  expect(await dot.evaluate(element => getComputedStyle(element).width)).toBe("8px");
+  await page.screenshot({ path: testInfo.outputPath("workbench-feedback-dirty.png") });
+  await page.getByRole("button", { name: "保存文件", exact: true }).click();
+  await expect(dot).toHaveCount(0); expect(h.puts).toHaveLength(1);
+  await language.click(); await page.getByRole("option", { name: "Plain Text", exact: true }).click();
+  await expect(language.locator("[data-slot=select-value]")).toHaveText("Plain Text"); expect(h.puts).toHaveLength(1);
+  for (let i = 0; i < 8; i++) await page.getByRole("treeitem", { name: `long-filename-for-tabs-${i}.txt`, exact: true }).click();
+  const actions = page.locator(".editor-tab-actions"); const before = await actions.boundingBox();
+  await page.locator(".editor-tabs").evaluate(element => { element.scrollLeft = element.scrollWidth; });
+  expect(await actions.boundingBox()).toEqual(before); await expect(actions.getByRole("link", { name: "下载文件" })).toBeVisible();
+  await page.getByRole("tab", { name: "Sample.java", exact: true }).click();
+  await page.getByRole("button", { name: "向右拆分编辑器", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "语言模式" })).toHaveCount(1); await expect(language.locator("[data-slot=select-value]")).toHaveText("Plain Text");
+  await expect.poll(() => page.evaluate(() => window.editorRecovery.monaco.editor.getModels().find(model => model.uri.path.endsWith("Sample.java"))?.getLanguageId())).toBe("plaintext");
+  await page.screenshot({ path: testInfo.outputPath("workbench-feedback-desktop.png") }); expect(h.errors).toEqual([]);
 });

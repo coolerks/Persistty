@@ -1,18 +1,16 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Download, RefreshCw, Save } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Failure, Loading } from "@/components/Feedback";
-import { ApiError, fileDownloadURL } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/client";
 import type { Project } from "@/lib/api/decoder";
 import { useEditorScope } from "./editor-context";
 import { editorText } from "./editor-text";
 import { downloadDraft, type FileDraft } from "./editor-drafts";
 import { FilePreview } from "./FilePreview";
 import { sameVersion } from "./editor-session";
-import { LanguageSelect } from "./LanguageSelect";
 import { languageForFile } from "./file-language";
 import { fileKey, useWorkspaceView, type OpenFile } from "./workspace-view";
 const DesktopEditor = lazy(() => import("./DesktopEditor"));
@@ -24,7 +22,6 @@ export function FileEditor({ project, file, mobile }: { project: Project; file: 
   useEffect(() => { scope.open(file); }, [scope, file]);
   const buffer = scope.buffers.get(fileKey(file));
   const mode = useWorkspaceView(state => state.languageModes[project.id]?.[fileKey(file)]);
-  const setLanguage = useWorkspaceView(state => state.setLanguage);
   const [draft, setDraft] = useState<FileDraft | null>(null);
   const [source, setSource] = useState(false);
   const [compare, setCompare] = useState(false);
@@ -37,12 +34,9 @@ export function FileEditor({ project, file, mobile }: { project: Project; file: 
   return <div className="file-editor"><div className="editor-breadcrumb">
     <span className="truncate" title={file.path}>{project.folders.find(folder => folder.id === file.folderId)?.path}/{file.path}</span>
     {svg && <Button size="sm" variant="outline" onClick={() => setSource(value => !value)}>{source ? "查看图片" : "编辑源码"}</Button>}
-    {ready && <Badge variant={state.saveState === "conflict" || state.saveState === "failed" ? "destructive" : "secondary"} aria-live="polite">{labels[state.saveState]}</Badge>}
-    {!mobile && ready && <LanguageSelect mode={mode} detected={detected} onChange={value => setLanguage(project.id, file, value)} />}
-    {ready && <Button size="icon" variant="ghost" aria-label="保存文件" title="保存文件" disabled={state.saveState === "saving" || state.saveState === "conflict" || !buffer?.dirty} onClick={() => void buffer?.save(true)}><Save /></Button>}
-    <Button size="icon" variant="ghost" aria-label="刷新文件" title="刷新文件" onClick={() => void (ready ? buffer?.refresh() : buffer?.load())}><RefreshCw /></Button>
-    <a className={buttonVariants({ variant: "ghost", size: "icon" })} aria-label="下载文件" title="下载文件" href={fileDownloadURL(project.id, file.folderId, project.version, file.path)}><Download /></a>
+    {ready && ["conflict", "failed", "paused"].includes(state.saveState) && <Badge className="editor-save-warning" role="status" aria-live="polite" variant={state.saveState === "paused" ? "secondary" : "destructive"}>{labels[state.saveState]}</Badge>}
   </div>
+    {ready && !["conflict", "failed", "paused"].includes(state.saveState) && <span className="sr-only" role="status" aria-live="polite">{labels[state.saveState]}</span>}
     {(!state || state.status === "loading") && <div className="editor-feedback"><Loading /></div>}
     {state?.status === "error" && <div className="editor-feedback">{state.error instanceof ApiError && (state.error.status === 415 || state.error.status === 413) ? <FilePreview key={`${project.version}:${fileKey(file)}`} project={project} file={file} /> : <Failure error={state.error} retry={() => void buffer?.load()} />}</div>}
     {ready && <>

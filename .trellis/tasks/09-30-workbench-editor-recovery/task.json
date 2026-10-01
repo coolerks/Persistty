@@ -30,8 +30,13 @@
     "internal/httpapi/preview.go",
     "tests/contracts/workspace-files.json",
     "web/tests/e2e/editor-recovery.spec.ts",
-    "web/tests/e2e/w05-live.spec.ts"
+    "web/tests/e2e/w05-live.spec.ts",
+    "web/src/features/workspaces/EditorFileActions.tsx",
+    "web/src/features/workspaces/EditorLanguageStatus.tsx",
+    "web/src/features/terminal/TerminalSession.tsx",
+    "web/tests/e2e/terminal-scrolling.spec.ts",
+    "web/tests/e2e/w05-feedback-live.spec.ts"
   ],
-  "notes": "2026-10-01：M01～M06 已实施；Go test/vet/race、npm lint/typecheck/128 项单测/build 通过。真实 Debian 保存/冲突/PNG/SVG/鉴权专项通过并完成隔离资源清理。最终 Chromium 专项 9 项通过；真实手机软键盘与完整图片/平台矩阵待验收。保留 in_progress，未提交、未归档。",
+  "notes": "2026-10-01：W05 既有功能完成；截图批次 U01～U04 已实施：标签灰点、固定右侧文件操作、底部语言入口、空历史保留 live。最终 lint/typecheck/128 项单测/build、Go test/vet/race、18 项 Chromium 与 2 项真实 Debian 专项通过；两个专属实例均已清理，见 feedback-check-report.md。本轮修改未提交。真实手机软键盘、触控板手感与完整图片/平台矩阵未验收，保留 in_progress，不自动归档。",
   "meta": {}
 }

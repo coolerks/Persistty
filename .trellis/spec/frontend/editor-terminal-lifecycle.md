@@ -30,7 +30,7 @@ DiffEditor 使用公开 createDiffEditor/createModel/createViewModel；清理顺
 
 `web/src/features/workspaces/file-language.ts` 提供 `languageForFile(path: string, content?: string): string` 及完整清单。`web/scripts/generate-language-metadata.mjs` 从锁定 Monaco 0.57.0 的真实注册 AST 提取 91 个 ID（89 基础语言、JSON、plaintext），沿主入口注册顺序，不维护少量后缀白名单。非静态元数据、版本或集合变化须停止生成并复核。图标可复用轻量 metadata，但文件树不能因此提前加载引擎/worker。
 
-推断为 exact basename → 最长 registered extension → 有界首行上游 shebang → plaintext，名称小写匹配。桌面 breadcrumb 用既有 shadcn Select 提供自动识别及全部模式；FreeMarker 六变体、mysql/pgsql/redshift 无独立后缀，保留手动入口。选择只改变 model language，不写文件/启用诊断/LSP；JSON/CSS/HTML/TS/JS 的诊断关闭，语法/worker 本地动态加载。
+推断为 exact basename → 最长 registered extension → 有界首行上游 shebang → plaintext，名称小写匹配。桌面底部状态栏用单一既有 shadcn Select 提供当前 focused group 文件的自动识别及全部模式；已就绪文件才显示，上方活动标签为终端时隐藏。触发器无常驻边框与箭头，仅显示实际语言名，不加“自动：”；菜单保留“自动识别”以清除手动覆盖。FreeMarker 六变体、mysql/pgsql/redshift 无独立后缀，保留手动入口。选择只改变 model language，不写文件/启用诊断/LSP；JSON/CSS/HTML/TS/JS 的诊断关闭，语法/worker 本地动态加载。
 
 ### 预览
 

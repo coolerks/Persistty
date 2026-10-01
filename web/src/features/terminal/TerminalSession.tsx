@@ -53,6 +53,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
   const [historyLines, setHistoryLines] = useState(0);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyEmpty, setHistoryEmpty] = useState(false);
   const [historyRevision, setHistoryRevision] = useState(0);
   const historyWheelRef = useRef(0);
   const historyModeRef = useRef(false);
@@ -64,6 +65,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
   const openHistory = useCallback((pixels = 0) => {
     if (!historyModeRef.current) {
       historyWheelRef.current = pixels;
+      setHistoryEmpty(false);
       setHistoryBytes(null);
       setHistoryMode(true);
     } else if (historyScrollRef.current) historyScrollRef.current(pixels);
@@ -179,6 +181,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
         ctrlRef.current = false; altRef.current = false; setCtrl(false); setAlt(false);
         return;
       }
+      setHistoryEmpty(false);
       let bytes = encoder.encode(value);
       if (value.length === 1 && ctrlRef.current) {
         const letter = value.toUpperCase().charCodeAt(0);
@@ -301,6 +304,13 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     api.terminalHistory(terminal.id, controller.signal).then(snapshot => {
       if (controller.signal.aborted) return;
       const binary = atob(snapshot.content_base64);
+      // capture-pane can return a blank line when tmux has no scrollback.
+      // An empty byte array is still truthy; do not replace the live screen with it.
+      if (snapshot.history_size === 0 || snapshot.returned_lines === 0 || binary.trim().length === 0) {
+        historyWheelRef.current = 0;
+        setHistoryBytes(null); setHistoryEmpty(true); setHistoryLoading(false); setHistoryMode(false);
+        return;
+      }
       setHistoryBytes(Uint8Array.from(binary, char => char.charCodeAt(0)));
       setHistoryLines(snapshot.returned_lines);
       setHistoryLoading(false);
@@ -308,7 +318,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
       if (!controller.signal.aborted) { setHistoryError(errorMessage(reason)); setHistoryLoading(false); }
     });
     return () => controller.abort();
-  }, [terminal.id, historyVisible, historyRevision]);
+  }, [terminal.id, historyVisible, historyRevision, setHistoryMode]);
 
   useEffect(() => {
     if (!historyVisible || !historyBytes || !historyHostRef.current) return;
@@ -383,6 +393,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
 
   return <div className="terminal-runtime" data-terminal-id={terminal.id} data-role={role} data-connection={connection}>
     {error && <Alert variant="destructive" className="shrink-0"><AlertDescription>{error}</AlertDescription><AlertAction><Button size="icon-xs" variant="ghost" aria-label="关闭错误" onClick={() => setError(null)}><X /></Button></AlertAction></Alert>}
+    {historyEmpty && !historyVisible && <div className="terminal-history-heading terminal-history-loading terminal-history-empty" role="status"><History /><span>暂无历史输出</span></div>}
     {historyVisible && !historyBytes && <div className="terminal-history-heading terminal-history-loading" role="status"><History />普通历史快照{historyLoading && <span>读取中…</span>}{historyError && <span role="alert">{historyError}</span>}</div>}
     <div className="terminal-live" ref={hostRef} style={{ display: historyVisible && historyBytes ? "none" : undefined }} aria-label="实时终端" />
     {historyVisible && historyBytes && <div className="terminal-history"><div className="terminal-history-heading"><History />普通历史快照{historyLines === 0 && <span>暂无历史输出</span>}{historyLoading && <span>读取中…</span>}{historyError && <span role="alert">{historyError}</span>}</div><div className="terminal-history-surface" ref={historyHostRef} aria-label="终端历史" /></div>}

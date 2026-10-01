@@ -22,6 +22,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useResource } from "@/lib/api/use-resource";
 import { panelStorage, useViewStorageWarning } from "./view-storage";
 import { FileEditor } from "./FileEditor";
+import { EditorFileActions } from "./EditorFileActions";
+import { EditorLanguageStatus } from "./EditorLanguageStatus";
 import { EditorScopeProvider } from "./EditorScopeProvider";
 import { useEditorScope } from "./editor-context";
 
@@ -110,7 +112,7 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
         </Group></Panel>
       </Group>
     </div>}
-    <footer className="workbench-status"><span>{project.folders.find(folder => folder.id === project.main_folder_id)?.path ?? project.name}</span><span>{activeFile ? `${activeFile.path} · UTF-8` : `${project.folders.length} 个文件夹`}</span><div className="status-controls"><Button size="icon" variant="ghost" aria-label="切换资源管理器" title="切换资源管理器" onClick={() => mobile ? showFiles() : sidebarRef.current?.isCollapsed() ? sidebarRef.current?.expand() : sidebarRef.current?.collapse()}><PanelLeft /></Button><Button size="icon" variant="ghost" aria-label="切换终端面板" title="切换终端面板" onClick={() => mobile ? setMobileView("terminal") : terminalRef.current?.isCollapsed() ? terminalRef.current?.expand() : terminalRef.current?.collapse()}><PanelBottom /></Button></div></footer>
+    <footer className="workbench-status"><span>{project.folders.find(folder => folder.id === project.main_folder_id)?.path ?? project.name}</span><span>{activeFile ? `${activeFile.path} · UTF-8` : `${project.folders.length} 个文件夹`}</span>{!mobile && <EditorLanguageStatus project={project} file={activeUpperId && !dismissed[activeUpperId] ? undefined : activeFile} />}<div className="status-controls"><Button size="icon" variant="ghost" aria-label="切换资源管理器" title="切换资源管理器" onClick={() => mobile ? showFiles() : sidebarRef.current?.isCollapsed() ? sidebarRef.current?.expand() : sidebarRef.current?.collapse()}><PanelLeft /></Button><Button size="icon" variant="ghost" aria-label="切换终端面板" title="切换终端面板" onClick={() => mobile ? setMobileView("terminal") : terminalRef.current?.isCollapsed() ? terminalRef.current?.expand() : terminalRef.current?.collapse()}><PanelBottom /></Button></div></footer>
   </main></TerminalRuntimeProvider></EditorScopeProvider>;
 }
 
@@ -171,23 +173,24 @@ function EditorGroup({ project, group, mobile = false, upperTerminals = [], acti
       const terminal = visibleUpper.find(item => item.id === value);
       if (terminal) onActivateUpper?.(terminal.id);
       else { const file = files.find(item => fileKey(item) === value); if (file) { onActivateUpper?.(null); activateFile(file); } }
-    }} className="editor-tab-layout"><TabsList variant="line" className="editor-tabs" aria-label="文件标签">
+    }} className="editor-tab-layout"><div className="editor-tab-row"><TabsList variant="line" className="editor-tabs" aria-label="文件标签">
       {files.map((file, index) => <div key={fileKey(file)} className={`editor-tab ${active && fileKey(active) === fileKey(file) ? "active" : ""}`} data-file-key={fileKey(file)} draggable={!mobile} onDragStart={event => dragStart(event, file)}>
-        <TabsTrigger value={fileKey(file)} className="editor-tab-label" onClick={() => { onActivateUpper?.(null); activateFile(file); }}><FileTypeIcon path={file.path} /><span className="truncate">{file.path.split("/").at(-1)}</span></TabsTrigger>
+        <TabsTrigger value={fileKey(file)} className="editor-tab-label" onClick={() => { onActivateUpper?.(null); activateFile(file); }}><FileTypeIcon path={file.path} /><span className="truncate" title={editors.buffers.get(fileKey(file))?.dirty ? `${file.path} · 未保存` : file.path}>{file.path.split("/").at(-1)}</span></TabsTrigger>
         {index > 0 && !mobile && <Button size="icon-xs" variant="ghost" aria-label={`左移标签 ${file.path}`} onClick={() => move(project.id, file, group, group, files[index - 1])}>←</Button>}
-        <Button size="icon" variant="ghost" className="editor-tab-close" aria-label={`关闭 ${file.path}`} title="关闭文件标签" onClick={() => {
+        <Button size="icon" variant="ghost" className={`editor-tab-close ${editors.buffers.get(fileKey(file))?.dirty ? "is-dirty" : ""}`} aria-label={`关闭 ${file.path}`} title="关闭文件标签" onClick={() => {
           const buffer = editors.buffers.get(fileKey(file));
           const references = allOpenFiles(view).filter(item => buffer ? buffer.aliases.has(fileKey(item)) : fileKey(item) === fileKey(file)).length;
           if (references > 1) { closeFile(file); return; }
           void editors.protect(file).then(ok => { if (ok) closeFile(file); else setCloseError("草稿保存失败，文件仍保持打开，请导出内容。"); });
-        }}><X /></Button>
+        }}>{editors.buffers.get(fileKey(file))?.dirty && <span className="editor-dirty-dot" role="img" aria-label="未保存" />}<X /></Button>
       </div>)}
       {visibleUpper.map(item => <TerminalTab key={item.id} terminal={item} region={visibleUpper} active={activeTerminal?.id === item.id} position="top" onActivate={() => onActivateUpper?.(item.id)} onRefresh={() => void refreshTerminals()} onMove={item => onMoveToBottom?.(item.id)} moves={[...groupIndexes.filter(i => i !== group).map(i => ({ label: `移到上方第 ${i + 1} 组`, run: (terminal: Terminal) => useWorkspaceView.getState().placeTerminal(project.id, terminal.id, { region: "top", group: i }) })), ...groupIndexes.map(i => ({ label: `移到下方第 ${i + 1} 组`, run: (terminal: Terminal) => useWorkspaceView.getState().placeTerminal(project.id, terminal.id, { region: "bottom", group: i }) }))]} />)}
-      {!mobile && active && <Button size="icon" variant="ghost" aria-label="向右移动文件" title="向右移动文件" onClick={() => move(project.id, active, ((group + 1) % 4) as GroupIndex, group)}><PanelRight /></Button>}
-      <span className="editor-tab-spacer" />
+    </TabsList><div className="editor-tab-actions">
+      {active && !activeTerminal && <EditorFileActions project={project} file={active} />}
+      {!mobile && active && !activeTerminal && <Button size="icon" variant="ghost" aria-label="向右移动文件" title="向右移动文件" onClick={() => move(project.id, active, ((group + 1) % 4) as GroupIndex, group)}><PanelRight /></Button>}
       {!mobile && active && visibleEditorCount(view) < 4 && <Button size="icon" variant="ghost" aria-label="向右拆分编辑器" title="向右拆分编辑器" onClick={() => split(project.id, active)}><PanelRight /></Button>}
       {!mobile && view?.split && group !== 0 && <Button size="icon" variant="ghost" aria-label="合并编辑器" title="合并编辑器" onClick={() => unsplit(project.id)}><PanelRight /></Button>}
-    </TabsList>
+    </div></div>
     {closeError && <p role="alert" className="terminal-inline-error">{closeError}</p>}
     {refreshError && <p role="alert" className="terminal-inline-error">{refreshError}</p>}
     <TabsContent value={activeValue} className="editor-tab-content">{activeTerminal ? <div className="editor-upper-terminal"><TerminalSession key={activeTerminal.id} terminal={activeTerminal} closeRequested={closeUpperId === activeTerminal.id} onCloseRequestHandled={() => onCloseUpper?.(null)} /></div> : active ? <FileEditor key={fileKey(active)} project={project} file={active} mobile={mobile} /> : <div className="editor-empty"><Files className="size-9" /><span>从资源管理器打开文件</span></div>}</TabsContent></Tabs>

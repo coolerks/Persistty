@@ -80,3 +80,14 @@ Terminal “隐藏/分离”只调整 UI。`Close Terminal` 始终 Dialog：`关
 标准 scrollbar-color 规则必须限定在 `@supports not selector(::-webkit-scrollbar)`，WebKit 分支保持 scrollbar-width:auto/scrollbar-color:auto，防止高优先级 hover 标准属性让 Chromium 退回原生轨道。WebKit thumb 用容器的 `--tab-scrollbar-thumb` 变量同步 hover/focus-visible 颜色；浏览器回归同时验默认隐藏、悬停可见、移开再隐藏，三状态与滑块 hover 的轨道高度及 label 坐标均稳定。
 
 回归测试验目录无选中、跨根文件单选、树可见时 tab 切换不 reveal、重复收展/页面恢复/移动端返回、后续分页目标、右键操作完整、终端 ended 关闭零 mutation。浏览器检查展开目录移开鼠标后透明，两类 tab 溢出可滚动且轨道 4px；不能只验初始样式而忽略 hover 后的布局/颜色。合成接口验收不能宣称真实 PTY 或真机通过。
+
+
+### 编辑器标签与状态栏（2026-10-01）
+
+正常保存状态不占据 breadcrumb 的可见空间；ready 的 saved/pending/saving 用 sr-only live status 提供无障碍反馈。conflict/failed/paused 保留可见且唯一的 status，避免相同状态重复播报。未保存依共享 FileBuffer.dirty 在标签关闭按钮内显示 8px 语义灰色圆点，title/aria-label 提供文字语义；hover 或键盘 focus-visible 显示 X，关闭仍执行原草稿保护入口。保存成功才消除 dirty，不以点击保存作为成功。
+
+每组 editor-tab-row 内，横向滚动的 TabsList 与固定的 editor-tab-actions 为同级。TabsList 使用 flex:1、width:0、min-width:0；不能被另一条 flex:none 覆盖为零宽度。保存/刷新/下载复用原 buffer/API，拆分/移动/合并保持既有动作。多标签水平滚动不会移动右侧按钮；手机仍保留文件动作。
+
+语言入口归底部全工作台状态栏的 EditorLanguageStatus，读取 focused group 与共享 buffer，复用 LanguageSelect/shadcn Select；只显示实际模式，无边框/常驻箭头，hover 和 focus-visible 保留反馈。菜单提供自动及全部语言；不把菜单当前选择写入文件、不重新建立 model。未知格式显示 Plain Text，切换组显示对应模式，多组同文件只保留一个入口。
+
+验收 editor-recovery 浏览器专项：正文修改显示灰点、明确保存后消失、breadcrumb 不显示正常状态、按钮固定且可点击、底部标签与自动检测一致、手动模式同步到原 model、多组入口唯一。应断言 SelectValue 的实际标签，隐藏的 Base UI Icon 默认字符不等于可见标签。

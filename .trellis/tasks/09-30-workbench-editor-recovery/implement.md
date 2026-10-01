@@ -24,3 +24,14 @@ workspaces 的 ProjectWorkbench/DesktopEditor/view/model/Explorer/ExplorerAction
 ## 实施记录
 
 M01～M06 完成代码与对应自动化；M07 最终 Chromium 9 项、前端 128 项单测、Go test/vet/race 与生产构建全部通过，文档链接/忽略/分发/diff 检查通过。新发现的迟到读取倒退强版本、diff worker 清理顺序、字体缓存尺寸和干净标签关闭缓存问题均已原地修复，并加入测试/owner 契约。见 [检查报告](check-report.md)。真机软键盘与完整图片/平台矩阵仍为最终验收事项；任务不自动完成或归档。
+
+## 截图反馈实施批次
+
+- [x] U01 标签脏圆点、隐藏常驻保存状态、文件操作固定在标签栏右侧。
+- [x] U02 活动文件语言选择移到单一底部状态栏；自动检测仅显示实际语言，手动选择保持原 model。
+- [x] U03 空历史保留 live 画面及明确空态；连续惯性/底部返回/短历史和双角色回归。
+- [x] U04 lint/typecheck/test/build、Go test/vet/race、文档/diff 及专项浏览器验收；真实 Debian 隔离专项。
+
+变更边界：FileEditor/ProjectWorkbench 负责编辑 UI 与活动组，LanguageSelect/新增 EditorFileActions/EditorLanguageStatus 复用现有 shadcn 原语；styles.css 只调整对应区域。TerminalSession 只处理历史读取与展示边界，不改变 WS/终止/接管协议或真实进程生命周期。真实资源验证继续使用专属 harness，不操作截图中的用户项目或终端。
+
+截图批次 U01～U04 完成；最终 128 项单测、18 项 Chromium 与 2 项真实 Debian 专项通过，隔离资源全部清理。实施/失败修正/未验收边界见 [截图反馈检查报告](feedback-check-report.md)。本轮修改未提交；W05 仍进行中。

@@ -109,3 +109,59 @@ for (const role of ["controller", "observer"] as const) test(`${role} 历史 LF 
   } else { await expect(history).toBeVisible(); expect(inputs).toEqual([]); }
   expect(connects).toBe(1); expect(errors).toEqual([]);
 });
+
+for (const snapshot of [
+  { history_size: 0, returned_lines: 1, content: "\n" },
+  { history_size: 0, returned_lines: 0, content: "" },
+  { history_size: 5, returned_lines: 1, content: "   \n" },
+]) test(`空历史 ${snapshot.history_size}/${snapshot.returned_lines} 行时保留实时画面，不显示空白历史`, async ({ page }) => {
+  const inputs: string[] = []; let connections = 0;
+  const terminal = { id: "empty-history", project_id: "interaction", display_name: "空历史验收", working_directory: "/fixture", state: "running" };
+  await page.route("**/api/v1/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    const data = path === "/api/v1/terminals" ? { items: [terminal] } : path.endsWith("/entries") ? { items: [], next_cursor: "", project_version: 1 } : path.endsWith("/history") ? { history_size: snapshot.history_size, returned_lines: snapshot.returned_lines, content_base64: Buffer.from(snapshot.content).toString("base64"), cols: 80, rows: 24, alternate_on: false, truncated: false } : null;
+    if (!data) throw new Error(`unexpected ${path}`);
+    await route.fulfill({ json: { data, request_id: "fixture" } });
+  });
+  await page.routeWebSocket(/\/api\/v1\/events/, () => {});
+  await page.routeWebSocket(/\/api\/v1\/terminals\/.*\/stream/, socket => {
+    connections++; socket.onMessage(message => { if (typeof message !== "string") inputs.push(Buffer.from(message).toString("base64")); });
+    socket.send(JSON.stringify({ type: "ready", protocol: 3, terminal_id: terminal.id, viewer_id: "fixture", role: "controller", generation: 1, cols: 80, rows: 24, pending_termination: null }));
+    socket.send(Buffer.from("\x1b[?1049h\x1b[2J\x1b[Hvisible prompt> "));
+  });
+  await page.goto("/tests/fixtures/workbench-interactions.html");
+  const live = page.getByLabel("实时终端", { exact: true });
+  await expect(live.locator(".xterm-rows")).toContainText("visible prompt>");
+  await live.hover(); await page.mouse.wheel(0, -120);
+  await expect(page.getByText("暂无历史输出", { exact: true })).toBeVisible();
+  await expect(live).toBeVisible(); await expect(live.locator(".xterm-rows")).toContainText("visible prompt>");
+  await expect(page.getByLabel("终端历史", { exact: true })).toHaveCount(0);
+  expect(connections).toBe(1); expect(inputs).toEqual([]);
+});
+
+test("短历史重复上下切换仍有内容、保持单连接且零 shell 输入", async ({ page }) => {
+  const inputs: string[] = []; let connections = 0;
+  const terminal = { id: "short-history", project_id: "interaction", display_name: "短历史验收", working_directory: "/fixture", state: "running" };
+  await page.route("**/api/v1/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    const data = path === "/api/v1/terminals" ? { items: [terminal] } : path.endsWith("/entries") ? { items: [], next_cursor: "", project_version: 1 } : path.endsWith("/history") ? { history_size: 2, returned_lines: 2, content_base64: Buffer.from("earlier line\nrecent line\n").toString("base64"), cols: 80, rows: 24, alternate_on: false, truncated: false } : null;
+    if (!data) throw new Error(`unexpected ${path}`);
+    await route.fulfill({ json: { data, request_id: "fixture" } });
+  });
+  await page.routeWebSocket(/\/api\/v1\/events/, () => {});
+  await page.routeWebSocket(/\/api\/v1\/terminals\/.*\/stream/, socket => {
+    connections++; socket.onMessage(message => { if (typeof message !== "string") inputs.push(Buffer.from(message).toString("base64")); });
+    socket.send(JSON.stringify({ type: "ready", protocol: 3, terminal_id: terminal.id, viewer_id: "fixture", role: "controller", generation: 1, cols: 80, rows: 24, pending_termination: null }));
+    socket.send(Buffer.from("\x1b[?1049h\x1b[2J\x1b[Hcurrent prompt> "));
+  });
+  await page.goto("/tests/fixtures/workbench-interactions.html");
+  const live = page.getByLabel("实时终端", { exact: true }), history = page.getByLabel("终端历史", { exact: true });
+  await expect(live.locator(".xterm-rows")).toContainText("current prompt>");
+  for (let i = 0; i < 4; i++) {
+    await live.hover(); await page.mouse.wheel(0, -120);
+    await expect(history.locator(".xterm-rows")).toContainText("recent line");
+    await history.hover(); await page.mouse.wheel(0, 240);
+    await expect(live).toBeVisible(); await expect(live.locator(".xterm-rows")).toContainText("current prompt>");
+  }
+  expect(connections).toBe(1); expect(inputs).toEqual([]);
+});

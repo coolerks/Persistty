@@ -42,11 +42,11 @@ test("隔离真实工作台的文件树/标签图标、语言选择、分组及�
   await page.getByRole("tab", { name: "query.sql", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "语言模式" })).toHaveText(/PostgreSQL/);
   await page.getByRole("button", { name: "向右拆分编辑器" }).click();
-  await expect(page.getByRole("combobox", { name: "语言模式" })).toHaveCount(2);
+  await expect(page.getByRole("combobox", { name: "语言模式" })).toHaveCount(1);
   const left = page.getByRole("region", { name: "左侧编辑器" });
   const right = page.getByRole("region", { name: "右侧编辑器" });
-  await left.getByRole("combobox", { name: "语言模式" }).click(); await page.getByRole("option", { name: "MySQL", exact: true }).click();
-  await expect(right.getByRole("combobox", { name: "语言模式" })).toHaveText(/MySQL/);
+  await left.getByRole("tab", { name: "query.sql", exact: true }).click(); await page.getByRole("combobox", { name: "语言模式" }).click(); await page.getByRole("option", { name: "MySQL", exact: true }).click();
+  await right.getByRole("tab", { name: "query.sql", exact: true }).click(); await expect(page.getByRole("combobox", { name: "语言模式" })).toHaveText(/MySQL/);
   await page.getByRole("button", { name: "合并编辑器" }).click();
   await page.getByRole("treeitem", { name: "config.toml", exact: true }).click();
   await page.getByRole("combobox", { name: "主题", exact: true }).click(); await page.getByRole("option", { name: "浅色", exact: true }).click();
