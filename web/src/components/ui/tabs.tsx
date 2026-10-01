@@ -45,6 +45,7 @@ function TabsList({
       data-slot="tabs-list"
       data-variant={variant}
       className={cn(tabsListVariants({ variant }), className)}
+      style={{height: "24px"}}
       {...props}
     />
   )

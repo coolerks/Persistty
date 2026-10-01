@@ -145,9 +145,9 @@
 .terminal-unavailable { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; text-align: center; color: var(--muted-foreground); font-size: 13px; }
 .terminal-heading > [data-slot="select-trigger"] { max-width: min(40vw, 260px); }
 .terminal-tab-layout { height: 100%; min-height: 0; min-width: 0; flex-direction: column; gap: 0; }
-.terminal-tab-row { width: 100%; height: 36px; min-width: 0; display: flex; align-items: center; gap: 3px; flex: none; border-bottom: 1px solid var(--border); padding-inline: 5px; }
+.terminal-tab-row { width: 100%; min-width: 0; display: flex; align-items: center; gap: 3px; flex: none; padding-inline: 5px; padding: 3px 5px }
 .terminal-tab-row > button { flex: none; }
-.terminal-tabs { height: 34px !important; min-width: 0; max-width: calc(100% - 110px); display: flex; justify-content: flex-start; align-items: stretch; gap: 2px; overflow-x: auto; overflow-y: hidden; padding: 0; scrollbar-width: thin; }
+.terminal-tabs { min-width: 0; max-width: calc(100% - 110px); display: flex; justify-content: flex-start; align-items: stretch; gap: 2px; overflow-x: auto; overflow-y: hidden; padding: 0; scrollbar-width: thin; }
 @supports not selector(::-webkit-scrollbar) {
   .editor-tabs, .terminal-tabs { scrollbar-color: transparent transparent; }
   .editor-tabs:hover, .editor-tabs:has(:focus-visible), .terminal-tabs:hover, .terminal-tabs:has(:focus-visible) { scrollbar-color: color-mix(in oklch, var(--muted-foreground) 45%, transparent) transparent; }
@@ -159,7 +159,7 @@
   .editor-tabs::-webkit-scrollbar-track, .terminal-tabs::-webkit-scrollbar-track { background: transparent; }
   .editor-tabs::-webkit-scrollbar-thumb, .terminal-tabs::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--tab-scrollbar-thumb); }
 }
-.terminal-tab { display: flex; align-items: center; max-width: 240px; min-width: 120px; height: 30px; flex: none; border-radius: 4px; }
+.terminal-tab { display: flex; align-items: center; max-width: 240px; min-width: 120px; height: 24px; flex: none; border-radius: 4px; }
 .editor-tabs .terminal-tab { align-self: center; }
 .terminal-tab.active { background: var(--accent); }
 .terminal-tab-label { min-width: 0; flex: 1; justify-content: flex-start; padding-inline: 5px; }
@@ -187,7 +187,7 @@
 .terminal-role { color: var(--muted-foreground); white-space: nowrap; }
 .terminal-live, .terminal-history-surface { flex: 1; min-width: 0; min-height: 0; overflow: clip; overscroll-behavior: none; }
 /* FitAddon subtracts xterm's padding, not its parent's padding. */
-.terminal-live .xterm, .terminal-history-surface .xterm { height: 100%; padding: 5px 8px; }
+.terminal-live .xterm, .terminal-history-surface .xterm { height: 100%; padding: 5px 8px; padding-top: 0 }
 /* xterm 6 themes its scrollable element, but the backing viewport defaults to black. */
 .terminal-live .xterm-viewport, .terminal-history-surface .xterm-viewport { background-color: var(--background); }
 .terminal-history { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; }
