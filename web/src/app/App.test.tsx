@@ -63,16 +63,18 @@ it("项目打开位置弹窗支持取消和当前标签，直达不重复询问"
   expect(await screen.findByRole("heading", { name: "示例项目" })).toBeInTheDocument();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
-it("资源401停止读取并返回登录，未知终端不创建或attach", async () => {
+it("旧终端地址返回欢迎页，资源401停止读取且不创建或attach终端", async () => {
   let authorized = true;
-  vi.stubGlobal("fetch", vi.fn((path: string) => {
+  const fetch = vi.fn((path: string) => {
     if (path.endsWith("/auth/session")) return Promise.resolve(sessionResponse());
     if (!authorized) return Promise.resolve(Response.json(fixture.unauthenticated, { status: 401 }));
-    return Promise.resolve(Response.json(fixture.empty_terminals));
-  }));
-  mount("/terminals/missing");
-  expect(await screen.findByText("终端不存在")).toBeInTheDocument();
-  authorized = false; await userEvent.click(screen.getByRole("button", { name: "刷新终端" }));
+    return Promise.resolve(Response.json(fixture.empty_projects));
+  });
+  vi.stubGlobal("fetch", fetch); mount("/terminals/missing");
+  expect(await screen.findByText("暂无项目")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "开始使用" })).toBeInTheDocument();
+  expect(fetch.mock.calls.filter(([path]) => path.includes("/terminals"))).toHaveLength(0);
+  authorized = false; await userEvent.click(screen.getByRole("button", { name: "刷新项目" }));
   expect(await screen.findByLabelText("访问密码")).toBeInTheDocument();
 });
 

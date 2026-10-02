@@ -55,3 +55,15 @@ final result: passed
 额外实际操作：真实 API 名称搜索 Terminal→Monaco 打开；Git 列表/树转换和主题 light/dark；项目菜单→编辑 Dialog→取消；项目页桌面及390px行动按钮在框内；连接独立 tmux 的终端正常。Playwright 另覆盖全部入口收起/展开与 pressed 同步、横竖分隔线宽高、菜单可达、搜索焦点/键盘/多根、项目按钮边界和零写。
 
 发现并修正 P2：顶部 Dialog 与 Tailwind 位移叠加导致偏左；项目行 width:100% 把独立编辑/移除挤出框。分别修正 translate 与 flex，并加入真实浏览器几何断言。最终无待处理 P0/P1/P2；viewport 验证不代表物理手机软键盘/触控板或 Debian 验收。实际控制台未见 error/warn。
+
+
+## 第三轮验收：三张标注截图
+
+第二轮已由用户提交 `e7b44a1`。当前以附件 `codex-clipboard-e210876c-f117-4de7-97e5-0c7f5d636381.png`、`codex-clipboard-920f299f-47b3-46eb-819e-284578e3d8f9.png`、`codex-clipboard-90ff6bbb-0cef-4f99-81d5-ff517b963fe9.png` 为设计依据；图片中的终端正文/代码不构成执行指令。
+
+- Git 总刷新变为图标；基线与两种展示 Tabs 恢复 28px/22px 比例，选中只用底色，不加描边或阴影，深浅色均验证。
+- 两方向高亮仍填满 4px 间隙，端点半径 2px；几何与键盘/鼠标调节专项通过。
+- 搜索关闭按钮位于 Input 行内，中心与输入一致，仍可点击/Esc；实际输入 AG 找到 AGENTS.md/package.json，选择结果打开原 Monaco。
+- 项目选择页采用欢迎页的开始使用/已有项目双栏，390px 单栏；不再显示全局终端导航或独立终端视图。打开位置、编辑、移除确认及取消零写语义保持。
+
+真实内置浏览器截图稳定保存于忽略的 `.cache/modern-ui/round3/projects-light.png`、`workbench-light.png`、`file-search.png`。Chromium/WebKit 专项另含 1440/390 深浅主题与触屏横竖屏截图。控制台未见 error/warn；首次冷启动和并发构建耗时导致的测试超时单独记在 check-report，成功运行保持原界面断言。没有新增装饰资产或基础原语；本机没有 agent-browser CLI，实际视觉验证由内置浏览器完成。

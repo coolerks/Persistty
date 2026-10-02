@@ -61,7 +61,7 @@ func (s *Service) Names(ctx context.Context, project string, version int64, quer
 		if err != nil {
 			return FileNames{}, err
 		}
-		allowed, err := s.discover(ctx, root, filepath.Join(dir, "names-"+strconv.Itoa(index)), &budget, func(string, string) {})
+		allowed, err := s.discoverTree(ctx, root, filepath.Join(dir, "names-"+strconv.Itoa(index)), &budget, func(string, string) {}, true)
 		if err != nil {
 			return FileNames{}, err
 		}

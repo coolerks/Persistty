@@ -25,6 +25,7 @@ func TestRegisteredToolRoutesUseConfiguredDeadline(t *testing.T) {
 			{"/api/v1/projects/:id/repositories/:repoId/status", "/api/v1/projects/p/repositories/r/status", true},
 			{"/api/v1/projects/:id/git-baseline", "/api/v1/projects/p/git-baseline", true},
 			{"/api/v1/projects/:id/repositories/:repoId/commits/:commitId", "/api/v1/projects/p/repositories/r/commits/c", true},
+			{"/api/v1/projects/:id/file-names", "/api/v1/projects/p/file-names", true},
 			{"/api/v1/projects/:id/searches", "/api/v1/projects/p/searches", true},
 			{"/api/v1/projects/:id/folders/:folderId/content", "/api/v1/projects/p/folders/repositories/content", false},
 		}

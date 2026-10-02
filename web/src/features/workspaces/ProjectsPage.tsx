@@ -34,8 +34,14 @@ export function ProjectsPage() {
     finally { setPending(false); }
   }
   return <main className="page-main projects-page">
+    <header className="projects-welcome"><h1>Persistty</h1><p>打开项目，继续工作。</p></header>
+    <div className="projects-columns">
+      <section className="projects-start" aria-labelledby="projects-start-title"><h2 id="projects-start-title">开始使用</h2>
+        <Button variant="ghost" onClick={() => setEditing("new")}><Plus />新建项目</Button>
+        <p>将服务器上的文件夹组织为项目。</p>
+      </section>
     <section className="projects-panel" aria-label="项目列表">
-    <div className="page-heading"><h1>项目</h1><div className="flex gap-2"><Button onClick={() => setEditing("new")}><Plus data-icon="inline-start" />新建项目</Button><Button size="icon" variant="ghost" aria-label="刷新项目" title="刷新项目" disabled={resource.status === "loading"} onClick={refresh}><RefreshCw /></Button></div></div>
+    <div className="page-heading"><h2>已有项目</h2><Button size="icon-sm" variant="ghost" aria-label="刷新项目" title="刷新项目" disabled={resource.status === "loading"} onClick={refresh}><RefreshCw /></Button></div>
     {resource.status === "loading" && <Loading />}
     {resource.status === "error" && <Failure error={resource.error} retry={refresh} />}
     {resource.status === "ready" && (resource.data.length === 0 ? <Empty><EmptyHeader><EmptyMedia variant="icon"><Folder /></EmptyMedia><EmptyTitle>暂无项目</EmptyTitle></EmptyHeader></Empty> :
@@ -45,7 +51,7 @@ export function ProjectsPage() {
           <Badge variant="secondary">{project.folders.length} 个文件夹</Badge><ArrowUpRight data-icon="inline-end" />
         </Button><Button size="icon" variant="ghost" title="编辑项目" aria-label={`编辑 ${project.name}`} onClick={() => setEditing(project)}><Pencil /></Button><Button size="icon" variant="ghost" title="移除项目" aria-label={`移除 ${project.name}`} onClick={() => setRemoving(project)}><Trash2 /></Button>
       </li>)}</ul>)}
-    </section>
+    </section></div>
     {editing && <ProjectEditor key={editing === "new" ? "new" : editing.id} project={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refresh(); }} />}
     <Dialog open={removing !== null} onOpenChange={open => { if (!open && !pending) { setRemoving(null); setMutationError(null); } }}><DialogContent><DialogHeader><DialogTitle>移除项目</DialogTitle><DialogDescription>仅移除“{removing?.name}”的项目配置，不删除磁盘文件或终止已有终端。</DialogDescription></DialogHeader>
       {mutationError && <p role="alert" className="text-sm text-destructive">{mutationError}</p>}

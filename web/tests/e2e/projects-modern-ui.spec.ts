@@ -16,7 +16,10 @@ test("项目页深浅色及窄屏保留完整操作，打开与移除确认不�
     await page.setViewportSize({ width, height: 845 });
     for (const dark of [false, true]) {
       await page.evaluate(dark => document.documentElement.classList.toggle("dark", dark), dark);
-      await expect(page.locator(".projects-panel")).toHaveCSS("border-radius", "8px");
+      await expect(page.getByRole("heading", { name: "开始使用", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "已有项目", exact: true })).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "主导航" })).toHaveCount(0);
+      await expect(page.locator(".terminal-runtime")).toHaveCount(0);
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
       for (const project of projects) for (const action of ["打开", "编辑", "移除"]) {
         const button = page.getByRole("button", { name: `${action} ${project.name}`, exact: true });
@@ -38,5 +41,8 @@ test("项目页深浅色及窄屏保留完整操作，打开与移除确认不�
   await page.getByRole("button", { name: "移除 项目 0", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "移除项目", exact: true })).toContainText("不删除磁盘文件或终止已有终端");
   await page.getByRole("button", { name: "取消", exact: true }).click();
+  await page.goto("/terminals");
+  await expect(page).toHaveURL(/\/projects$/);
+  await expect(page.locator(".terminal-runtime")).toHaveCount(0);
   expect(errors).toEqual([]); expect(writes).toEqual([]);
 });

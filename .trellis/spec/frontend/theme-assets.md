@@ -78,3 +78,10 @@ react-resizable-panels 4.14.1 的 Panel 外层有内联 `overflow: visible`，�
 项目页在原功能与确认 Dialog 外使用 workbench chrome/sidebar/border、8px 主框/4px 条目、紧凑标题/文件夹图标与路径，保留打开/新标签页/编辑/配置移除边界。项目数量不改变命令/后台资源的语义。
 
 Dialog 原语的 Tailwind translate 与 transform 是独立属性；顶部搜索弹窗用 `translate: -50% 0; transform: none` 设置水平居中、top:12%，不能再叠加 translateX。真实浏览器检查 dialog 中心与 viewport 中心一致，且窄屏宽度/上下边界容纳。
+
+
+第三轮截图细化：分隔器 `::before` 保持完整 4px 间隙，半径 2px 形成圆头；8px 热区不改变。Git 局部 TabsList 为 28px、3px 内边距/6px 圆角，Trigger 为 22px/4px 圆角，选中用正文底色，无描边与阴影；focus ring 保留。不修改基础 Tabs 或其他功能标签。总仓库刷新使用已有 RefreshCw/Button icon-sm，aria/title“刷新仓库”。
+
+FileQuickOpen 的 Input 与 DialogClose 组合在 `.file-quick-input-row` 中，关闭按钮 right:4px/top:50%/translateY(-50%)，关闭/输入的中心一致；禁用 DialogContent 默认关闭按钮，避免两个关闭入口叠加。
+
+项目选择页用欢迎页结构：品牌标题、开始使用/已有项目两栏，760px 以下单栏；项目名称、路径、打开位置 Dialog、编辑与移除配置确认保持原语义。没有独立终端导航或 runtime；旧 `/terminals` 和 `/terminals/:id` 在鉴权后 Navigate 到 `/projects`，不发送终端创建/attach/终止请求，项目工作台终端不受影响。

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogClose, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { errorMessage } from "@/lib/api/client";
 import { searchGitAPI } from "@/lib/api/search-git-client";
 import type { FileNames } from "@/lib/api/search-git-decoder";
@@ -48,13 +48,13 @@ export function FileQuickOpen({ project, onOpen }: { project: Project; onOpen(fi
   }
   return <Dialog open={open} onOpenChange={value => { setOpen(value); if (value) { setQuery(""); setResponse(null); setSelected(0); } }}>
     <DialogTrigger render={<Button variant="outline" className="file-quick-trigger" aria-label="按名称搜索文件" />}><Search /><span>搜索文件</span><kbd>⌘ / Ctrl P</kbd></DialogTrigger>
-    <DialogContent className="file-quick-dialog" initialFocus={true}>
+    <DialogContent className="file-quick-dialog" initialFocus={true} showCloseButton={false}>
       <DialogHeader className="sr-only"><DialogTitle>按名称搜索文件</DialogTitle><DialogDescription>搜索项目中的文件名，方向键选择，Enter 打开文件。</DialogDescription></DialogHeader>
-      <Input className="pr-10" aria-label="文件名关键词" placeholder="输入文件名关键词…" value={query} maxLength={256} onChange={event => { setQuery(event.target.value); setResponse(null); setSelected(0); }} onKeyDown={event => {
+      <div className="file-quick-input-row"><Input className="pr-10" aria-label="文件名关键词" placeholder="输入文件名关键词…" value={query} maxLength={256} onChange={event => { setQuery(event.target.value); setResponse(null); setSelected(0); }} onKeyDown={event => {
         if (event.nativeEvent.isComposing || !items.length) return;
         if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); select((selected + (event.key === "ArrowDown" ? 1 : items.length - 1)) % items.length); }
         if (event.key === "Enter") { event.preventDefault(); choose(selected); }
-      }} />
+      }} /><DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="关闭搜索" title="关闭搜索" />}><X /></DialogClose></div>
       <div ref={results} className="file-quick-results" aria-label="文件搜索结果" aria-busy={!!keyword && valid && !current}>
         {items.map((item, index) => <Button key={`${item.folder_id}:${item.path}`} variant="ghost" className="file-quick-result" aria-label={`打开 ${item.path}`} aria-current={index === selected} onFocus={() => setSelected(index)} onClick={() => choose(index)}>
           <FileTypeIcon path={item.path} /><span><span>{item.path.split("/").at(-1)}</span><span className="file-quick-path">{project.folders.find(folder => folder.id === item.folder_id)?.path}/{item.path}</span></span>

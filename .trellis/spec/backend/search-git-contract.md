@@ -129,3 +129,6 @@ HTTP 根据已注册 route pattern 为 search/Git 路由使用 `ToolTimeout()`�
 - 用例：正常为 ignored 依赖目录剪枝；基础为 clean/未跟踪/无 HEAD；错误为忽略目录内 tracked 文件被错误丢弃或存在 filter 却报告 clean。
 - 必需测试：`worktree_test.go` 使用超过单目录 10000 条限制的忽略树、超过正文预算的忽略文件、tracked 修改与嵌套否定规则，完整对照合成仓库 CLI；`tool_deadline_test.go` 通过实际注册 middleware 验 3/15/25 秒配置与普通文件 10 秒，相似路径不能命中工具预算；原改名/缺对象/安全根与源零写入测试继续通过。
 - 反例：只提高 HTTP timeout 或硬编码排除 node_modules；正例：Git 原生忽略裁决先剪枝，同时用 index 跟踪集保留真实变更，并统一有界 context。
+
+
+共享 discovery 的 `files.ErrTooLarge` 必须区分目录项/深度遍历限额与 ignore 控制文件读取限额：前者 truncated，后者原样返回 413，不能交付未完整过滤的候选。名称请求的工具兜底和 no-require-git 只在名称 owner 启用，全文搜索保留原 rg 行为，详见[名称搜索契约](file-name-search.md)。

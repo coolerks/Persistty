@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useOutletContext } from "react-router";
-import { TerminalSquare, Folder, LogOut } from "lucide-react";
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useOutletContext } from "react-router";
+import { TerminalSquare, LogOut } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -9,7 +9,6 @@ import { useAuth } from "@/features/auth/auth-context";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ThemeSelect } from "@/features/settings/ThemeSelect";
 import { ProjectsPage, ProjectRoute } from "@/features/workspaces/ProjectsPage";
-import { TerminalsPage } from "@/features/terminal/TerminalsPage";
 import { editorScopes } from "@/features/workspaces/editor-session";
 import { errorMessage } from "@/lib/api/client";
 import { Failure, Loading } from "@/components/Feedback";
@@ -46,9 +45,6 @@ function Shell() {
       </div>
     </header>}
     {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-    {auth.state.status === "authenticated" && !workspaceRoute && <nav aria-label="主导航" className="main-nav">
-      <NavLink to="/projects"><Folder aria-hidden="true" />项目</NavLink><NavLink to="/terminals"><TerminalSquare aria-hidden="true" />终端</NavLink>
-    </nav>}
     {auth.state.status === "loading" ? <main className="page-main"><Loading /></main> : auth.state.status === "error" ? <main className="page-main"><Failure error={auth.state.error} retry={auth.retry} /></main> : <Outlet context={{ headerActions: <>
       <ThemeSelect />
       <Button variant="ghost" size="icon-sm" aria-label="退出登录" title="退出登录" disabled={pending} onClick={() => void logout()}><LogOut /></Button>
@@ -63,8 +59,8 @@ export function App() {
     <Route element={<Authenticated />}>
       <Route path="/projects" element={<ProjectsPage />} />
       <Route path="/projects/:projectId" element={<ProjectRoute />} />
-      <Route path="/terminals" element={<TerminalsPage />} />
-      <Route path="/terminals/:terminalId" element={<TerminalsPage />} />
+      <Route path="/terminals" element={<Navigate to="/projects" replace />} />
+      <Route path="/terminals/:terminalId" element={<Navigate to="/projects" replace />} />
     </Route>
     <Route path="/" element={<Navigate to="/projects" replace />} />
     <Route path="*" element={<main className="page-main"><h1>页面不存在</h1><Link className={buttonVariants({ variant: "outline" })} to="/projects">项目面板</Link></main>} />

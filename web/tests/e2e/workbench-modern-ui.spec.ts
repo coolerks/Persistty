@@ -41,6 +41,10 @@ test("微圆角面板保持几何边界、可调整分隔器、标签滚动及�
   }
   await expect(page.getByRole("button", { name: "变更", exact: true })).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(page.getByRole("tab", { name: "变更文件展示：列表", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "刷新仓库", exact: true })).toBeVisible();
+  const baseline = page.getByRole("tab", { name: "HEAD", exact: true });
+  await expect(baseline).toHaveCSS("border-radius", "4px"); await expect(baseline).toHaveCSS("box-shadow", "none");
+  await expect(baseline).toHaveCSS("height", "22px");
   await page.getByRole("button", { name: "资源管理器", exact: true }).click();
   const tab = page.getByRole("tab", { name: "file-0.ts", exact: true });
   expect(Math.abs((await tab.boundingBox())!.y - (await page.locator(".editor-tab-row").boundingBox())!.y)).toBeLessThanOrEqual(1);
@@ -48,6 +52,7 @@ test("微圆角面板保持几何边界、可调整分隔器、标签滚动及�
   const before = (await sidebar.boundingBox())!.width;
   await separator.focus(); await page.keyboard.press("ArrowRight");
   const line = await separator.evaluate(element => ({ width: getComputedStyle(element, "::before").width, height: getComputedStyle(element, "::before").height, own: element.getBoundingClientRect().height }));
+  await expect.poll(() => separator.evaluate(element => getComputedStyle(element, "::before").borderRadius)).toBe("2px");
   expect(line.width).toBe("4px"); expect(parseFloat(line.height)).toBeCloseTo(line.own, 2);
   await expect.poll(async () => (await sidebar.boundingBox())!.width).toBeGreaterThan(before);
   const bounds = (await separator.boundingBox())!;
@@ -62,6 +67,7 @@ test("微圆角面板保持几何边界、可调整分隔器、标签滚动及�
   const horizontal = page.locator(".workbench-separator.horizontal").first();
   await horizontal.focus();
   const crossLine = await horizontal.evaluate(element => ({ height: getComputedStyle(element, "::before").height, width: getComputedStyle(element, "::before").width, own: element.getBoundingClientRect().width }));
+  await expect.poll(() => horizontal.evaluate(element => getComputedStyle(element, "::before").borderRadius)).toBe("2px");
   expect(crossLine.height).toBe("4px"); expect(parseFloat(crossLine.width)).toBeCloseTo(crossLine.own, 2);
   for (let i = 1; i < 12; i++) await page.getByRole("treeitem", { name: `file-${i}.ts`, exact: true }).click();
   await page.locator(".editor-tabs").evaluate(element => { element.scrollLeft = element.scrollWidth; });
@@ -122,6 +128,12 @@ test("顶栏按名称快速打开保留多根文件身份、键盘导航与取�
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "file-1.ts", exact: true })).toBeVisible();
   await expect(page.locator(".editor-breadcrumb")).toContainText("/other/file-1.ts");
+  await page.getByRole("button", { name: "按名称搜索文件", exact: true }).click();
+  const close = page.getByRole("button", { name: "关闭搜索", exact: true });
+  const inputRect = (await input.boundingBox())!, closeRect = (await close.boundingBox())!;
+  expect(Math.abs(inputRect.y + inputRect.height / 2 - closeRect.y - closeRect.height / 2)).toBeLessThan(1);
+  expect(closeRect.x + closeRect.width).toBeLessThan(inputRect.x + inputRect.width);
+  await close.click(); await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: "按名称搜索文件", exact: true }).click();
   await input.fill("file"); await input.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);

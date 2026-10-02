@@ -1,13 +1,12 @@
-# 第二轮提交方案
+# 第三轮提交方案
 
-第一轮 `6881b6c` 已由用户提交。本轮拟议单一完整提交：`feat：细化工作台 UI 与文件名搜索`。
+前两轮 `6881b6c`/`e7b44a1` 已由用户提交。本轮拟议单一完整提交：`feat：重做项目欢迎页并增强文件名搜索`。
 
-该变更统一用户截图要求的工作台/项目页控件，并包含名称搜索的服务、DTO、浏览器与单测、owner 规范和任务验收记录；拆开后顶栏入口会缺少协议，故归为同一可审查单元。
+按三张标注截图细化 Git 标签/刷新图标、圆头分隔线和搜索关闭对齐，重做欢迎页并移除独立终端导航；名称查询在 rg 不可用时使用同安全树 Go glob/ignore，保留配额/版本/取消，并统一 HTTP 工具预算。测试、规范与报告一并纳入。
 
 本会话修改文件：
 
 - `.trellis/spec/backend/file-name-search.md`
-- `.trellis/spec/backend/index.md`
 - `.trellis/spec/backend/search-git-contract.md`
 - `.trellis/spec/frontend/search-git-workbench.md`
 - `.trellis/spec/frontend/theme-assets.md`
@@ -18,30 +17,21 @@
 - `.trellis/tasks/10-02-workbench-modern-ui/prd.md`
 - `.trellis/tasks/10-02-workbench-modern-ui/task.json`
 - `design-qa.md`
-- `internal/httpapi/search_git.go`
-- `internal/httpapi/search_git_test.go`
+- `internal/httpapi/router.go`
+- `internal/httpapi/tool_deadline_test.go`
 - `internal/search/discovery.go`
 - `internal/search/file_names.go`
 - `internal/search/file_names_test.go`
-- `internal/search/service.go`
-- `tests/fixtures/search-git.json`
+- `web/src/app/App.test.tsx`
 - `web/src/app/App.tsx`
 - `web/src/app/styles.css`
-- `web/src/features/git/GitFiles.tsx`
-- `web/src/features/settings/ThemeSelect.tsx`
-- `web/src/features/workspaces/FileQuickOpen.test.tsx`
+- `web/src/features/git/GitPanel.tsx`
 - `web/src/features/workspaces/FileQuickOpen.tsx`
-- `web/src/features/workspaces/ProjectWorkbench.tsx`
 - `web/src/features/workspaces/ProjectsPage.tsx`
-- `web/src/lib/api/search-git-client.ts`
-- `web/src/lib/api/search-git-decoder.test.ts`
-- `web/src/lib/api/search-git-decoder.ts`
-- `web/tests/e2e/git-hover.spec.ts`
-- `web/tests/e2e/git-layout.spec.ts`
 - `web/tests/e2e/projects-modern-ui.spec.ts`
-- `web/tests/e2e/workbench-interactions.spec.ts`
 - `web/tests/e2e/workbench-modern-ui.spec.ts`
+- `internal/search/native_names.go`
 
-未识别的未提交文件：无。临时服务/数据库/tmux、截图、测试 traces、编译产物与日志全部忽略，不纳入提交。
+未识别改动：无。临时服务、fixture、截图、日志和测试产物全部忽略。
 
-按 [.trellis/workflow.md](../../workflow.md) 阶段 3.4 的“一次展示方案，一次确认”，等待用户回复 ok/行后再执行 git add/commit；不 amend、不 push，不自动归档其他活动任务。
+按[项目工作流](../../workflow.md)阶段3.4“一次展示方案，一次确认”，用户确认后才 git add/commit；不 amend、不 push，不归档其他活动任务。

@@ -41,3 +41,16 @@
 
 
 第二轮控件查找记录：现有 Select、DropdownMenu、Dialog、Input、Button、Tabs 已足够；对照官方 https://ui.shadcn.com/docs/components/base/select 、https://ui.shadcn.com/docs/components/base/dropdown-menu 、https://ui.shadcn.com/docs/components/base/dialog 。FileQuickOpen 是业务组合，不新增基础控件/依赖；`discover` 抽取现有搜索安全发现，不为名称搜索另设弱安全路径。完整跨层签名见 `.trellis/spec/backend/file-name-search.md`。
+
+
+## 第三轮截图细化（2026-10-02，用户授权“看图调整”）
+
+- Git 总刷新改为 lucide 图标按钮；比较基线和列表/树形 Tabs 恢复自然的 28px 高度、6px/4px 圆角、无选中描边/阴影，深浅色保持背景区分，不修改全局原语。
+- 分隔线保持铺满 4px 间隙，圆头改为 2px；搜索 Input 与关闭按钮放在同一相对定位行内居中。
+- 文件名发现优先 rg，缺失或能力失败时在同一私有安全占位树上使用 Go glob/ignore 过滤兜底。保留忽略、链接、版本、取消和限额；全文搜索仍依赖原工具，不能通过兜底掩盖权限、控制文件读取、超时或资源超限错误。
+- 项目选择页改为 VS Code 欢迎页结构：品牌标题、开始使用、已有项目两栏，窄屏单栏；保留新建/刷新/编辑/移除/当前页与新标签页打开。移除全局终端导航与选择页终端视图，旧 /terminals 路径回到项目页，不终止既有 tmux 进程。
+
+归属：GitPanel/styles.css 处理视觉；FileQuickOpen 使用既有 DialogClose/Button 组合修复位置；App/ProjectsPage 处理欢迎页和旧路由；search discovery 的名称专用选项及 staged ignore matcher 实现工具兜底，不改变内容搜索行为。补缺工具/不支持参数、ignore 对照、取消/截断与 UI 几何回归，再执行前后端门禁和 Chromium/WebKit 专项。
+
+
+第三轮预算检查补充：名称路由未进入 isToolRoute，HTTP 10秒与服务配置预算不一致。归属 router.middleware/isToolRoute，将精确注册的 file-names 纳入既有 ToolTimeout，路由专项覆盖3/15/25秒；不修改普通文件请求预算。

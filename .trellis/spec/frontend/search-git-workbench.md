@@ -94,3 +94,6 @@ GitFileViewToggle 组合已有 Tabs/TabsList/TabsTrigger，与 HEAD/暂存/未�
 侧栏实际收起时，ProjectWorkbench 将 GitPanel.visible 置 false，使既有请求/详情 owner 执行隐藏清理；重新打开恢复原表单/展示状态并按原契约加载，不卸载编辑器或终端。
 
 顶部名称搜索与内容搜索职责独立，UI/服务签名、忽略与配额、键盘/取消及测试以[文件名搜索契约](../backend/file-name-search.md)为准。文件名结果只携 folder_id/path，不替换编辑内容。
+
+
+第三轮 Git 基线与文件展示 Tabs 仅局部调整比例（28px list/22px trigger、6px/4px 圆角），选中不加描边/阴影；仓库总刷新为 icon-sm RefreshCw，保留原 discoveryRevision、禁用状态及基线失效流程。“本地引用”入口保持文字。

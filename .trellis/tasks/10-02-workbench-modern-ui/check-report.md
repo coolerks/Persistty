@@ -75,3 +75,26 @@
 
 
 最终结算：每个浏览器 15 个不同专项用例通过（完整回归14项 + 新项目页1项），最终重复4项覆盖最后修改的可见性、标题菜单、Dialog位置及项目动作边界。横竖分隔线完整宽高另补断言并实际运行；lint/typecheck/build在项目页最终样式后通过。所有日志/截图/fixture保持忽略，无额外未识别工作树修改。
+
+
+## 第三轮范围与检查（2026-10-02）
+
+第二轮已由用户提交 `e7b44a1`；上方保留历史证据。本轮按新三张标注截图，细化 Git Tabs/刷新图标、2px 圆头、搜索关闭对齐，并重做欢迎页。文件名搜索加入 rg 不可用/能力失败时的同树 Go glob/ignore 兜底；`.gitignore` 在非 Git 目录同样生效。普通文件正文、根外链接和身份/版本安全边界不变。共享 discovery 同时修复控制文件超限不能误判扫描截断的问题。
+
+| 检查 | 第三轮实际结果 |
+| --- | --- |
+| frontend lint/typecheck/test/build | 通过；31 文件/162 单测；build 含字体/许可证验证；既有 canvas/chunk 提示保留 |
+| go test ./... / go vet ./... | 通过；新增独立无工具 fixture、工具能力失败、rg 对照、ignore 优先/嵌套/反选/字符类/转义、普通非 Git 目录、链接/截断/控制文件超限、畸形模式回归 |
+| Chromium | 5 项通过：工作台3 + 欢迎页1 + 原工作台交互1；报告 round3-chromium-final |
+| WebKit | 相同5项通过；报告 round3-webkit-warm |
+| 真实内置浏览器 | 欢迎页→项目；AG查询→原 Monaco；Git 图标/标签与关闭对齐；控制台无 error/warn |
+
+失败处理：移除独立终端路由后，App 单测仍期待旧终端页面，更新为旧地址返回欢迎页/零终端读取，并保留 401 登录检查。Go 新超限回归发现共享 discovery 将 ignore 读取超限误判 truncated，已修正并通过搜索测试。首次 WebKit 与 build/Vitest/race 同时运行，编辑器加载5秒与全测试30秒超时；停止重负载后，保留原界面断言、整项允许60秒串行重跑5项成功。首次完整 race 有3项既有认证测试 login timeout（无 data race 报告），串行重跑结果待下节结算，不将失败记为通过。
+
+范围限制：本机模拟不表示 Firefox、真实手机软键盘、Debian/systemd 或部署验收；没有修改提权执行、安全配置或其他任务状态。截图/日志/fixture均忽略，任务保持 in_progress，未自动提交/归档。
+
+
+完整 `go test -race -p 1 ./...` 串行重跑通过（httpapi 72.924s，其余含缓存），不再出现认证 timeout。额外 rg 对照识别了 POSIX 形式字符类与 globset 的差异，修正 native matcher 中嵌套 `[` 的语义后普通搜索专项通过；最终 race 结算见末尾。首次并发失败不计为通过。
+
+
+最终结算：Names 最终源码通过全量普通 test/vet、`go test -race -p 1 ./...`（round3-go-race-final，HTTP 64.455s，搜索3.515s，其余含缓存）；最后只补精确名称路由预算及其无状态测试，普通全量 test/vet 与路由专项 race 重新验证。前端31/162、Chromium/WebKit各5项均通过。Markdown本地链接与diff清洁检查通过。第三轮改动25个文件，暂无未识别修改，不提交、不部署、不归档。

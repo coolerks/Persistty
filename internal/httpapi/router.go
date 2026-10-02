@@ -415,5 +415,5 @@ func isToolRoute(route string) bool {
 		return false
 	}
 	tail := strings.TrimPrefix(route, prefix)
-	return tail == "git-baseline" || tail == "repositories" || strings.HasPrefix(tail, "repositories/") || tail == "searches" || strings.HasPrefix(tail, "searches/") || tail == "replace-previews" || strings.HasPrefix(tail, "replace-previews/")
+	return tail == "file-names" || tail == "git-baseline" || tail == "repositories" || strings.HasPrefix(tail, "repositories/") || tail == "searches" || strings.HasPrefix(tail, "searches/") || tail == "replace-previews" || strings.HasPrefix(tail, "replace-previews/")
 }
