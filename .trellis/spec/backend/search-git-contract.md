@@ -20,7 +20,7 @@ W06 已接入多根搜索、选择后替换预览/应用、多仓库只读 Git �
 | `GET /repositories/:repoId/status` | `project_version` | `{repo_id,head,branch,changes,total_paths}` |
 | `GET /repositories/:repoId/refs` | `project_version` | `{items:[{name,commit_id}]}` |
 | `GET /repositories/:repoId/log` | `project_version,offset=0,head=可选固定对象ID` | `{head,items,next_offset}` |
-| `GET /repositories/:repoId/commits/:commitId` | `project_version,parent_id=可选父ID` | `{commit,parent_id,files}` |
+| `GET /repositories/:repoId/commits/:commitId` | `project_version,parent_id=可选父ID` | `{commit,parent_id,files,message,stats,github_url}` |
 | `POST /repositories/:repoId/comparisons` | `project_version,path,kind,reference,commit_id,parent_id` | `{repo_id,path,old_path,original,modified,binary,baseline}` |
 | `GET /git-baseline` | `project_version,folder_id,path` | `{state,repo_id,head,content,version}` |
 
@@ -48,7 +48,11 @@ Git `.git` 文件/链接、commondir/gitdir、alternates/http-alternates、promi
 
 repo item 为 `{id,folder_id,path,name,state,reason}`，state 为 available/unavailable。ID 绑定项目版本和元数据真实身份；不接受客户端仓库绝对路径。`changes=[{path,old_path,index,worktree}]` 来自 porcelain v1 -z；`total_paths` 是 HEAD 到磁盘的实际不同路径加未跟踪文件。暂存后磁盘又恢复 HEAD 的文件仍可出现在 changes，但不出现在 total_paths。空/删除文件与缺失对象必须区分：通过 ls-tree/ls-files 确认缺路径才返回空内容，缺 blob/tree/commit 报失败。
 
-commit 为 `{id,parents,author,date,subject}`，根 parents=[]，不能返回null。HEAD/暂存/未暂存比较识别 rename，old_path 非空时原边读取原路径，不把纯改名伪装成新增正文。文本比较单边≤8MiB；binary=true 时正文为空。baseline `state=tracked|untracked|binary|unavailable|no_repository`，version 可空；按真实绝对所属路径选最内层仓库，即使文件从另一重叠文件夹打开也正确。baseline 不用于写回缓冲区。
+commit 为 `{id,parents,author,date,subject}`，根 parents=[]，不能返回null。HEAD/暂存/未暂存及历史提交比较识别 rename，old_path 非空时原边读取原路径，不把纯改名伪装成新增正文。文本比较单边≤8MiB；binary=true 时正文为空。baseline `state=tracked|untracked|binary|unavailable|no_repository`，version 可空；按真实绝对所属路径选最内层仓库，即使文件从另一重叠文件夹打开也正确。baseline 不用于写回缓冲区。
+
+提交详情 `message` 为完整 UTF-8 多行消息，最多 64KiB，保留正文换行；读取 `%B` 时只去掉 Git format 添加的一条额外 LF，不使用日志 subject 代替正文。`stats=[{path,old_path,status,additions,deletions}]` 与 `files` 的顺序和路径一一对应，最多 5000 项；status 为 A/M/D/T/R/C，未改名 old_path 为空。增删行为非负安全整数，二进制的两个计数同时为 null，0 表示真实零行。统计基线与 `parent_id` 一致，根提交按空树，合并默认第一父或显式已验证父。
+
+固定 `diff-tree --raw --numstat --no-abbrev -M -z -r` 在同一私有元数据快照生成状态与计数，NUL 解析保留文件名的 tab/LF；重命名两边路径匹配统计，历史比较使用该 old_path。`github_url` 为空或 canonical `https://github.com/owner/repo/commit/<对象ID>`；只从显式本地 config 的 remote.origin.url 提取 github.com 的 HTTPS/SSH/scp Git 地址，拒绝 lookalike host、额外路径、query/fragment 和异常端口，去掉凭证后生成公共网页地址。原始 URL/凭证不返回、不记录、不写入可执行私有 config；不调用 remote/fetch 或 GitHub API，没有新增配置/环境变量。
 
 Git每次读请求生成独立快照，不提供持久 snapshot_id；一个响应内部由同一个 staging 和元数据复验保证一致，不承诺整个项目原子截点。状态、引用、历史的连续请求之间可能发生外部修改，不能拼成全仓库原子事务。历史分页和比较响应使用固定对象标明各自基线。
 
@@ -81,6 +85,7 @@ Git每次读请求生成独立快照，不提供持久 snapshot_id；一个响�
 - search临时真实rg：ignore/include、多根去重、BOM/CR/CRLF/emoji、捕获组/选择/原字节、结果截断、配置与文件冲突、取消和幂等、释放额度。
 - git临时真实仓库：staged/unstaged/HEAD总变化、根/merge父选择、删除、特殊名称、最内层/重叠根、缺对象/恶意配置/alternates/filter，原HEAD/index保持。
 - 共享 `tests/fixtures/search-git.json` 同时由Go DTO roundtrip与严格TS decoder验证；HTTP session/Origin/CSRF及日志不含正文。
+- `commit-details_test.go` 对照真实根提交/修改/删除/新增/纯改名/二进制/多行长消息，保留含 tab/LF 的路径、历史改名原边及源 HEAD/index/config；解析拒绝不匹配或不完整 NUL 记录。GitHub 地址测试覆盖 HTTPS/SSH/scp、凭证不回显及伪造 host/端口/路径拒绝；超过消息/文件/工具输出配额明确失败，不能回传截断成功或伪装零统计。
 - 本机真实后端浏览器链路与编辑器保护/工作台回归；真实Debian工具、手机软键盘和完整设备矩阵按用户明确指令后续验收。
 
 ## 7. 错误与正确示例

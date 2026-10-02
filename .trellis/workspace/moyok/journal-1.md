@@ -313,3 +313,38 @@ W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控�
 ### Next Steps
 
 - 继续W05/W06统一验收原待办，真实手机/触控板/Firefox与Debian目标授权仍待补齐；不提交、推送或归档。
+
+
+## Session 11: W06 提交与文件悬浮卡片
+<!-- trellis-session: v=2 fp=9ca2d27508dbb84a -->
+
+**Date**: 2026-10-02
+**Task**: W06 提交与文件悬浮卡片
+**Branch**: `main`
+
+### Summary
+
+完成提交完整消息、作者日期ID、真实文件/增删行数及GitHub链接卡片；历史文件列表和树共用卡片，详情有界缓存与展开复用。
+
+### Main Changes
+
+- 新增详情DTO与私有快照raw/numstat解析，保留重命名原路径及源仓库零写入；仅生成无凭证GitHub公共链接。
+- 复用官方shadcn HoverCard，450ms按需加载、8项/2MiB缓存、取消和失败无自动重试；同步PRD与前后端owner。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] Go全包test/vet/race通过；前端lint/typecheck/build、最终28文件152项单测通过。
+- [OK] Chromium/WebKit各5个不同真实后端用例通过，含完整消息、真实统计、外链本地拦截跳转、缓存复用、合并/分页/无轮询；源HEAD/index/config不变。
+- [OK] 21个本地Markdown链接、JSON、忽略规则和diff检查通过；官方本机开发实例重启就绪，8089/5179与专属测试根清理。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- W05/W06仍进行中，原Debian授权、真实手机和设备验收待办保留；不提交、推送或归档。

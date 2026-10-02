@@ -59,7 +59,7 @@ test("前台请求或隐藏区域不加载，卸载后移除监听", async () =>
 test("合并提交通过右键选择父提交，收起时选择默认父也能触发读取", async () => {
   const parents = ["b".repeat(40), "c".repeat(40)], merge = { ...commit, parents }, onParent = vi.fn();
   const mergedHistory = { ...history, items: [merge] }, onMore = vi.fn().mockResolvedValue(true);
-  const view = render(<GitHistory {...props} history={mergedHistory} expanded={commit.id} detail={{ commit: merge, parent_id: parents[0]!, files: ["src/file.ts"] }} onParent={onParent} onMore={onMore} />);
+  const view = render(<GitHistory {...props} history={mergedHistory} expanded={commit.id} detail={{ commit: merge, parent_id: parents[0]!, files: ["src/file.ts"], stats: [{ path: "src/file.ts", old_path: "", status: "M", additions: 1, deletions: 1 }], message: "First commit", github_url: "" }} onParent={onParent} onMore={onMore} />);
   expect(screen.queryByRole("combobox", { name: "比较父提交" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "src/file.ts" }).closest(".git-commit-files")).not.toBeNull();
   fireEvent.contextMenu(screen.getByRole("button", { name: /^First commit/ }), { clientX: 10, clientY: 10 });

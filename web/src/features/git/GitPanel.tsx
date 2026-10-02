@@ -20,6 +20,7 @@ import { GitSections } from "./GitSections";
 import { GitHistory } from "./GitHistory";
 import { GitFiles, GitFileViewToggle, type FileView } from "./GitFiles";
 import { refreshGitBaselines } from "./baseline-requests";
+import { useCommitDetails } from "./useCommitDetails";
 export function GitPanel({ project, mobile, visible }: { project: Project; mobile: boolean; visible: boolean }) {
   const auth = useAuth(), scope = useEditorScope();
   const csrf = auth.state.status === "authenticated" ? auth.state.session.csrf_token : "";
@@ -43,13 +44,16 @@ export function GitPanel({ project, mobile, visible }: { project: Project; mobil
   const baselineRevision = useRef(0);
   const [fullscreen, setFullscreen] = useState(false), [comparisonMode, setComparisonMode] = useState("side-by-side");
   const controller = useRef<AbortController | null>(null);
+  const details = useCommitDetails(project, repoID, visible, discoveryRevision, pending || refsOpen || comparison !== null);
+  const { cancelPreview } = details;
   const repository = repositories.find(item => item.id === repoID);
   const run = useCallback(async (work: (signal: AbortSignal) => Promise<void>) => {
+    cancelPreview();
     statusController.current?.abort(); setStatusPending(false);
     controller.current?.abort(); const current = new AbortController(); controller.current = current; setPending(true); setError(null);
     try { await work(current.signal); return !current.signal.aborted; } catch (cause) { if (!current.signal.aborted) setError(errorMessage(cause)); return false; }
     finally { if (!current.signal.aborted) setPending(false); }
-  }, []);
+  }, [cancelPreview]);
   useEffect(() => {
     if (!visible) { controller.current?.abort(); statusController.current?.abort(); setPending(false); setStatusPending(false); return; }
     const discovery = new AbortController(); setDiscovering(true); setError(null);
@@ -102,7 +106,7 @@ export function GitPanel({ project, mobile, visible }: { project: Project; mobil
       setBufferContent(kind === "staged" || kind === "commit" ? null : buffer?.state.content ?? null); setUseBuffer(false); setFullscreen(false); setComparisonMode("side-by-side"); setComparison(value);
     });
   }
-  async function loadDetail(commit: string, parent = "") { await run(async signal => { const value = await searchGitAPI.detail(project.id, project.version, repoID, commit, parent, signal); if (!signal.aborted) setDetail(value); }); }
+  async function loadDetail(commit: string, parent = "") { await run(async signal => { const value = await details.read(commit, parent, signal); if (!signal.aborted) setDetail(value); }); }
   const changeFiles = ((changeKind === "head" ? status?.total_paths.map(path => status.changes.find(item => item.path === path) ?? { path, old_path: "", index: "", worktree: "" }) : status?.changes.filter(item => changeKind === "staged" ? item.index !== " " && item.index !== "?" : item.worktree !== " ")) ?? []).map(item => ({ path: item.path, oldPath: item.old_path, status: (changeKind === "staged" ? item.index : item.worktree.trim() || item.index.trim()) || "M" }));
   function openRefs() { setRefsOpen(true); void run(async signal => { const result = await searchGitAPI.refs(project.id, project.version, repoID, signal); if (!signal.aborted) { setRefs(result.items); setReference(previous => result.items.some(item => item.name === previous) ? previous : result.items[0]?.name ?? ""); } }); }
   return <section className="feature-panel git-panel" aria-label="只读 Git"><div className="flex flex-wrap items-center justify-between gap-2"><h2>只读 Git</h2><div className="flex gap-1"><Button size="sm" variant="ghost" disabled={discovering || repository?.state !== "available"} onClick={openRefs}>本地引用</Button><Button size="sm" variant="outline" disabled={discovering} onClick={() => setDiscoveryRevision(value => value + 1)}>刷新</Button></div></div>
@@ -119,7 +123,8 @@ export function GitPanel({ project, mobile, visible }: { project: Project; mobil
         {status && !changeFiles.length && <p>工作区没有变更。</p>}{!status && !statusPending && !statusError && <p>点击刷新变更读取状态。</p>}
       </>}
       history={<><GitHistory history={history} detail={detail} expanded={expanded} branch={status?.branch ?? ""} view={historyView} pending={pending}
-        onExpand={(commit, open) => { setExpanded(open ? commit : ""); if (open) { setDetail(null); void loadDetail(commit); } else { controller.current?.abort(); setPending(false); } }}
+        preview={details.preview} onPreview={(commit, parent, open) => { if (open) { statusController.current?.abort(); setStatusPending(false); } details.show(commit, parent, open); }}
+        onExpand={(commit, open) => { setExpanded(open ? commit : ""); if (open) { setDetail(null); void loadDetail(commit, history?.items.find(item => item.id === commit)?.parents[0] ?? ""); } else { controller.current?.abort(); setPending(false); } }}
         onParent={(commit, parent) => { setExpanded(commit); setDetail(null); void loadDetail(commit, parent); }} onCompare={path => compare(path, "commit")}
         onMore={() => { if (!history || pending || history.next_offset < 0) return Promise.resolve(false); return run(async signal => { const next = await searchGitAPI.log(project.id, project.version, repoID, history.next_offset, signal, history.head); if (!signal.aborted) setHistory({ head: next.head, items: [...history.items, ...next.items], next_offset: next.next_offset }); }); }} />{pending && <Loading />}</>}
     />}

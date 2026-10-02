@@ -5,7 +5,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FileTypeIcon } from "@/features/workspaces/FileTypeIcon";
 import { gitFileTree, type FileNode } from "./file-tree";
-export type GitFile = { path: string; status?: string; oldPath?: string };
+import { FileHoverCard } from "./GitHoverCards";
+import type { GitFileStat } from "@/lib/api/search-git-decoder";
+export type GitFile = { path: string; status?: string; oldPath?: string; stat?: GitFileStat };
 export type FileView = "list" | "tree";
 export function GitFileViewToggle({ label, value, onChange }: { label: string; value: FileView; onChange(value: FileView): void }) {
   return <ToggleGroup aria-label={label} size="sm" spacing={0} value={[value]} onValueChange={values => { const next = values[0]; if (next === "list" || next === "tree") onChange(next); }}>
@@ -15,11 +17,12 @@ export function GitFileViewToggle({ label, value, onChange }: { label: string; v
 }
 function FileRow({ file, list, disabled, onSelect }: { file: GitFile; list: boolean; disabled: boolean; onSelect(path: string): void }) {
   const slash = file.path.lastIndexOf("/");
-  return <Button variant="ghost" className="git-file-row" disabled={disabled} aria-label={file.path} title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path} onClick={() => onSelect(file.path)}>
+  const button = <Button variant="ghost" className="git-file-row" disabled={disabled} aria-label={file.path} title={file.stat ? undefined : file.oldPath ? `${file.oldPath} → ${file.path}` : file.path} onClick={() => onSelect(file.path)}>
     <FileTypeIcon path={file.path} /><span className="truncate">{file.path.slice(slash + 1)}</span>
     {list && slash >= 0 && <span className="git-file-parent truncate">{file.path.slice(0, slash)}</span>}
     {file.status && <span className="git-file-status" data-status={file.status} aria-label={`状态 ${file.status}`}>{file.status}</span>}
   </Button>;
+  return file.stat ? <FileHoverCard stat={file.stat}>{button}</FileHoverCard> : button;
 }
 function Directory({ node, disabled, onSelect }: { node: FileNode; disabled: boolean; onSelect(path: string): void }) {
   const [open, setOpen] = useState(true);

@@ -55,3 +55,20 @@ Browser 截图位于被忽略的 `web/test-results/git-panel-chromium/`、`git-m
 初次 Chromium 使用临时浏览器路径时缺可执行文件，未执行；切换本机已安装 Chromium 后通过。右键单测发现 RadioItem 默认选择后不关闭，已显式使用 closeOnClick 并复验。最终截图在 `web/test-results/git-history-chromium/` 与 `git-history-webkit/`，专属测试根为 `/private/tmp/persistty-w06-browser-895442550`；这些运行产物不入版本管理。本批仅修改前端与记录，不重跑无新增改动的 Go 检查；上节 Go 结果为此前实际运行证据，真实设备验收状态不变。
 
 追加批次收尾：20 个本地 Markdown 链接、任务 JSON 与 `git diff --check` 通过。专属 8089/5179 进程已退出，测试根确认已删除；会话日志 Session 10 已记录，未提交、推送或归档。
+
+## 追加：提交与文件悬浮详情（2026-10-02）
+
+用户要求长提交消息通过悬浮卡片查看完整内容，并显示作者、时间、ID、文件与行数变更；GitHub origin 可一键打开提交。展开文件同样提供增删行数卡片。
+
+- 后端详情增加 `message,stats,github_url`，保留 `commit,parent_id,files`；完整消息上限 64KiB，统计最多 5000 文件，与实际父基线一致。固定 diff-tree raw/numstat/-M/-z 同时得到真实状态、改名前路径与增删行数，binary 为 null/null；历史改名比较读取旧路径。所有命令仍只在私有元数据快照执行，没有新的源 CLI、Git 写入或联网。
+- 本地 origin 只用于生成 canonical github.com 网页链接，支持 HTTPS、SSH、scp；去凭证、拒绝伪造 host/异常端口/query/fragment/额外路径。响应和可执行 Git config 不包含原始远端或凭证；链接仅用户点击后由浏览器打开。
+- 查找已有组件后使用官方 shadcn CLI `docs hover-card`、[官方文档](https://ui.shadcn.com/docs/components/base/hover-card)并 add 生成 HoverCard source，复用已安装 Base UI PreviewCard，无新增 manifest/锁文件依赖。450ms 悬停后打开，200ms 移出关闭；移入卡片可点击，长文本换行、宽高有界、超高滚动。文件列表和树共用相同卡片及 Material 图标。
+- `useCommitDetails` 将悬停与展开共享有界内存 LRU：8 项且总计最多 2MiB，刷新/项目版本/仓库/隐藏变化清理；默认父统一成第一父，避免空参数与实际父造成两次读取。超缓存预算的合法详情仍显示但不驻留。前台动作优先，快速移出/换项目中止预览，失败只显示局部错误，离开重悬停才重试；文件卡片不增加请求，没有固定轮询或持久化正文。
+
+实际检查：Go 全包 test/vet/race 全部通过（race HTTP 包本机耗时约 138 秒，非接口耗时）；前端 lint/typecheck/test/build 通过，新增缓存字节预算测试单独 5 项通过，最终完整单测 28 文件、152 项通过。补充测试后重跑其 lint 和完整 typecheck；字体、37 项许可证通过，既有 jsdom canvas 提示和构建大 chunk 提示保留。一次完整单测与开发实例构建重启同时执行时，原 LanguageSelect 键盘用例触及 5 秒测试上限；构建结束后未修改该用例或超时预算，独立重跑完整 152 项全部通过，失败轮不记通过。
+
+Chromium/WebKit 各 5 个不同真实后端用例通过：悬浮卡片、双区域、merge 父切换/只读比较、105 提交自动分页及两分钟无轮询/慢 status 展开。悬浮用例断言完整长标题及多行正文、作者/日期/完整 ID、5 文件 +3/-2 和 binary 数量、文件 +2/-1、rename 原路径、列表/树一致；移入卡片点击链接在新标签打开，重复悬停→展开仅 1 次详情请求，源 HEAD/index/config hash 不变。外部 URL 使用浏览器本地响应拦截，未访问真实 GitHub。截图在忽略目录 `web/test-results/git-hover-chromium-rerun/` 与 `git-hover-webkit-final/`。
+
+首轮 Chromium 发现 Base UI 给 anchor 默认附 button role，已明确 role=link、nativeButton=false 后实际点击回归通过。一次 WebKit 运行主动中止以避免构建生成资源与浏览器同时运行造成热更新干扰，该中止不计通过；构建结束后串行复跑全部 5 项通过。测试只使用 8089/5179、自有 `/private/tmp/persistty-w06-browser-2734426900`，真实设备待办和 W05/W06 in_progress 保留。
+
+收尾：官方开发 socket 确认原实例为 5173，使用 `./scripts/dev.sh restart` 恢复原参数重启成功，前后端就绪且新后端构建覆盖本轮源码，脚本保留 tmux 任务。专属 8089/5179 进程已退出、端口无监听，测试根已删除；21 个本地 Markdown 链接、修改的 JSON、忽略规则和 `git diff --check` 通过。本轮单代理执行，未提交、推送、归档或连接 Debian。

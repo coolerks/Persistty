@@ -119,5 +119,29 @@
     "modified": "one\ntwo\n",
     "binary": false,
     "baseline": "0123456789012345678901234567890123456789"
+  },
+  "detail": {
+    "commit": {
+      "id": "0123456789012345678901234567890123456789",
+      "parents": [],
+      "author": "测试",
+      "date": "2026-10-01T00:00:00Z",
+      "subject": "根提交"
+    },
+    "parent_id": "",
+    "files": [
+      "中 文.ts"
+    ],
+    "message": "根提交\n\n完整提交消息 😀\n",
+    "stats": [
+      {
+        "path": "中 文.ts",
+        "old_path": "",
+        "status": "A",
+        "additions": 2,
+        "deletions": 0
+      }
+    ],
+    "github_url": "https://github.com/fixture/repository/commit/0123456789012345678901234567890123456789"
   }
 }

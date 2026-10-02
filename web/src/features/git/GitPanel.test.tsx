@@ -33,7 +33,7 @@ test("慢状态不能锁住提交展开，取消后迟到状态不回填或重�
   repositories(); vi.spyOn(searchGitAPI, "log").mockResolvedValue(history);
   let finish: (value: typeof status) => void = () => {}; let signal: AbortSignal | undefined;
   const states = vi.spyOn(searchGitAPI, "status").mockImplementation((_p, _v, _r, current) => { signal = current; return new Promise(resolve => { finish = resolve; }); });
-  vi.spyOn(searchGitAPI, "detail").mockResolvedValue({ commit, parent_id: "", files: [] });
+  vi.spyOn(searchGitAPI, "detail").mockResolvedValue({ commit, parent_id: "", files: [], stats: [], message: "current commit", github_url: "" });
   render(<GitPanel project={project} mobile={false} visible />);
   await waitFor(() => expect(states).toHaveBeenCalledTimes(1));
   await userEvent.click(await screen.findByRole("button", { name: /^current commit/ }));

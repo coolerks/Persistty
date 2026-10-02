@@ -23,7 +23,7 @@ func TestSearchGitSharedDTO(t *testing.T) {
 	if err = json.Unmarshal(data, &values); err != nil {
 		t.Fatal(err)
 	}
-	dtos := map[string]any{"search": &search.Result{}, "preview": &search.Preview{}, "repositories": &gitview.Repositories{}, "status": &gitview.Status{}, "log": &gitview.Log{}, "baseline": &gitview.Baseline{}, "comparison": &gitview.Comparison{}}
+	dtos := map[string]any{"search": &search.Result{}, "preview": &search.Preview{}, "repositories": &gitview.Repositories{}, "status": &gitview.Status{}, "log": &gitview.Log{}, "detail": &gitview.Detail{}, "baseline": &gitview.Baseline{}, "comparison": &gitview.Comparison{}}
 	for name, dto := range dtos {
 		t.Run(name, func(t *testing.T) {
 			if err := json.Unmarshal(values[name], dto); err != nil {

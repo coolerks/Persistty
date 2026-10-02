@@ -45,6 +45,7 @@ type snapshot struct {
 	head       string
 	branch     string
 	directPath string
+	githubURL  string
 }
 
 func New(store *storage.Store, r *toolrunner.Runner, cfg config.Config) *Service {
@@ -388,6 +389,8 @@ func (s *Service) build(ctx context.Context, r repository, dir string, scope sna
 			return nil, ErrUnavailable
 		}
 		switch k {
+		case "remote.origin.url":
+			snap.githubURL = githubRepository(v)
 		case "core.repositoryformatversion":
 			if v != "0" && v != "1" {
 				return nil, ErrUnavailable
@@ -728,11 +731,18 @@ func (s *Service) detail(ctx context.Context, v *snapshot, id, parent string) (D
 	if !objectID(id) || parent != "" && !objectID(parent) {
 		return Detail{}, ErrInvalid
 	}
-	b, err := s.Runner.GitRun(ctx, v.dir, "show", "--no-show-signature", "--no-patch", "--format=%H%x1f%P%x1f%an%x1f%aI%x1f%s%x00", id, "--")
+	b, err := s.Runner.GitRun(ctx, v.dir, "show", "--no-show-signature", "--no-patch", "--format=%H%x1f%P%x1f%an%x1f%aI%x1f%s%x00%B", id, "--")
 	if err != nil {
 		return Detail{}, err
 	}
-	commits, err := parseCommits(b)
+	meta, message, ok := bytes.Cut(b, []byte{0})
+	if !ok || !utf8.Valid(message) || bytes.ContainsRune(message, 0) {
+		return Detail{}, ErrUnavailable
+	}
+	if len(message) > 64<<10 {
+		return Detail{}, files.ErrTooLarge
+	}
+	commits, err := parseCommits(meta)
 	if err != nil || len(commits) != 1 {
 		return Detail{}, ErrUnavailable
 	}
@@ -751,7 +761,7 @@ func (s *Service) detail(ctx context.Context, v *snapshot, id, parent string) (D
 			return Detail{}, ErrInvalid
 		}
 	}
-	args := []string{"diff-tree", "--no-commit-id", "--no-ext-diff", "--no-textconv", "--name-only", "-z", "-r"}
+	args := []string{"diff-tree", "--no-commit-id", "--no-ext-diff", "--no-textconv", "--raw", "--numstat", "--no-abbrev", "-M", "-z", "-r"}
 	if parent == "" {
 		args = append(args, "--root", id)
 	} else {
@@ -762,19 +772,19 @@ func (s *Service) detail(ctx context.Context, v *snapshot, id, parent string) (D
 	if err != nil {
 		return Detail{}, err
 	}
-	changed := []string{}
-	for _, p := range bytes.Split(b, []byte{0}) {
-		if len(p) > 0 {
-			if !files.ValidRelative(string(p), false) {
-				return Detail{}, ErrUnavailable
-			}
-			changed = append(changed, string(p))
-		}
+	stats, err := parseFileStats(b)
+	if err != nil {
+		return Detail{}, err
 	}
-	if len(changed) > 5000 {
-		return Detail{}, files.ErrTooLarge
+	changed := make([]string, 0, len(stats))
+	for _, stat := range stats {
+		changed = append(changed, stat.Path)
 	}
-	return Detail{commit, parent, changed}, nil
+	link := ""
+	if v.githubURL != "" {
+		link = v.githubURL + "/commit/" + commit.ID
+	}
+	return Detail{Commit: commit, ParentID: parent, Files: changed, Message: strings.TrimSuffix(string(message), "\n"), Stats: stats, GitHubURL: link}, nil
 }
 func (s *Service) Detail(ctx context.Context, project string, version int64, repo, id, parent string) (Detail, error) {
 	var out Detail
@@ -900,6 +910,7 @@ func (s *Service) Compare(ctx context.Context, project, repo string, input Compa
 	err := s.with(ctx, project, input.ProjectVersion, repo, scope, func(ctx context.Context, v *snapshot) error {
 		revision := v.head
 		modifiedRevision := ""
+		commitOldPath := ""
 		switch input.Kind {
 		case "head":
 		case "unstaged":
@@ -927,12 +938,21 @@ func (s *Service) Compare(ctx context.Context, project, repo string, input Compa
 			}
 			revision = detail.ParentID
 			modifiedRevision = detail.Commit.ID
+			for _, stat := range detail.Stats {
+				if stat.Path == input.Path {
+					commitOldPath = stat.OldPath
+					break
+				}
+			}
 		default:
 			return ErrInvalid
 		}
 		originalPath, err := s.originalPath(ctx, v, input.Kind, input.Path)
 		if err != nil {
 			return err
+		}
+		if commitOldPath != "" {
+			originalPath = commitOldPath
 		}
 		if originalPath != input.Path {
 			out.OldPath = originalPath

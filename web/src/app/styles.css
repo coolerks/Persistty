@@ -312,6 +312,14 @@
 .git-commit-id { color: var(--muted-foreground); font-size: .7rem; }
 .git-commit-detail { padding: 0 0 .5rem; }
 .git-commit-files { margin-left: 3px; border-left: 1px solid var(--border); }
+.git-hover-card { width: min(440px, calc(100vw - 2rem)); max-height: min(480px, calc(100dvh - 2rem)); overflow: auto; display: flex; flex-direction: column; gap: .65rem; }
+.git-hover-message { white-space: pre-wrap; overflow-wrap: anywhere; }
+.git-hover-footer { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; border-top: 1px solid var(--border); padding-top: .5rem; }
+.git-hover-footer > svg { width: 16px; height: 16px; flex-shrink: 0; }
+.git-hover-footer code { overflow-wrap: anywhere; min-width: 0; }
+.git-hover-baseline { color: var(--muted-foreground); font-size: .75rem; }
+.git-added { color: var(--primary); }
+.git-removed { color: var(--destructive); }
 .git-graph { position: relative; overflow: hidden; }
 .git-graph > svg:first-child { display: block; }
 .git-graph path { stroke-width: 1.5; fill: none; vector-effect: non-scaling-stroke; }

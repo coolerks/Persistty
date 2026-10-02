@@ -50,9 +50,19 @@ type Log struct {
 	NextOffset int      `json:"next_offset"`
 }
 type Detail struct {
-	Commit   Commit   `json:"commit"`
-	ParentID string   `json:"parent_id"`
-	Files    []string `json:"files"`
+	Commit    Commit     `json:"commit"`
+	ParentID  string     `json:"parent_id"`
+	Files     []string   `json:"files"`
+	Message   string     `json:"message"`
+	Stats     []FileStat `json:"stats"`
+	GitHubURL string     `json:"github_url"`
+}
+type FileStat struct {
+	Path      string `json:"path"`
+	OldPath   string `json:"old_path"`
+	Status    string `json:"status"`
+	Additions *int64 `json:"additions"`
+	Deletions *int64 `json:"deletions"`
 }
 type CompareInput struct {
 	ProjectVersion int64  `json:"project_version"`
