@@ -57,9 +57,9 @@ test("多文件夹无仓库禁用选择器，新仓库无提交可查看并全�
   const refreshed = page.waitForResponse(response => /\/repositories\/[^/]+\/status\?/.test(response.url()) && response.ok());
   await page.getByRole("button", { name: "刷新", exact: true }).click(); await refreshed;
   await expect(page.getByText("main · 尚无提交", { exact: true })).toBeVisible();
-  await page.getByRole("tab", { name: "历史", exact: true }).click(); await expect(page.getByText("尚无提交历史。", { exact: true })).toBeVisible();
-  await page.getByRole("tab", { name: "本地引用", exact: true }).click(); await expect(page.getByRole("combobox", { name: "本地分支或标签" })).toBeDisabled();
-  await page.getByRole("tab", { name: "变更", exact: true }).click(); await page.getByRole("button", { name: /^new.txt/ }).click();
+  await expect(page.getByText("尚无提交历史。", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "本地引用", exact: true }).click(); await expect(page.getByRole("combobox", { name: "本地分支或标签" })).toBeDisabled();
+  await page.getByRole("button", { name: "关闭引用", exact: true }).click(); await page.getByRole("button", { name: /^new.txt/ }).click();
   const dialog = page.getByRole("dialog"); const diff = dialog.locator(".monaco-diff-editor");
   await expect(diff).toHaveClass(/side-by-side/);
   await dialog.getByRole("tab", { name: "行内", exact: true }).click(); await expect(diff).not.toHaveClass(/side-by-side/);

@@ -473,49 +473,7 @@ func (s *Service) build(ctx context.Context, r repository, dir string, scope sna
 	}
 
 	if scope.worktree {
-		err = files.WalkSnapshotWithCopy(ctx, r.root, r.public.Path, s.Config.SearchOptions().MaxEntries, func(relative string, e files.Entry, copy files.SnapshotCopy) (bool, error) {
-			tail := strings.TrimPrefix(relative, r.public.Path)
-			tail = strings.TrimPrefix(tail, "/")
-			if e.Name == ".git" {
-				return false, nil
-			}
-			if strings.EqualFold(e.Name, ".git") {
-				return false, ErrUnavailable
-			}
-			target := filepath.Join(dir, filepath.FromSlash(tail))
-			if e.Kind == "directory" {
-				if err := os.MkdirAll(target, 0700); err != nil {
-					return false, err
-				}
-				return true, nil
-			}
-			if e.Size > limit-size {
-				return false, files.ErrTooLarge
-			}
-			if e.Kind == "unsupported" {
-				link, err := files.SnapshotLink(r.root, relative)
-				if err != nil {
-					return false, ErrUnavailable
-				}
-				if !utf8.ValidString(link) {
-					return false, ErrUnavailable
-				}
-				size += int64(len(link))
-				return false, os.WriteFile(target, []byte(link), 0600)
-			}
-			var content bytes.Buffer
-			v, mode, err := copy(&content, limit-size)
-			b := content.Bytes()
-			if err != nil {
-				return false, err
-			}
-			size += int64(len(b))
-			snap.versions[tail] = v
-			if e.Name == ".gitattributes" && bytes.Contains(b, []byte("filter=")) {
-				return false, ErrUnavailable
-			}
-			return false, os.WriteFile(target, b, 0600|(mode&0111))
-		})
+		err = s.copyWorktree(ctx, snap, &size, limit)
 		if err != nil {
 			return nil, err
 		}
@@ -551,7 +509,7 @@ func (s *Service) build(ctx context.Context, r repository, dir string, scope sna
 
 	return snap, nil
 }
-func (s *Service) with(ctx context.Context, project string, version int64, id string, scope snapshotScope, run func(*snapshot) error) error {
+func (s *Service) with(ctx context.Context, project string, version int64, id string, scope snapshotScope, run func(context.Context, *snapshot) error) error {
 	release, err := s.Runner.Acquire(ctx)
 	if err != nil {
 		return err
@@ -575,7 +533,7 @@ func (s *Service) with(ctx context.Context, project string, version int64, id st
 		}
 		return err
 	}
-	if err = run(snap); err != nil {
+	if err = run(ctx, snap); err != nil {
 		return err
 	}
 	// Return no mixed snapshot if tracked metadata changed while the command ran.
@@ -609,7 +567,7 @@ func objectID(value string) bool {
 }
 func (s *Service) Status(ctx context.Context, project string, version int64, id string) (Status, error) {
 	out := Status{RepoID: id, Changes: []Change{}, TotalPaths: []string{}}
-	err := s.with(ctx, project, version, id, snapshotScope{worktree: true}, func(v *snapshot) error {
+	err := s.with(ctx, project, version, id, snapshotScope{worktree: true}, func(ctx context.Context, v *snapshot) error {
 		out.Head = v.head
 		out.Branch = v.branch
 		b, err := s.Runner.GitRun(ctx, v.dir, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignore-submodules=all")
@@ -704,7 +662,7 @@ func (s *Service) refs(ctx context.Context, v *snapshot) ([]Ref, error) {
 }
 func (s *Service) Refs(ctx context.Context, project string, version int64, id string) ([]Ref, error) {
 	result := []Ref{}
-	err := s.with(ctx, project, version, id, snapshotScope{}, func(v *snapshot) error { var err error; result, err = s.refs(ctx, v); return err })
+	err := s.with(ctx, project, version, id, snapshotScope{}, func(ctx context.Context, v *snapshot) error { var err error; result, err = s.refs(ctx, v); return err })
 	return result, err
 }
 func parseCommits(b []byte) ([]Commit, error) {
@@ -740,7 +698,7 @@ func (s *Service) LogAt(ctx context.Context, project string, version int64, id s
 	if offset < 0 || offset > 10000 || head != "" && !objectID(head) {
 		return out, ErrInvalid
 	}
-	err := s.with(ctx, project, version, id, snapshotScope{}, func(v *snapshot) error {
+	err := s.with(ctx, project, version, id, snapshotScope{}, func(ctx context.Context, v *snapshot) error {
 		revision := head
 		if revision == "" {
 			revision = v.head
@@ -749,7 +707,7 @@ func (s *Service) LogAt(ctx context.Context, project string, version int64, id s
 		if revision == "" {
 			return nil
 		}
-		b, err := s.Runner.GitRun(ctx, v.dir, "log", "--no-show-signature", "--format=%H%x1f%P%x1f%an%x1f%aI%x1f%s%x00", "--max-count=51", "--skip="+strconv.Itoa(offset), revision, "--")
+		b, err := s.Runner.GitRun(ctx, v.dir, "log", "--topo-order", "--no-show-signature", "--format=%H%x1f%P%x1f%an%x1f%aI%x1f%s%x00", "--max-count=51", "--skip="+strconv.Itoa(offset), revision, "--")
 		if err != nil {
 			return err
 		}
@@ -820,7 +778,11 @@ func (s *Service) detail(ctx context.Context, v *snapshot, id, parent string) (D
 }
 func (s *Service) Detail(ctx context.Context, project string, version int64, repo, id, parent string) (Detail, error) {
 	var out Detail
-	err := s.with(ctx, project, version, repo, snapshotScope{}, func(v *snapshot) error { var err error; out, err = s.detail(ctx, v, id, parent); return err })
+	err := s.with(ctx, project, version, repo, snapshotScope{}, func(ctx context.Context, v *snapshot) error {
+		var err error
+		out, err = s.detail(ctx, v, id, parent)
+		return err
+	})
 	return out, err
 }
 
@@ -935,7 +897,7 @@ func (s *Service) Compare(ctx context.Context, project, repo string, input Compa
 	if input.Kind == "head" || input.Kind == "unstaged" || input.Kind == "reference" {
 		scope.file = input.Path
 	}
-	err := s.with(ctx, project, input.ProjectVersion, repo, scope, func(v *snapshot) error {
+	err := s.with(ctx, project, input.ProjectVersion, repo, scope, func(ctx context.Context, v *snapshot) error {
 		revision := v.head
 		modifiedRevision := ""
 		switch input.Kind {
@@ -1033,7 +995,7 @@ func (s *Service) Baseline(ctx context.Context, project string, version int64, f
 	}
 	p = filepath.ToSlash(p)
 	out.RepoID = selected.public.ID
-	err = s.with(ctx, project, version, selected.public.ID, snapshotScope{file: p}, func(v *snapshot) error {
+	err = s.with(ctx, project, version, selected.public.ID, snapshotScope{file: p}, func(ctx context.Context, v *snapshot) error {
 		out.Head = v.head
 		if v.head == "" {
 			out.State = "untracked"

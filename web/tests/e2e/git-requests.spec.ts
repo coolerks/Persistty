@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("Git 静置无轮询，刷新一次，慢状态请求可切到历史", async ({ page }) => {
+test("Git 静置无轮询，刷新一次，慢状态请求仍可展开历史", async ({ page }) => {
   const project = process.env.PERSISTTY_E2E_W06_PROJECT;
   test.skip(!project || !process.env.PERSISTTY_E2E_W06_ROOT?.startsWith("/private/tmp/persistty-w06-browser-"), "仅使用专属合成项目");
   const requests = { baseline: 0, status: 0, repositories: 0, log: 0 };
@@ -22,7 +22,8 @@ test("Git 静置无轮询，刷新一次，慢状态请求可切到历史", asyn
   await page.getByRole("button", { name: "只读 Git", exact: true }).click();
   const panel = page.getByRole("region", { name: "只读 Git" });
   await expect(panel.getByRole("button", { name: "刷新", exact: true })).toBeEnabled();
-  expect(requests).toMatchObject({ status: 1, baseline: 1, repositories: 1 });
+  await expect.poll(() => requests.status).toBe(1);
+  expect(requests).toMatchObject({ status: 1, baseline: 1, repositories: 1, log: 1 });
   await page.clock.install();
   await page.clock.fastForward(120000);
   expect(requests).toMatchObject({ status: 1, baseline: 1, repositories: 1 });
@@ -37,9 +38,10 @@ test("Git 静置无轮询，刷新一次，慢状态请求可切到历史", asyn
   const queued = new Promise<void>(resolve => { started = resolve; });
   await page.route("**/repositories/*/status?*", async route => { started(); await barrier; await route.continue().catch(() => {}); });
   await panel.getByRole("button", { name: "刷新", exact: true }).click(); await queued;
-  await panel.getByRole("tab", { name: "历史", exact: true }).click();
+  await panel.getByRole("button", { name: /^initial/ }).click();
+  await expect(panel.locator(".git-commit-detail").getByRole("button", { name: "sample.txt", exact: true })).toBeVisible();
   await expect(panel.getByRole("button", { name: /^initial/ })).toBeVisible();
   release();
-  expect(requests.log).toBe(1); await expect(panel.getByRole("alert")).toHaveCount(0);
+  expect(requests.log).toBe(3); await expect(panel.getByRole("alert")).toHaveCount(0);
   expect(errors).toEqual([]);
 });

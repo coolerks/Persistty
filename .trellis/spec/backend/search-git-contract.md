@@ -42,7 +42,7 @@ replacement≤4096字节，不能含NUL。preview file 为 `{id,folder_id,path,v
 
 ### Git 与工具隔离
 
-源目录由注册 root identity 和 no-follow 目录/叶句柄读取，枚举/文件读取后复验；不允许通过“校验后 os.Open 绝对路径”重新打开。CLI 只读0700私有 staging；不能把 cwd 当文件沙箱，也不能通过输出过滤补救根外读取。Git metadata 源不写入；只复制 HEAD/index/refs/packed-refs/objects/shallow/白名单 info 与 sharedindex，逐文件版本复验。对象/元数据合计默认512MiB，元数据流式拷贝；状态及需要改名识别的比较复制完整工作树，受同一上限约束，不静默遗漏 tracked 文件；历史/引用/提交详情/暂存与提交比较只复制元数据，baseline/本地引用与普通 HEAD/未暂存比较只补目标文件。仓库发现最多100个，重叠真实 `.git` identity 去重。
+源目录由注册 root identity 和 no-follow 目录/叶句柄读取，枚举/文件读取后复验；不允许通过“校验后 os.Open 绝对路径”重新打开。CLI 只读0700私有 staging；不能把 cwd 当文件沙箱，也不能通过输出过滤补救根外读取。Git metadata 源不写入；只复制 HEAD/index/refs/packed-refs/objects/shallow/白名单 info 与 sharedindex，逐文件版本复验。对象/元数据合计默认512MiB，元数据流式拷贝；状态及需要改名识别的比较复制 tracked 与未忽略的工作树候选，受同一上限约束，不静默遗漏 tracked 文件；历史/引用/提交详情/暂存与提交比较只复制元数据，baseline/本地引用与普通 HEAD/未暂存比较只补目标文件。仓库发现最多100个，重叠真实 `.git` identity 去重。
 
 Git `.git` 文件/链接、commondir/gitdir、alternates/http-alternates、promisor、未知 extensions、外部 filter 配置或属性先不可用。外部工作树 symlink 只读取 link 文本、在 staging 作为普通文件配合 `core.symlinks=false`，不读取目标。config 用 `--no-includes --file` 显式解析后重写允许 core/objectformat 设置；忽略 include、helpers、hooks、fsmonitor、pager、diff driver。命令为固定参数列表，无 shell；环境不继承 Git/rg/凭证配置，设置 `GIT_NO_LAZY_FETCH=1,GIT_OPTIONAL_LOCKS=0,GIT_TERMINAL_PROMPT=0` 及禁全局/系统配置，禁止联网补对象。git 使用 no-pager、no-ext-diff、no-textconv；stdout32MiB/stderr64KiB，stderr不进入HTTP/日志。并发最多2个任务，默认15秒，取消杀死自己的进程组，退出清理自己 staging。
 
@@ -100,7 +100,26 @@ Git每次读请求生成独立快照，不提供持久 snapshot_id；一个响�
 
 - 不以放宽并发/超时解决重复快照。Repositories 仍重新发现仓库；Service 仅保存最多1000项 opaque ID 到已发现位置的映射，满时清空；find 每次复验项目/文件夹版本、注册 root 和 `.git` identity，响应后再复验。映射不缓存状态、历史、正文或授权，未知ID回到有界发现，不能按客户端绝对路径执行Git。
 - Baseline 只检查请求文件的祖先目录；对所有包含该真实路径的注册根分别检查，选最内层仓库，保留重叠根语义。已删除的祖先可向上继续；链接/不安全父目录不能跳过安全失败。
-- 每请求独立0700 staging、白名单元数据/对象拷贝与完整版本复验不变。对象读取无须复制无关工作树。HEAD/未暂存目标在原边存在时只取该文件，直接按原路径比较；新增/潜在改名目标仍用完整工作树识别改名。过滤器配置仍拒绝，普通配置只解析一次并以验证过的枚举值生成私有安全config。
+- 每请求独立0700 staging、白名单元数据/对象拷贝与完整版本复验不变。对象读取无须复制无关工作树。HEAD/未暂存目标在原边存在时只取该文件，直接按原路径比较；新增/潜在改名目标仍用 tracked 与未忽略的完整候选识别改名。过滤器配置仍拒绝，普通配置只解析一次并以验证过的枚举值生成私有安全config。
 - 目标工作树路径不能含任意大小写的 `.git` 组件，不能覆盖 staging 元数据；完整工作树遍历跳过真实 `.git`，遇到大小写别名拒绝读取。单文件快照同样计算剩余字节预算；链接仍只复制 link 文本。
 - metadata 复验流式写向 io.Discard，不能为丢弃的对象内容分配整包正文内存。源 HEAD/index/config 保持不变，不将源仓库交给 CLI，不建立跨请求正文/对象缓存，不使用源硬链接。
 - 回归：`snapshot_scope_test.go` 用超过快照预算的无关大文件证明历史/详情/baseline/普通比较可用，而status不能静默省略文件；验证旧ID不能接受替换后的 `.git`、不可用仓库保留领域错误、保留元数据路径被拒绝。`performance_test.go` 以显式 PERSISTTY_GIT_PERF_ROOT 启用真实本机只读复测，所有CLI仍只执行于私有快照，断言源 HEAD/index/config hash 不变；耗时日志不含正文。
+
+## 状态快照剪枝与请求预算（2026-10-02）
+
+状态及改名识别所需工作树快照先在私有 staging 用 `ls-files --cached -z` 固定 tracked 路径及祖先集合，再广度枚举，每层复制安全的 `.gitignore/.gitattributes` 控制文件、批量 `check-ignore -z --stdin` 裁决。忽略的非 tracked 目录在枚举内部之前剪枝；tracked 路径与其祖先不得因 ignore 被丢弃，嵌套规则、否定规则、info/exclude 继续遵守。被忽略的属性文件仍是有效控制文件，外部 filter 保持不可用。stdin 每层至多 4MiB；目录项/深度/私有快照容量维持原边界。
+
+候选集合确定后复用 `WalkSnapshotWithCopy` 按安全目录句柄复制正文，仅进入候选目录；不在源目录调用 Git，不引入源对象 hardlink 或持久正文缓存。`check-ignore` 本身不接受 pathspec magic，固定命令使用 `--no-literal-pathspecs`，路径经 NUL stdin 提供，不启用 glob 或任意参数。
+
+HTTP 根据已注册 route pattern 为 search/Git 路由使用 `ToolTimeout()`，普通请求仍 10 秒；默认工具操作 15 秒、配置最多 120 秒。服务的同一有界 context 贯穿快照、命令和交付复验，不能让闭包重新使用无期限父 context。超预算仍明确 timeout，不增加自动重试。历史 `git log --topo-order` 保证后代先于父节点，分页继续固定首屏 HEAD。
+
+
+### 剪枝与预算的可执行检查
+
+- 范围：GET status、需要全树的 comparisons 和所有注册 search/Git 请求；API 签名及 envelope 不变，无新增配置或环境变量。
+- 签名：`copyWorktree(ctx, snap, size, limit)`；`Runner.GitIgnored(ctx, dir, input)` 只接受私有 staging 的路径列表，返回 NUL 匹配；exit 1 为空匹配成功。
+- 契约：忽略候选不能消耗正文预算，tracked 忽略文件必须仍被读取；同一配置预算覆盖 HTTP/service/子进程与元数据复验。命令及配额见上节。
+- 错误矩阵：源变化→409；非忽略/跟踪正文超预算→413；外部 filter/元数据指针→503 unavailable；配置预算耗尽→503 timeout；取消→中止并清理自己的 staging。
+- 用例：正常为 ignored 依赖目录剪枝；基础为 clean/未跟踪/无 HEAD；错误为忽略目录内 tracked 文件被错误丢弃或存在 filter 却报告 clean。
+- 必需测试：`worktree_test.go` 使用超过单目录 10000 条限制的忽略树、超过正文预算的忽略文件、tracked 修改与嵌套否定规则，完整对照合成仓库 CLI；`tool_deadline_test.go` 通过实际注册 middleware 验 3/15/25 秒配置与普通文件 10 秒，相似路径不能命中工具预算；原改名/缺对象/安全根与源零写入测试继续通过。
+- 反例：只提高 HTTP timeout 或硬编码排除 node_modules；正例：Git 原生忽略裁决先剪枝，同时用 index 跟踪集保留真实变更，并统一有界 context。

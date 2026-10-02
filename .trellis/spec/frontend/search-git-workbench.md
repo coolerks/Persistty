@@ -49,8 +49,27 @@ Fullscreen只改变本弹窗布局到100vw/100dvh，内容区内部滚动，标�
 
 ## Git 加载与背景请求（2026-10-01）
 
-GitPanel 只在打开、切换视图/仓库或明确刷新时读取；不以固定timer或focus反复全量status。刷新先重新发现仓库，再读取当前视图，发现世代包含project/version/revision，不能先给旧仓库再发一轮请求；切换视图中止旧请求，迟到结果不能更新新视图，失败保留错误且不自动重试。
+该批旧 Tabs 实现只在打开、切换视图/仓库或明确刷新时读取；当前双区域行为以末节为准。不以固定timer或focus反复全量status。刷新先重新发现仓库，再读取当前视图，发现世代包含project/version/revision，不能先给旧仓库再发一轮请求；切换视图中止旧请求，迟到结果不能更新新视图，失败保留错误且不自动重试。
 
 `baseline-requests.ts` 只共享活跃订阅的相同project/version/folder/path/文件etag键。跨组/StrictMode并发合并，背景基线串行最多一个；保存版本变化读取新基线，focus/online/visibility有30秒冷却（失败同样冷却），隐藏页面不发起请求，没有固定timer。手动Git刷新成功后明确刷新基线，一次刷新revision只通知一次。最后订阅卸载取消、移除排队任务和内存结果；不持久化正文或跨认证复用。Git状态需要用户打开视图或点击刷新更新，不能误宣称实时Git事件订阅。
 
 验证 `use-git-baseline.test.tsx` 的共用、串行、取消/迟到、冷却、失败和保存变化；`git-requests.spec.ts` 用真实隔离后端和浏览器时钟证明两分钟静置没有baseline/status轮询、明确刷新只一轮，并验证慢status时切历史仍可完成。
+
+## Git 双区域与提交图（2026-10-02）
+
+GitPanel 在仓库选择下同时展示上方变更、下方历史。`GitSections` 复用官方 shadcn Collapsible/Resizable，初始 50/50、最小 80px；两区开放时可拖动/键盘调整，收起时保留标题、另一开放区填满剩余空间，两区均可收起。重新展开恢复上次分隔比例。只保存本组件视图状态，不持久化 Git 正文。
+
+`GitFiles` 显示文件名、列表模式的父路径与已知 porcelain 状态、完整路径 title；目录与文件沿用 `FileTypeIcon` 的现有 Material 映射及主题。ToggleGroup 控制列表/文件树，两区独立选择；树只来自当前变更或提交详情，不调用资源管理器逐目录 API。嵌套目录使用 Collapsible，完整路径作为唯一键。
+
+历史 `commitGraph` 依据实际 parents 建立活动 lane，合并分叉/汇合及跨页连续线保留。`GitHistory` 在对应提交下展开文件和 merge 父选择，不把详情放在整个列表末端；分页固定首屏 HEAD。提交文件 DTO 只有 paths，不虚构 A/M/D 状态。图使用主题语义色，展开内容中持续显示经过该行的连接。引用比较入口复用独立 Dialog，保持已打开文件→选定本地引用的能力；只读比较窗口仍保留并排/行内、全屏和打开时编辑快照。
+
+历史不显示“加载更多提交”按钮。在历史自己的 `.git-section-content` 滚动区域距底部不超过 24px 时，发送当前 `next_offset` 和首屏 `head`，追加记录；不监听整个页面、不在 render/effect 初始化时连读所有页。`GitHistory.onMore(): Promise<boolean>` 返回实际请求是否成功；同步 ref 与前台 pending 阻止重复请求，`next_offset < 0` 停止监听。失败/取消不自动重试，保留已有历史与原错误反馈；离开底部再滚回可重试。隐藏区高度为零时不读取，effect 清理滚动监听；加载提示在列表之后，避免向顶部插入提示造成滚动跳动。
+
+合并提交不在详情中常驻展示“比较父提交”下拉框；提交区域复用已有 shadcn ContextMenu/RadioGroup，在右键菜单选择编号和短 ID，勾选实际当前父（首次默认第一父）。`onParent(commit, parent)` 显式传所属提交，即使该条收起或当前详情属于其他提交，也直接展开并只读取所选父，不能先读默认父再读所选父。RadioItem 用 `closeOnClick`，选择后关闭菜单；pending 时禁用选项。作者/时间保留。详情中的文件列表和树共用 `.git-commit-files`：向内 3px、1px 主题 border 左边框贯穿当前提交文件范围，不影响上方当前变更区。
+
+打开/仓库或项目版本变更/明确刷新时先读取历史，再串行读取状态，预留另一个工具槽给编辑基线。状态有独立 AbortController/loading/error，不禁用提交展开或仓库切换；历史/详情/比较操作取消尚未完成的状态读取，取消后用户可明确刷新变更，不自动重试。初始化 continuation 同时检查 effect 生命周期与其实际初始 signal，不能让旧请求在新仓库启动状态读取。隐藏/卸载清理两类请求；无固定 polling/focus 状态请求。手动整体刷新保持重新发现及一次基线失效通知。
+
+
+验证：`commit-graph.test.ts` 验实际合并分叉/汇合及追加分页的 lane 连续，文件树保留同名完整路径与改名元信息；`GitPanel.test.tsx` 验项目版本变化后旧历史不能继续读取旧状态、慢状态可取消而不回填或重试。`git-layout.spec.ts` 在真实隔离后端验 50/50、拖动/收展恢复、Material 文件/目录图标、真实 merge 两条 parents 及父选择→对应文件树→只读比较，并对源 HEAD/index/config hash。`git-requests.spec.ts` 验两分钟无轮询及慢状态期间展开历史；比较、无仓库、无 HEAD 和 W05 原 model/草稿回归保留。
+
+`GitHistory.test.tsx` 验仅历史滚到底触发、未完成请求去重、失败不连重试/重新滚入重试、pending/隐藏/末页不读及卸载释放；`git-pagination.spec.ts` 用专属 105 提交真实仓库验证 50→100→105、慢第二页期间零重复、冻结 HEAD、追加无丢失/重复及末页停止。

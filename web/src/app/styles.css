@@ -247,7 +247,7 @@
 .editor-tab:hover .editor-dirty-dot, .editor-tab-close:focus-visible .editor-dirty-dot { display: none; }
 .editor-save-warning { flex: none; }
 .workbench-status .editor-language-select { flex: none; width: auto; max-width: 35%; height: 23px; padding: 0 6px; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-size: 11px; }
-.workbench-status .editor-language-select:hover { background: var(--muted); }
+.workbench-status .editor-language-select:hover { background: var(--secondary); }
 .workbench-status .editor-language-select > svg { display: none; }
 .workbench-status .editor-language-select:focus-visible { outline: 1px solid var(--ring); outline-offset: -1px; }
 .workbench-status .editor-language-select [data-slot="select-value"] { overflow: hidden; text-overflow: ellipsis; }
@@ -278,6 +278,48 @@
 .replace-preview-files { max-height: 25vh; overflow: auto; min-width: 0; }
 .mobile-comparison { display: flex; flex-direction: column; gap: .75rem; max-height: 55vh; overflow: auto; min-width: 0; }
 .mobile-comparison pre { font-family: "Persistty Nerd Mono", monospace; white-space: pre; overflow: auto; padding: .5rem; border: 1px solid var(--border); }
-.git-line-added { border-left: 3px solid var(--chart-2); }
-.git-line-modified { border-left: 3px solid var(--chart-3); }
+.git-line-added { border-left: 3px solid var(--muted-foreground); }
+.git-line-modified { border-left: 3px solid var(--foreground); }
 .git-line-deleted { border-left: 3px solid var(--destructive); }
+
+/* Git owns two independently scrollable panes; long names never size the sidebar. */
+.git-panel { overflow: hidden; min-height: 0; gap: .5rem; }
+.git-panel > :not(.git-sections) { flex-shrink: 0; }
+.git-sections { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.git-section { display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 0 0 auto; }
+.git-section-open { flex: 1; height: 100%; }
+.git-section-heading { display: flex; flex: 0 0 36px; align-items: center; gap: .25rem; min-width: 0; }
+.git-section-trigger { flex: 1; min-width: 0; justify-content: flex-start; }
+.git-section-content { flex: 1; min-height: 0; overflow: auto; }
+.git-section-content p { padding: .4rem .25rem; }
+.git-branch-icon { width: 14px; height: 14px; flex-shrink: 0; }
+.git-branch-label { max-width: 5rem; font-size: .75rem; color: var(--muted-foreground); }
+.git-branch-summary, .git-commit-author { color: var(--muted-foreground); font-size: .75rem; }
+.git-file-row { display: flex; width: 100%; min-width: 0; height: 28px; padding: 0 .25rem; justify-content: flex-start; gap: .4rem; border-radius: 0; }
+.git-file-row > .file-type-icon { flex-shrink: 0; }
+.git-file-parent { flex: 1; color: var(--muted-foreground); font-size: .75rem; text-align: left; }
+.git-file-status { margin-left: auto; flex-shrink: 0; color: var(--muted-foreground); font-size: .75rem; }
+.git-file-status[data-status="A"], .git-file-status[data-status="?"] { color: var(--primary); }
+.git-file-status[data-status="D"] { color: var(--destructive); }
+.git-file-status[data-status="M"] { color: var(--muted-foreground); }
+.git-tree-children { margin-left: .8rem; border-left: 1px solid var(--border); padding-left: .25rem; }
+.git-directory[aria-expanded="true"] { background: transparent; }
+.git-directory:hover { background: var(--secondary); }
+.git-commit { display: grid; min-width: 0; position: relative; }
+.git-commit-body { min-width: 0; }
+.git-commit-trigger { width: 100%; min-width: 0; justify-content: flex-start; gap: .3rem; height: 32px; padding: 0 .2rem; border-radius: 0; }
+.git-commit-trigger > .truncate { flex: 1; text-align: left; }
+.git-commit-id { color: var(--muted-foreground); font-size: .7rem; }
+.git-commit-detail { padding: 0 0 .5rem; }
+.git-commit-files { margin-left: 3px; border-left: 1px solid var(--border); }
+.git-graph { position: relative; overflow: hidden; }
+.git-graph > svg:first-child { display: block; }
+.git-graph path { stroke-width: 1.5; fill: none; vector-effect: non-scaling-stroke; }
+.git-graph circle { stroke-width: 1.5; }
+.git-graph circle[data-expanded="true"] { r: 5; }
+.git-graph-tail { position: absolute; top: 32px; bottom: 0; height: calc(100% - 32px); }
+.git-graph-color-0 { stroke: var(--primary); fill: var(--primary); }
+.git-graph-color-1 { stroke: var(--muted-foreground); fill: var(--muted-foreground); }
+.git-graph-color-2 { stroke: var(--foreground); fill: var(--foreground); }
+.git-graph-color-3 { stroke: var(--destructive); fill: var(--destructive); }
+.git-graph-color-4 { stroke: var(--primary); fill: var(--primary); }

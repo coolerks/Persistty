@@ -116,13 +116,29 @@ func (r *Runner) Run(ctx context.Context, tool, dir string, input []byte, args .
 	}
 	return nil, -1, ErrUnavailable
 }
-func (r *Runner) GitRun(ctx context.Context, dir string, args ...string) ([]byte, error) {
+func gitArgs(args []string) []string {
 	fixed := []string{"--no-pager", "--literal-pathspecs", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "gc.auto=0", "-c", "maintenance.auto=false", "-c", "diff.external=", "-c", "core.attributesFile=/dev/null", "-c", "core.excludesFile=/dev/null"}
-	out, code, err := r.Run(ctx, "git", dir, nil, append(fixed, args...)...)
+	return append(fixed, args...)
+}
+func (r *Runner) GitRun(ctx context.Context, dir string, args ...string) ([]byte, error) {
+	out, code, err := r.Run(ctx, "git", dir, nil, gitArgs(args)...)
 	if err != nil {
 		return nil, err
 	}
 	if code != 0 {
+		return nil, ErrUnavailable
+	}
+	return out, nil
+}
+
+// GitIgnored evaluates only validated paths against private snapshot rules.
+// Exit 1 means none matched, not an execution failure.
+func (r *Runner) GitIgnored(ctx context.Context, dir string, input []byte) ([]byte, error) {
+	out, code, err := r.Run(ctx, "git", dir, input, gitArgs([]string{"--no-literal-pathspecs", "check-ignore", "-z", "--stdin"})...)
+	if err != nil {
+		return nil, err
+	}
+	if code != 0 && code != 1 {
 		return nil, ErrUnavailable
 	}
 	return out, nil

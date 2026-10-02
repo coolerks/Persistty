@@ -189,6 +189,11 @@ func (a *api) middleware() gin.HandlerFunc {
 		} else if strings.Contains(c.Request.URL.Path, "/uploads/") || strings.Contains(c.Request.URL.Path, "/archives/") || strings.HasSuffix(c.Request.URL.Path, "/download") {
 			timeout = 5 * time.Minute
 		}
+		// Match registered tool routes, not arbitrary URL substrings. The service
+		// and HTTP layer must share the configured bounded operation budget.
+		if isToolRoute(c.FullPath()) {
+			timeout = a.cfg.ToolTimeout()
+		}
 		ctx, cancel := context.WithTimeout(c.Request.Context(), timeout)
 		defer cancel()
 		c.Request = c.Request.WithContext(ctx)
@@ -364,4 +369,13 @@ func (a *api) error(c *gin.Context, err error) {
 		a.logger.Error("请求处理失败", "event", "request_error", "request_id", c.GetString("request_id"), "error_code", "internal_error")
 		a.fail(c, 500, "internal_error", "服务器内部错误。")
 	}
+}
+
+func isToolRoute(route string) bool {
+	const prefix = "/api/v1/projects/:id/"
+	if !strings.HasPrefix(route, prefix) {
+		return false
+	}
+	tail := strings.TrimPrefix(route, prefix)
+	return tail == "git-baseline" || tail == "repositories" || strings.HasPrefix(tail, "repositories/") || tail == "searches" || strings.HasPrefix(tail, "searches/") || tail == "replace-previews" || strings.HasPrefix(tail, "replace-previews/")
 }

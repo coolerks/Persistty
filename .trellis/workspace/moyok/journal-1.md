@@ -246,3 +246,70 @@ W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控�
 ### Next Steps
 
 - W05/W06真实Debian与手机/触控板等验收仍待完成，详见任务验收报告
+
+
+## Session 9: Git 超时预算与双区域提交图调整
+<!-- trellis-session: v=2 fp=c65a8b89dbcae28c -->
+
+**Date**: 2026-10-02
+**Task**: Git 超时预算与双区域提交图调整
+**Branch**: `main`
+
+### Summary
+
+修正 HTTP/工具预算和忽略树快照，接入可拖动可折叠的变更/历史面板及 Material 文件树；重启已管理的 5173 本机实例使修复生效。
+
+### Main Changes
+
+- Git 原生 ignore 剪枝保留 tracked 文件，所有操作使用同一预算 context；历史按拓扑顺序及真实父关系绘图。
+- 官方 Collapsible/Resizable/ToggleGroup 组合默认平分双区域，提交详情内联展开，保留父选择/本地引用/只读比较。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] Go 全包 test/vet/race 通过；最终受影响三包再验 test/race 与完整 vet。前端 lint/typecheck/build，26 文件 142 单测通过。
+- [OK] Chromium 13 个不同用例、WebKit 7 项通过；Halo 只读 status 约 2.43 秒，源 HEAD/index/config 哈希不变。21 本地链接/任务 JSON/diff 检查通过；Linux Git 测试二进制编译通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- W05/W06 保持进行中；真实 Debian 目标授权、真实手机输入法、触控板、shell 主题和 Firefox 仍按原验收队列记录。
+
+
+## Session 10: Git 历史触底加载与右键父提交选择
+<!-- trellis-session: v=2 fp=129dfd243767233e -->
+
+**Date**: 2026-10-02
+**Task**: Git 历史触底加载与右键父提交选择
+**Branch**: `main`
+
+### Summary
+
+移除手动分页按钮并实现触底加载；父提交选择移到右键菜单，文件范围增加3px缩进和左边框。
+
+### Main Changes
+
+- 复用已有 ContextMenu/RadioGroup，选父关闭菜单且直接展开指定提交；保留默认第一父、只读比较与冻结 HEAD。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 前端 lint/typecheck/test/build 通过，27文件146项单测；Chromium/WebKit各3项真实后端回归通过，105提交三页、慢请求去重、末页停止和真实merge父切换。
+- [OK] git diff --check、20个本地Markdown链接、task JSON通过；隔离8089/5179实例及自身测试根已清理。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 继续W05/W06统一验收原待办，真实手机/触控板/Firefox与Debian目标授权仍待补齐；不提交、推送或归档。
