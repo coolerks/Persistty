@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,7 +24,7 @@ func TestSearchGitSharedDTO(t *testing.T) {
 	if err = json.Unmarshal(data, &values); err != nil {
 		t.Fatal(err)
 	}
-	dtos := map[string]any{"search": &search.Result{}, "preview": &search.Preview{}, "repositories": &gitview.Repositories{}, "status": &gitview.Status{}, "log": &gitview.Log{}, "detail": &gitview.Detail{}, "baseline": &gitview.Baseline{}, "comparison": &gitview.Comparison{}}
+	dtos := map[string]any{"file_names": &search.FileNames{}, "search": &search.Result{}, "preview": &search.Preview{}, "repositories": &gitview.Repositories{}, "status": &gitview.Status{}, "log": &gitview.Log{}, "detail": &gitview.Detail{}, "baseline": &gitview.Baseline{}, "comparison": &gitview.Comparison{}}
 	for name, dto := range dtos {
 		t.Run(name, func(t *testing.T) {
 			if err := json.Unmarshal(values[name], dto); err != nil {
@@ -108,5 +109,47 @@ func TestSearchReplaceHTTPBoundToSessionAndCSRF(t *testing.T) {
 	}
 	if got := request(r, "GET", prefix+"/repositories", "", "", cookie, ""); got.Code != 428 {
 		t.Fatal(got.Code)
+	}
+}
+
+func TestFileNamesHTTPAuthenticationVersionAndNoBodyLeak(t *testing.T) {
+	r, cfg, logs := setup(t)
+	cookie, csrf := login(t, r, cfg)
+	root := t.TempDir()
+	os.WriteFile(filepath.Join(root, "SecretName.txt"), []byte("PRIVATE_BODY_MARKER"), 0600)
+	body, _ := json.Marshal(map[string]any{"name": "names", "folder_paths": []string{root}, "main_index": 0})
+	created := request(r, "POST", "/api/v1/projects", string(body), cfg.Server.PublicOrigin, cookie, csrf)
+	var p struct{ Data storage.Project }
+	json.Unmarshal(created.Body.Bytes(), &p)
+	if created.Code != 201 {
+		t.Fatal(created.Body)
+	}
+	prefix := "/api/v1/projects/" + p.Data.ID + "/file-names"
+	for _, tc := range []struct {
+		suffix string
+		cookie *http.Cookie
+		code   int
+	}{
+		{"?project_version=1&query=secret", nil, 401},
+		{"?query=secret", cookie, 428},
+		{"?project_version=2&query=secret", cookie, 409},
+		{"?project_version=1&query=", cookie, 400},
+		{"?project_version=1&query=secret%0A", cookie, 400},
+	} {
+		got := request(r, "GET", prefix+tc.suffix, "", "", tc.cookie, "")
+		if got.Code != tc.code {
+			t.Fatalf("%s: %d %s", tc.suffix, got.Code, got.Body)
+		}
+	}
+	got := request(r, "GET", prefix+"?project_version=1&query=secret", "", "", cookie, "")
+	var result struct{ Data search.FileNames }
+	json.Unmarshal(got.Body.Bytes(), &result)
+	if got.Code != 200 || len(result.Data.Items) != 1 || result.Data.Items[0].Path != "SecretName.txt" || strings.Contains(got.Body.String(), "PRIVATE_BODY_MARKER") {
+		t.Fatalf("response %d %s", got.Code, got.Body)
+	}
+	for _, secret := range []string{"SecretName.txt", "PRIVATE_BODY_MARKER", root, "query=secret"} {
+		if strings.Contains(logs.String(), secret) {
+			t.Fatalf("logged %s", secret)
+		}
 	}
 }

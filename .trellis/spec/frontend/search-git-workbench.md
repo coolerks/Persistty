@@ -59,7 +59,7 @@ Fullscreen只改变本弹窗布局到100vw/100dvh，内容区内部滚动，标�
 
 GitPanel 在仓库选择下同时展示上方变更、下方历史。`GitSections` 复用官方 shadcn Collapsible/Resizable，初始 50/50、最小 80px；两区开放时可拖动/键盘调整，收起时保留标题、另一开放区填满剩余空间，两区均可收起。重新展开恢复上次分隔比例。只保存本组件视图状态，不持久化 Git 正文。
 
-`GitFiles` 显示文件名、列表模式的父路径与已知 porcelain 状态、完整路径 title；目录与文件沿用 `FileTypeIcon` 的现有 Material 映射及主题。ToggleGroup 控制列表/文件树，两区独立选择；树只来自当前变更或提交详情，不调用资源管理器逐目录 API。嵌套目录使用 Collapsible，完整路径作为唯一键。
+`GitFiles` 显示文件名、列表模式的父路径与已知 porcelain 状态、完整路径 title；目录与文件沿用 `FileTypeIcon` 的现有 Material 映射及主题。现有 shadcn Tabs 控制列表/文件树，两区独立选择；树只来自当前变更或提交详情，不调用资源管理器逐目录 API。嵌套目录使用 Collapsible，完整路径作为唯一键。
 
 历史 `commitGraph` 依据实际 parents 建立活动 lane，合并分叉/汇合及跨页连续线保留。`GitHistory` 在对应提交下展开文件和 merge 父选择，不把详情放在整个列表末端；分页固定首屏 HEAD。提交文件使用真实详情 stats 的 A/M/D/T/R/C 状态，不从路径虚构状态。图使用主题语义色，展开内容中持续显示经过该行的连接。引用比较入口复用独立 Dialog，保持已打开文件→选定本地引用的能力；只读比较窗口仍保留并排/行内、全屏和打开时编辑快照。
 
@@ -85,3 +85,12 @@ GitPanel 在仓库选择下同时展示上方变更、下方历史。`GitSection
 正常：悬停长标题查看多行正文→链接打开→展开复用同一响应→文件显示真实 +2/-1；基础：根提交空树、无 origin 无链接、二进制只给明确提示；错误：503 只在卡片显示失败且不循环重试，新项目不接受旧响应。反例：每次 mousemove 发详情、把 null 转 0、把 origin 原串作 href；正例：官方延迟卡片→有界 scope cache→严格 canonical URL→用户点击 anchor。
 
 `useCommitDetails.test.tsx` 验缓存复用/逐出、scope/隐藏清理、迟到响应、busy 优先及失败重试边界；共享详情 fixture 和 decoder 验完整消息、统计及非法 URL/半 null。`git-hover.spec.ts` 在真实隔离后端验截断标题与完整卡片、移入可点击链接、一次详情供悬停和展开、列表/树的真实文本/二进制/改名信息，以及源 HEAD/index/config 不变。外链浏览器测试通过本地拦截响应验证跳转，不记为访问真实 GitHub 的证据。
+
+
+## 微圆角 UI 细化与文件名入口（2026-10-02）
+
+GitFileViewToggle 组合已有 Tabs/TabsList/TabsTrigger，与 HEAD/暂存/未暂存共用样式；不使用另一个 ToggleGroup 风格。两区标题只保留 hover 背景，移除 aria-expanded 导致的常驻灰底；TabsList 使用 workbench-tabs，当前 trigger 使用正文背景与细框。目录按钮 aria-label 为完整相对路径，同名嵌套目录可区分。
+
+侧栏实际收起时，ProjectWorkbench 将 GitPanel.visible 置 false，使既有请求/详情 owner 执行隐藏清理；重新打开恢复原表单/展示状态并按原契约加载，不卸载编辑器或终端。
+
+顶部名称搜索与内容搜索职责独立，UI/服务签名、忽略与配额、键盘/取消及测试以[文件名搜索契约](../backend/file-name-search.md)为准。文件名结果只携 folder_id/path，不替换编辑内容。

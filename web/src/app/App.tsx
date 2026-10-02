@@ -50,7 +50,7 @@ function Shell() {
       <NavLink to="/projects"><Folder aria-hidden="true" />项目</NavLink><NavLink to="/terminals"><TerminalSquare aria-hidden="true" />终端</NavLink>
     </nav>}
     {auth.state.status === "loading" ? <main className="page-main"><Loading /></main> : auth.state.status === "error" ? <main className="page-main"><Failure error={auth.state.error} retry={auth.retry} /></main> : <Outlet context={{ headerActions: <>
-      <Link className={buttonVariants({ variant: "ghost", size: "icon-sm" })} to="/projects" aria-label="Persistty 项目面板" title="Persistty 项目面板"><Folder /></Link><ThemeSelect />
+      <ThemeSelect />
       <Button variant="ghost" size="icon-sm" aria-label="退出登录" title="退出登录" disabled={pending} onClick={() => void logout()}><LogOut /></Button>
     </> }} />}
     {!workspaceRoute && <footer className="app-footer">{auth.state.status === "authenticated" ? "已登录" : "Persistty"}</footer>}

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path"
 	"path/filepath"
 	"persistty/internal/config"
 	"persistty/internal/files"
@@ -200,86 +199,15 @@ func (s *Service) Search(ctx context.Context, owner, project string, q Query) (R
 			return Result{}, err
 		}
 		tree := filepath.Join(dir, "tree-"+hex.EncodeToString([]byte{byte(index)}))
-		if err = os.Mkdir(tree, 0700); err != nil {
-			return Result{}, err
-		}
-		err = files.WalkSnapshot(ctx, root, "", options.MaxEntries-entriesSeen, func(relative string, e files.Entry) (bool, error) {
-			entriesSeen++
-			target := filepath.Join(tree, filepath.FromSlash(relative))
-			if e.Kind == "directory" {
-				if excluded(e.Name, options.ExcludeDirectories) {
-					return false, nil
-				}
-				if err := os.MkdirAll(target, 0700); err != nil {
-					return false, err
-				}
-				if e.Name == ".git" {
-					source := path.Join(relative, "info/exclude")
-					var b bytes.Buffer
-					_, _, err := files.CopySnapshot(ctx, root, source, &b, 1<<20)
-					if err == nil {
-						controlBytes += int64(b.Len())
-						if controlBytes > options.MaxBytes {
-							return false, toolrunner.ErrLimit
-						}
-						if err = os.MkdirAll(filepath.Join(target, "info"), 0700); err != nil {
-							return false, err
-						}
-						if err = os.WriteFile(filepath.Join(target, "info/exclude"), b.Bytes(), 0600); err != nil {
-							return false, err
-						}
-					} else if !os.IsNotExist(err) {
-						skip(folder.ID, source, "ignore_unavailable")
-						return false, err
-					}
-					return false, nil
-				}
-				return true, nil
-			}
-			if e.Name == ".git" {
-				return false, nil
-			}
-			if e.Kind != "file" {
-				skip(folder.ID, relative, "unsupported")
-				return false, nil
-			}
-			content := []byte{}
-			if e.Name == ".gitignore" || e.Name == ".ignore" || e.Name == ".rgignore" {
-				var b bytes.Buffer
-				_, _, err := files.CopySnapshot(ctx, root, relative, &b, 1<<20)
-				if err != nil {
-					return false, err
-				}
-				controlBytes += int64(b.Len())
-				if controlBytes > options.MaxBytes {
-					return false, toolrunner.ErrLimit
-				}
-				content = b.Bytes()
-			}
-			return false, os.WriteFile(target, content, 0600)
-		})
-		if err != nil {
-			if errors.Is(err, files.ErrTooLarge) {
-				result.Truncated = true
-			} else {
-				return Result{}, err
-			}
-		}
-		args := []string{"--no-config", "--files", "--hidden", "--null", "--glob", "!.git/**", "--glob", "!**/.git/**", "--", "."}
-		out, code, err := s.Runner.Run(ctx, "rg", tree, nil, args...)
+		budget := discoveryBudget{entries: entriesSeen, controlBytes: controlBytes}
+		allowed, err := s.discover(ctx, root, tree, &budget, func(relative, reason string) { skip(folder.ID, relative, reason) })
 		if err != nil {
 			return Result{}, err
 		}
-		if code != 0 && code != 1 {
-			return Result{}, toolrunner.ErrUnavailable
-		}
-		allowed := map[string]bool{}
-		for _, raw := range bytes.Split(out, []byte{0}) {
-			relative := strings.TrimPrefix(string(raw), "./")
-			if files.ValidRelative(relative, false) {
-				allowed[relative] = true
-			}
-		}
+		entriesSeen, controlBytes = budget.entries, budget.controlBytes
+		result.Truncated = result.Truncated || budget.truncated
+		var out []byte
+		var code int
 		// Globs are applied to a second discovery, then intersected with the ignore set.
 		if len(q.Include)+len(q.Exclude) > 0 {
 			filtered := []string{"--no-config", "--files", "--hidden", "--null"}

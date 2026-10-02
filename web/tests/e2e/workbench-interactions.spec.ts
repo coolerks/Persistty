@@ -54,7 +54,7 @@ test("工作台右键、树选择与重展开定位、已结束终端关闭和�
   for (const selector of [".editor-tabs", ".terminal-tabs"]) {
     const tabs = page.locator(selector);
     expect(await tabs.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
-    await page.locator("h1").click(); await page.mouse.move(0, 0);
+    await page.locator(".workbench-status > span").first().click(); await page.mouse.move(0, 0);
     const geometry = () => tabs.evaluate(element => {
       const label = element.querySelector('[role="tab"]');
       return { clientHeight: element.clientHeight, height: element.getBoundingClientRect().height, labelTop: label?.getBoundingClientRect().top, labelHeight: label?.getBoundingClientRect().height, trackHeight: getComputedStyle(element, "::-webkit-scrollbar").height, scrollbarColor: getComputedStyle(element).scrollbarColor };

@@ -1,5 +1,5 @@
 import { request } from "./client";
-import { decodeBaseline, decodeDetail, decodeGitComparison, decodeLog, decodePreview, decodeRefs, decodeReplaceComparison, decodeRepositories, decodeSearch, decodeStatus } from "./search-git-decoder";
+import { decodeFileNames, decodeBaseline, decodeDetail, decodeGitComparison, decodeLog, decodePreview, decodeRefs, decodeReplaceComparison, decodeRepositories, decodeSearch, decodeStatus } from "./search-git-decoder";
 const projectPath = (id: string) => `/projects/${encodeURIComponent(id)}`;
 const repoPath = (project: string, repo: string) => `${projectPath(project)}/repositories/${encodeURIComponent(repo)}`;
 const write = (body: unknown, csrf: string, signal: AbortSignal): RequestInit => ({ method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify(body), signal });
@@ -7,6 +7,7 @@ const remove = (csrf: string, signal: AbortSignal): RequestInit => ({ method: "D
 export type SearchQuery = { project_version: number; folder_id: string; path: string; pattern: string; regex: boolean; case_sensitive: boolean; whole_word: boolean; include: string[]; exclude: string[] };
 export type GitCompareInput = { project_version: number; path: string; kind: "head" | "staged" | "unstaged" | "reference" | "commit"; reference: string; commit_id: string; parent_id: string };
 export const searchGitAPI = {
+  fileNames: (p: string, version: number, query: string, signal: AbortSignal) => request(`${projectPath(p)}/file-names?${new URLSearchParams({ project_version: String(version), query })}`, decodeFileNames, { signal }),
   search: (p: string, input: SearchQuery, csrf: string, signal: AbortSignal) => request(`${projectPath(p)}/searches`, decodeSearch, write(input, csrf, signal)),
   cancelSearch: (p: string, id: string, csrf: string, signal: AbortSignal) => request(`${projectPath(p)}/searches/${id}`, () => undefined, remove(csrf, signal)),
   preview: (p: string, input: { project_version: number; search_id: string; selected_match_ids: string[]; replacement: string }, csrf: string, signal: AbortSignal) => request(`${projectPath(p)}/replace-previews`, decodePreview, write(input, csrf, signal)),

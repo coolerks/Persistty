@@ -62,12 +62,19 @@ basename/关联键小写匹配，显示原名保留；`.env` 的 env 后缀参�
 
 工作台外观归 `web/src/app/styles.css`；`--workbench-chrome/sidebar/border/tabs` 在浅色与深色定义，面板半径 `--workbench-panel-radius: 8px`、条目半径 `--workbench-item-radius: 4px`、分隔间隔 `--workbench-gap: 4px`。侧栏、各编辑器组和各终端组独立 1px 边框，禁止用阴影堆叠或整页卡片替代工作台结构。文件树 wrapper 左右 5px 内收；Git 行与终端标签保持微圆角。
 
-编辑器选中标签使用正文背景及顶部 6px 圆角，不恢复主题色顶线或 TabsTrigger 下划线。未选中保留 hover，focus 继续使用既有 shadcn 原语。右侧文件动作与可滚动 TabsList 仍同级，不把按钮放进滚动标签容器。侧栏按钮用 `aria-pressed` 表达当前 sidebar；它描述当前视图，不代表面板展开或服务器状态。
+编辑器选中标签使用正文背景及顶部 6px 圆角，不恢复主题色顶线或 TabsTrigger 下划线。未选中保留 hover，focus 继续使用既有 shadcn 原语。右侧文件动作与可滚动 TabsList 仍同级，不把按钮放进滚动标签容器。侧栏按钮用 `aria-pressed` 表达实际展开且属于当前 sidebar；收起时全部侧栏按钮取消选中，onResize 读取真实面板尺寸同步状态，包含拖动、底部按钮、关闭及恢复。三个入口同一 toggleSidebar，点击当前打开入口收起，重点击展开。终端按钮位于活动栏底部并按实际尺寸同步选中。
 
 底部 `.workbench .terminal-pane` 局部令 `--background: var(--workbench-sidebar)`，让 xterm 的 `colors(host)` 与 viewport 同时继承底部面板背景；上方终端跟随编辑器背景。不能只改父面板 background 而让 xterm 网格留下不同底色，也不能改全局 `--background` 影响登录、项目和 Monaco。
 
-react-resizable-panels 4.14.1 的 Panel 外层有内联 `overflow: visible`，子框边框在尺寸归零时仍可能产生最小盒子。仅在 `.workbench-body [data-panel]` 使用 `overflow: clip !important` 约束局部框边界；不靠 body 裁剪隐藏 document 溢出。默认透明 separator 占 4px，hover/focus/拖动时中央 2px 线显示主题色，现有 8px 热区不缩小。收起验收读取真实 `[data-panel]#terminal` 的 0px 高度，而非用仍有最小 border-box 的子 section 的 `toBeVisible()` 推断面板状态。
+react-resizable-panels 4.14.1 的 Panel 外层有内联 `overflow: visible`，子框边框在尺寸归零时仍可能产生最小盒子。仅在 `.workbench-body [data-panel]` 使用 `overflow: clip !important` 约束局部框边界；不靠 body 裁剪隐藏 document 溢出。默认透明 separator 占 4px，hover/focus/拖动时整个 4px 间隙显示主题色，现有 8px 热区不缩小。收起验收读取真实 `[data-panel]#terminal` 的 0px 高度，而非用仍有最小 border-box 的子 section 的 `toBeVisible()` 推断面板状态。
 
 移动单内容区统一一层 1px/8px 外框、4px 外边距，内层 editor-group/terminal-pane 取消双框。保留 `(max-width: 760px), (hover: none) and (pointer: coarse)`，触屏横屏不能切为桌面 Monaco。
 
 验证见 `web/tests/e2e/workbench-modern-ui.spec.ts`：键盘与鼠标调整、收展、固定动作与滚动标签、深浅主题、触屏 390×844/844×390、document 几何及零额外 mutation；继续复跑 editor-recovery、workbench-interactions 和 terminal-geometry。浏览器模拟不代替 Debian/物理手机验收。
+
+
+第二轮选中标签去掉 tab-row 顶部留白，使其与框顶衔接。主题 SelectTrigger 使用所选主题的 Monitor/Sun/Moon 图标，保留 aria-label/title、键盘/option 与 system 监听，复用原下拉组件；仅局部隐藏 chevron。项目名 DropdownMenu 负责项目设置/切换项目，顶栏不重复放属性入口；居中搜索调用既有 Dialog/Input/Button，移动端缩短提示并隐藏快捷键标记。
+
+项目页在原功能与确认 Dialog 外使用 workbench chrome/sidebar/border、8px 主框/4px 条目、紧凑标题/文件夹图标与路径，保留打开/新标签页/编辑/配置移除边界。项目数量不改变命令/后台资源的语义。
+
+Dialog 原语的 Tailwind translate 与 transform 是独立属性；顶部搜索弹窗用 `translate: -50% 0; transform: none` 设置水平居中、top:12%，不能再叠加 translateX。真实浏览器检查 dialog 中心与 viewport 中心一致，且窄屏宽度/上下边界容纳。

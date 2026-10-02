@@ -1,4 +1,4 @@
-# UI 调整检查报告
+# UI 调整检查报告（第一轮历史）
 
 日期：2026-10-02。实施和本机视觉验收已完成，任务保持 `in_progress`，待提交确认及后续归档。W05/W06/W07 的状态和未验收项保持原记录。
 
@@ -43,3 +43,35 @@
 ## 未执行与限制
 
 本轮未执行 Firefox、真实手机软键盘、Debian/systemd 或正式部署。没有新增后端并发行为，不额外执行 Go race。任务暂不提交/归档，等待工作流提交方案确认；不将其他活动任务记为完成。
+
+
+## 第二轮最终范围与检查（2026-10-02）
+
+第一轮已由用户提交 `6881b6c`，以上结果保留为历史。当前追加范围以 PRD 第二轮与[名称搜索契约](../../spec/backend/file-name-search.md)为准，包含项目页和后端 API；不再沿用“未修改 API/Go”的第一轮说明。
+
+- 面板高亮铺满 4px 间隙、活动标签贴顶；三个侧栏入口统一 toggle，实际 onResize 同步 pressed，终端入口置底。
+- Git 标题移除常驻底色，三类 Tabs 使用同一 shadcn 原语；目录使用完整路径 aria-label。实际侧栏收起会同步 GitPanel.visible 并执行原请求清理。
+- 项目页统一 chrome/微框与紧凑条目，打开按钮 flex 分配剩余宽度，编辑/移除保留在框内；所有确认与真实资源边界保持。
+- 项目名菜单提供设置/切换项目，主题图标复用 Select；名称搜索组合 Dialog/Input/Button，防抖/取消/版本与 folder 校验，结果仍由原编辑器打开。
+- 搜索安全发现抽取为 shared discover：普通正文不读，ignore 控制安全复制至私有树，名称 DTO 有界；内容搜索原逻辑复用同一 owner，没有扩大 CLI 对源路径的权限。
+
+| 检查 | 第二轮实际结果 |
+| --- | --- |
+| frontend lint/typecheck/test/build | 通过；31 文件 162 Vitest 测试；最终生产 build 含字体/许可验证，保留既有 canvas/chunk 提示 |
+| go test ./... / go vet ./... | 通过；搜索、HTTP 新测实际执行，其余包含缓存；初次 sandbox 下 httptest 本机监听受限，使用经审核执行环境完成测试 |
+| go test -race ./... | 通过；HTTP 含实际取消/生命周期测试，其余包含缓存；不表示远端 Debian 验收 |
+| Chromium 相关完整回归 | 14 项通过，含真实隔离 Git 历史、merge、文件统计/卡片与源 hash 不变，以及编辑器恢复/草稿/终端几何 |
+| WebKit 相关完整回归 | 14 项通过，包含同一真实 Git fixture 和触屏横竖屏 |
+| 最终标题/可见性/项目页专项 | Chromium / WebKit 各 4 项通过 |
+| DTO 与协议 | 共享 file_names fixture 同时通过 Go roundtrip 和 TS 严格解码；根外/额外字段/超限拒绝；HTTP 未认证/版本/非法 query/日志不泄露通过 |
+
+浏览器专项修正：旧工作台测试点击 h1 清除 hover，如今该处是项目菜单，改为点击状态文本；真实 fixture 有两个 src 目录，以完整路径 aria-label 消除歧义。初次两个 Playwright 进程共享默认报告目录造成 trace 冲突，后续全部串行并使用独立输出目录。新名称搜索测试初始错误 CSS 定位器已按实际 editor-breadcrumb 修正；这些失败未记为通过，记录上表的是修正后完整成功运行。
+
+视觉发现已修正：Dialog 的 translate 与 transform 叠加导致偏左，改为单一 translate 并加中心几何断言；项目打开按钮旧 width:100% 挤出右侧操作，改为 flex:1/min-width:0/width:auto 并补 1440/390 深浅主题的边界断言。原 model/runtime owner 不变，模拟触屏仍使用 textarea。
+
+实际内置浏览器检查：真实名称查询 Terminal→原 Monaco 打开；编辑标签切换、Git 列表/树、主题 light/dark、项目菜单→编辑 Dialog→取消、项目页操作可达，真实终端已连接。截图位于忽略的 `.cache/modern-ui/round2/`；测试报告位于 `web/test-results/round2-*`。
+
+未执行：Firefox、物理手机软键盘、Debian/systemd/部署。本次没有提权或系统配置改动，不改变 W05/W06/W07 未验收项；任务保持 in_progress，未提交/归档。
+
+
+最终结算：每个浏览器 15 个不同专项用例通过（完整回归14项 + 新项目页1项），最终重复4项覆盖最后修改的可见性、标题菜单、Dialog位置及项目动作边界。横竖分隔线完整宽高另补断言并实际运行；lint/typecheck/build在项目页最终样式后通过。所有日志/截图/fixture保持忽略，无额外未识别工作树修改。

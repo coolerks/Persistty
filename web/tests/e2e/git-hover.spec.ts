@@ -61,7 +61,7 @@ test("提交与文件悬浮卡片展示完整消息、真实统计并复用详�
       await commit.getByRole("button", { name: "src/modify.ts", exact: true }).hover(); await expect(fileCard).toContainText("2 行插入 (+)"); await expect(fileCard).toContainText("1 行删除 (-)");
       await commit.getByRole("button", { name: "binary.dat", exact: true }).hover(); await expect(fileCard).toContainText("二进制文件，不统计文本行数");
       await commit.getByRole("button", { name: "src/new.ts", exact: true }).hover(); await expect(fileCard).toContainText("原路径：src/old.ts"); await expect(fileCard).toContainText("重命名");
-      await panel.getByRole("button", { name: "历史文件展示：文件树", exact: true }).click();
+      await panel.getByRole("tab", { name: "历史文件展示：文件树", exact: true }).click();
       await commit.getByRole("button", { name: "src/modify.ts", exact: true }).hover(); await expect(fileCard).toContainText("2 行插入 (+)");
       expect(requests).toHaveLength(1); await page.screenshot({ path: info.outputPath("file-hover-tree.png") });
       expect(await hashes()).toEqual(before); expect(errors).toEqual([]);

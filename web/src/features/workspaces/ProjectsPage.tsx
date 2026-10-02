@@ -33,17 +33,19 @@ export function ProjectsPage() {
     } catch (error: unknown) { setMutationError(errorMessage(error)); }
     finally { setPending(false); }
   }
-  return <main className="page-main">
+  return <main className="page-main projects-page">
+    <section className="projects-panel" aria-label="项目列表">
     <div className="page-heading"><h1>项目</h1><div className="flex gap-2"><Button onClick={() => setEditing("new")}><Plus data-icon="inline-start" />新建项目</Button><Button size="icon" variant="ghost" aria-label="刷新项目" title="刷新项目" disabled={resource.status === "loading"} onClick={refresh}><RefreshCw /></Button></div></div>
     {resource.status === "loading" && <Loading />}
     {resource.status === "error" && <Failure error={resource.error} retry={refresh} />}
     {resource.status === "ready" && (resource.data.length === 0 ? <Empty><EmptyHeader><EmptyMedia variant="icon"><Folder /></EmptyMedia><EmptyTitle>暂无项目</EmptyTitle></EmptyHeader></Empty> :
-      <ul className="resource-list">{resource.data.map(project => <li key={project.id} className="flex items-center gap-1">
+      <ul className="resource-list project-list">{resource.data.map(project => <li key={project.id} className="project-item">
         <Button variant="ghost" className="resource-row" aria-label={`打开 ${project.name}`} onClick={() => setSelected(project)}>
-          <Folder data-icon="inline-start" /><span className="resource-text"><span>{project.name}</span><span className="resource-path">{project.folders.find(folder => folder.id === project.main_folder_id)?.path}</span></span>
+          <span className="project-icon"><Folder /></span><span className="resource-text"><span>{project.name}</span><span className="resource-path">{project.folders.find(folder => folder.id === project.main_folder_id)?.path}</span></span>
           <Badge variant="secondary">{project.folders.length} 个文件夹</Badge><ArrowUpRight data-icon="inline-end" />
         </Button><Button size="icon" variant="ghost" title="编辑项目" aria-label={`编辑 ${project.name}`} onClick={() => setEditing(project)}><Pencil /></Button><Button size="icon" variant="ghost" title="移除项目" aria-label={`移除 ${project.name}`} onClick={() => setRemoving(project)}><Trash2 /></Button>
       </li>)}</ul>)}
+    </section>
     {editing && <ProjectEditor key={editing === "new" ? "new" : editing.id} project={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refresh(); }} />}
     <Dialog open={removing !== null} onOpenChange={open => { if (!open && !pending) { setRemoving(null); setMutationError(null); } }}><DialogContent><DialogHeader><DialogTitle>移除项目</DialogTitle><DialogDescription>仅移除“{removing?.name}”的项目配置，不删除磁盘文件或终止已有终端。</DialogDescription></DialogHeader>
       {mutationError && <p role="alert" className="text-sm text-destructive">{mutationError}</p>}

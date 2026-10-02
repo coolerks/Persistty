@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useOutletContext } from "react-router";
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
-import { Files, FolderKanban, PanelBottom, PanelLeft, PanelRight, TerminalSquare, X, FileText, Search, GitBranch } from "lucide-react";
+import { Files, FolderKanban, PanelBottom, PanelLeft, PanelRight, TerminalSquare, X, FileText, Search, GitBranch, ChevronDown, Settings } from "lucide-react";
+import { FileQuickOpen } from "./FileQuickOpen";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDropTarget } from "@/lib/use-drop-target";
@@ -62,6 +64,8 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
   const [bottomFocusRequest, setBottomFocusRequest] = useState<{ id: string } | null>(null);
   const sidebarRef = usePanelRef();
   const terminalRef = usePanelRef();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [terminalOpen, setTerminalOpen] = useState(true);
   const sidebarLayout = useDefaultLayout({ id: `persistty-sidebar-v1-${project.id}`, storage: panelStorage });
   const verticalLayout = useDefaultLayout({ id: `persistty-vertical-v1-${project.id}`, storage: panelStorage });
   const splitLayout = useDefaultLayout({ id: `persistty-editor-split-v1-${project.id}`, storage: panelStorage });
@@ -78,6 +82,7 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
   const [searchIntent, setSearchIntent] = useState<SearchIntent | null>(null);
   const sidebar = view?.sidebar ?? "files";
   const showSidebar = (value: ProjectView["sidebar"]) => { useWorkspaceView.setState(state => ({ projects: { ...state.projects, [project.id]: { ...(state.projects[project.id] ?? emptyView()), sidebar: value } } })); sidebarRef.current?.expand(); };
+  const toggleSidebar = (value: ProjectView["sidebar"]) => { if (sidebar === value && !sidebarRef.current?.isCollapsed()) sidebarRef.current?.collapse(); else showSidebar(value); };
   const onSearch = (folderId: string, path: string, replace: boolean) => { setSearchIntent({ folderId, path, replace, id: Date.now() }); if (mobile) setMobileView("search"); else showSidebar("search"); };
   useEffect(() => {
     const keyboard = (event: KeyboardEvent) => {
@@ -91,8 +96,8 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
     window.addEventListener("keydown", keyboard); return () => window.removeEventListener("keydown", keyboard);
   }, [mobile, project.id, sidebarRef]);
   const openFromPanel = (file: OpenFile) => { if (mobile) useWorkspaceView.getState().openMobile(project.id, file); else { open(project.id, file); setActiveUpperId(null); } };
-  const searchPanel = <SearchPanel project={project} mobile={mobile} intent={searchIntent} visible={mobile ? mobileView === "search" : sidebar === "search"} onOpen={openFromPanel} />;
-  const gitPanel = <GitPanel project={project} mobile={mobile} visible={mobile ? mobileView === "git" : sidebar === "git"} />;
+  const searchPanel = <SearchPanel project={project} mobile={mobile} intent={searchIntent} visible={mobile ? mobileView === "search" : sidebarOpen && sidebar === "search"} onOpen={openFromPanel} />;
+  const gitPanel = <GitPanel project={project} mobile={mobile} visible={mobile ? mobileView === "git" : sidebarOpen && sidebar === "git"} />;
   const explorer = <Explorer onSearch={onSearch} project={project} reveal={reveal} onFile={(folderId, path) => { if (mobile) useWorkspaceView.getState().openMobile(project.id, { folderId, path }); else { open(project.id, { folderId, path }); setActiveUpperId(null); } }} />;
   const editorAreaRef = useRef<HTMLDivElement>(null);
   const [editorWidth, setEditorWidth] = useState(window.innerWidth - 300);
@@ -108,7 +113,7 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
     </>}
   </div>;
   return <EditorScopeProvider key={project.id} project={project}><TerminalRuntimeProvider key={project.id}><main className="workbench" aria-label={`${project.name} 工作台`}>
-    <div className="workbench-title"><h1 className="workbench-title-name">{project.name}</h1><Button size="icon-sm" variant="ghost" aria-label="编辑项目" title="编辑项目" onClick={onEdit}><FolderKanban /></Button><span className="terminal-heading-spacer" /><div className="workbench-title-actions">{shell?.headerActions}</div></div>
+    <div className="workbench-title"><h1 className="workbench-project-menu"><DropdownMenu><DropdownMenuTrigger render={<Button size="sm" variant="ghost" className="workbench-title-name" aria-label="项目菜单" />}><span>{project.name}</span><ChevronDown /></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuItem onClick={onEdit}><Settings />项目设置</DropdownMenuItem><DropdownMenuItem render={<Link to="/projects" />}><FolderKanban />切换项目</DropdownMenuItem></DropdownMenuContent></DropdownMenu></h1><FileQuickOpen project={project} onOpen={openFromPanel} /><div className="workbench-title-actions">{shell?.headerActions}</div></div>
     {(recoveryError || storageWarning) && <Alert><AlertDescription>{recoveryError ?? storageWarning}</AlertDescription></Alert>}
     {mobile ? <>
       <nav className="mobile-workbench-nav" aria-label="工作区视图">
@@ -121,19 +126,19 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
       <div className="mobile-workbench-content"><div className="panel-surface" hidden={mobileView !== "files"}>{explorer}</div><div className="panel-surface" hidden={mobileView !== "search"}>{searchPanel}</div><div className="panel-surface" hidden={mobileView !== "git"}>{gitPanel}</div>{mobileView === "editor" ? editors : mobileView === "terminal" ? <TerminalWorkspace project={project} mobile /> : null}</div>
     </> : <div className="workbench-body">
       <nav className="activity-bar" aria-label="活动栏">
-        <Button variant="ghost" size="icon" aria-label="资源管理器" aria-pressed={sidebar === "files"} title="资源管理器" onClick={() => sidebar === "files" ? sidebarRef.current?.isCollapsed() ? sidebarRef.current?.expand() : sidebarRef.current?.collapse() : showSidebar("files")}><Files /></Button>
-        <Button variant="ghost" size="icon" aria-label="搜索与替换" aria-pressed={sidebar === "search"} title="搜索与替换" onClick={() => showSidebar("search")}><Search /></Button>
-        <Button variant="ghost" size="icon" aria-label="只读 Git" aria-pressed={sidebar === "git"} title="只读 Git" onClick={() => showSidebar("git")}><GitBranch /></Button>
+        <Button variant="ghost" size="icon" aria-label="资源管理器" aria-pressed={sidebarOpen && sidebar === "files"} title="资源管理器" onClick={() => toggleSidebar("files")}><Files /></Button>
+        <Button variant="ghost" size="icon" aria-label="搜索与替换" aria-pressed={sidebarOpen && sidebar === "search"} title="搜索与替换" onClick={() => toggleSidebar("search")}><Search /></Button>
+        <Button variant="ghost" size="icon" aria-label="只读 Git" aria-pressed={sidebarOpen && sidebar === "git"} title="只读 Git" onClick={() => toggleSidebar("git")}><GitBranch /></Button>
         <Link className={buttonVariants({ variant: "ghost", size: "icon" })} to="/projects" aria-label="项目面板" title="项目面板"><FolderKanban /></Link>
-        <Button variant="ghost" size="icon" aria-label="终端面板" title="终端面板" onClick={() => terminalRef.current?.isCollapsed() ? terminalRef.current?.expand() : terminalRef.current?.collapse()}><TerminalSquare /></Button>
+        <Button variant="ghost" size="icon" className="activity-terminal" aria-label="终端面板" aria-pressed={terminalOpen} title="终端面板" onClick={() => terminalRef.current?.isCollapsed() ? terminalRef.current?.expand() : terminalRef.current?.collapse()}><TerminalSquare /></Button>
       </nav>
       <Group orientation="horizontal" defaultLayout={sidebarLayout.defaultLayout} onLayoutChanged={sidebarLayout.onLayoutChanged}>
-        <Panel id="sidebar" panelRef={sidebarRef} defaultSize="24%" minSize={200} maxSize="45%" collapsible collapsedSize={0} className="workbench-sidebar" onResize={(size, _id, previous) => { if (size.inPixels > 0 && (!previous || previous.inPixels === 0)) revealCurrentFile(); }}><div className="panel-surface" hidden={sidebar !== "files"}>{explorer}</div><div className="panel-surface" hidden={sidebar !== "search"}>{searchPanel}</div><div className="panel-surface" hidden={sidebar !== "git"}>{gitPanel}</div></Panel>
+        <Panel id="sidebar" panelRef={sidebarRef} defaultSize="24%" minSize={200} maxSize="45%" collapsible collapsedSize={0} className="workbench-sidebar" onResize={(size, _id, previous) => { setSidebarOpen(size.inPixels > 0); if (size.inPixels > 0 && (!previous || previous.inPixels === 0)) revealCurrentFile(); }}><div className="panel-surface" hidden={sidebar !== "files"}>{explorer}</div><div className="panel-surface" hidden={sidebar !== "search"}>{searchPanel}</div><div className="panel-surface" hidden={sidebar !== "git"}>{gitPanel}</div></Panel>
         <Separator className="workbench-separator vertical" />
         <Panel id="main" minSize="40%"><Group orientation="vertical" defaultLayout={verticalLayout.defaultLayout} onLayoutChanged={verticalLayout.onLayoutChanged}>
           <Panel id="editors" defaultSize="62%" minSize={160}>{editors}</Panel>
           <Separator className="workbench-separator horizontal" />
-          <Panel id="terminal" panelRef={terminalRef} defaultSize="38%" minSize={110} collapsible collapsedSize={0}><Group orientation="horizontal" defaultLayout={bottomLayout.defaultLayout} onLayoutChanged={bottomLayout.onLayoutChanged}>{Array.from({ length: view?.lowerCount ?? 1 }, (_, index) => <Fragment key={index}>{index > 0 && <Separator className="workbench-separator vertical" />}<Panel id={`terminal-group-${index}`} minSize="15%"><TerminalWorkspace project={project} group={index as GroupIndex} upperIds={upperTerminals.map(item => item.id)} onMoveToTop={moveToTop} onMoveToBottom={id => moveToBottom(id, index as GroupIndex)} focusRequest={bottomFocusRequest} onHide={() => terminalRef.current?.collapse()} /></Panel></Fragment>)}</Group></Panel>
+          <Panel id="terminal" onResize={size => setTerminalOpen(size.inPixels > 0)} panelRef={terminalRef} defaultSize="38%" minSize={110} collapsible collapsedSize={0}><Group orientation="horizontal" defaultLayout={bottomLayout.defaultLayout} onLayoutChanged={bottomLayout.onLayoutChanged}>{Array.from({ length: view?.lowerCount ?? 1 }, (_, index) => <Fragment key={index}>{index > 0 && <Separator className="workbench-separator vertical" />}<Panel id={`terminal-group-${index}`} minSize="15%"><TerminalWorkspace project={project} group={index as GroupIndex} upperIds={upperTerminals.map(item => item.id)} onMoveToTop={moveToTop} onMoveToBottom={id => moveToBottom(id, index as GroupIndex)} focusRequest={bottomFocusRequest} onHide={() => terminalRef.current?.collapse()} /></Panel></Fragment>)}</Group></Panel>
         </Group></Panel>
       </Group>
     </div>}

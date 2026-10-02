@@ -143,5 +143,15 @@
       }
     ],
     "github_url": "https://github.com/fixture/repository/commit/0123456789012345678901234567890123456789"
+  },
+  "file_names": {
+    "project_version": 1,
+    "items": [
+      {
+        "folder_id": "folder-1",
+        "path": "src/资料😀.ts"
+      }
+    ],
+    "truncated": false
   }
 }

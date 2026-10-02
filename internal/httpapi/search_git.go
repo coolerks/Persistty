@@ -10,6 +10,7 @@ import (
 )
 
 func (a *api) registerSearchGit(r *gin.RouterGroup) {
+	r.GET("/projects/:id/file-names", a.fileNames)
 	r.POST("/projects/:id/searches", a.createSearch)
 	r.DELETE("/projects/:id/searches/:searchId", a.cancelSearch)
 	r.POST("/projects/:id/replace-previews", a.createReplacePreview)
@@ -219,4 +220,17 @@ func (a *api) gitBaseline(c *gin.Context) {
 		return
 	}
 	a.success(c, v)
+}
+
+func (a *api) fileNames(c *gin.Context) {
+	version, ok := a.projectVersion(c)
+	if !ok {
+		return
+	}
+	value, err := a.search.Names(c.Request.Context(), c.Param("id"), version, c.Query("query"))
+	if err != nil {
+		a.error(c, err)
+		return
+	}
+	a.success(c, value)
 }

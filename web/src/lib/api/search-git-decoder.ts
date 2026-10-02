@@ -48,3 +48,11 @@ export type SearchFile = ReturnType<typeof decodeSearchFile>;
 export type ReplacePreview = ReturnType<typeof decodePreview>;
 export type PreviewFile = ReturnType<typeof decodePreviewFile>;
 export type Repository = ReturnType<typeof decodeRepository>;
+
+const fileNamePath = (value: unknown) => {
+  const path = str(value);
+  if (!path || path.startsWith("/") || path.includes("\0") || path.split("/").some(part => !part || part === "." || part === ".." || part === ".git")) throw new ProtocolError();
+  return path;
+};
+export const decodeFileNames = shape({ project_version: positive, items: list(shape({ folder_id: id, path: fileNamePath }), 100), truncated: bool });
+export type FileNames = ReturnType<typeof decodeFileNames>;

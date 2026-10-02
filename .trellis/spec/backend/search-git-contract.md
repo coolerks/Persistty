@@ -10,6 +10,7 @@ W06 已接入多根搜索、选择后替换预览/应用、多仓库只读 Git �
 
 | Route 后缀 | 请求 | 响应 data |
 | --- | --- | --- |
+| `GET /file-names` | `project_version,query` | `{project_version,items:[{folder_id,path}],truncated}`；详见[名称搜索](file-name-search.md) |
 | `POST /searches` | `project_version,folder_id,path,pattern,regex,case_sensitive,whole_word,include,exclude` | `id,project_version,files,truncated,skipped,expires_at` |
 | `DELETE /searches/:searchId` | 无 body | 204，释放搜索快照 |
 | `POST /replace-previews` | `project_version,search_id,selected_match_ids,replacement` | `id,project_version,files,results,state,expires_at` |

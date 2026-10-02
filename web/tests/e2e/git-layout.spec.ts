@@ -26,7 +26,7 @@ test("Git 双区域默认平分，可拖动、折叠并切换带 Material 图标
   await panel.getByRole("button", { name: "变更", exact: true }).click(); await expect(changes).toBeVisible();
   await panel.getByRole("button", { name: "历史", exact: true }).click(); await expect(history).toBeVisible();
   await expect.poll(async () => (await sizes())[0]!).toBeCloseTo(resized[0]!, 0);
-  await panel.getByRole("button", { name: "变更文件展示：文件树", exact: true }).click();
+  await panel.getByRole("tab", { name: "变更文件展示：文件树", exact: true }).click();
   await expect(changes.locator('.git-files[data-view="tree"]')).toBeVisible();
   const src = changes.getByRole("button", { name: "src", exact: true });
   await expect(src.locator("img[data-file-icon]")).toHaveCount(1);
@@ -34,7 +34,7 @@ test("Git 双区域默认平分，可拖动、折叠并切换带 Material 图标
   await src.click(); await expect(changes.getByRole("button", { name: "src/nested/example.ts", exact: true })).toBeHidden(); await src.click();
   await history.getByRole("button", { name: /^initial/ }).click();
   await expect(history.locator(".git-commit-detail").getByRole("button", { name: "sample.txt", exact: true })).toBeVisible();
-  await panel.getByRole("button", { name: "历史文件展示：文件树", exact: true }).click();
+  await panel.getByRole("tab", { name: "历史文件展示：文件树", exact: true }).click();
   await expect(history.locator('.git-files[data-view="tree"]')).toBeVisible();
   await expect(history.locator("svg circle")).toHaveCount(1);
   await panel.screenshot({ path: info.outputPath("git-split-tree.png") });
@@ -68,7 +68,7 @@ test("真实合并历史展示两条父关系，详情内切父节点并以文�
     await expect(merge.locator("path[data-parent]")).toHaveCount(2);
     await merge.getByRole("button", { name: /^Merge fixture/ }).click();
     await expect(merge.getByRole("button", { name: "ui/view.ts", exact: true })).toBeVisible();
-    await panel.getByRole("button", { name: "历史文件展示：文件树", exact: true }).click();
+    await panel.getByRole("tab", { name: "历史文件展示：文件树", exact: true }).click();
     await expect(merge.getByRole("button", { name: "ui", exact: true })).toBeVisible();
     const parents = git("rev-list", "--parents", "-n", "1", "HEAD").toString().trim().split(" ").slice(1);
     await expect(merge.getByRole("combobox", { name: "比较父提交" })).toHaveCount(0);
