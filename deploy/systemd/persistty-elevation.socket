@@ -1,0 +1,14 @@
+[Unit]
+Description=Persistty 单文件授权 socket
+
+[Socket]
+ListenStream=/run/persistty-elevation/broker.sock
+SocketUser=developer
+SocketGroup=developer
+SocketMode=0600
+DirectoryMode=0755
+RemoveOnStop=yes
+Backlog=2
+
+[Install]
+WantedBy=sockets.target

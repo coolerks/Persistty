@@ -101,6 +101,10 @@ func (a *api) saveContent(c *gin.Context) {
 		return err
 	})
 	if err != nil {
+		if permissionFailure(err) {
+			a.fail(c, 403, "permission_denied", "权限不足，无法保存文件。")
+			return
+		}
 		a.error(c, err)
 		return
 	}

@@ -6,6 +6,7 @@ import type { Project } from "@/lib/api/decoder";
 import { EditorContext } from "./editor-context";
 import { EditorScope, editorScopes } from "./editor-session";
 import { useWorkspaceView } from "./workspace-view";
+import { PrivilegedSaveDialog } from "./PrivilegedSaveDialog";
 
 export function EditorScopeProvider({ project, children }: { project: Project; children: ReactNode }) {
   const auth = useAuth();
@@ -35,5 +36,5 @@ export function EditorScopeProvider({ project, children }: { project: Project; c
     window.addEventListener("beforeunload", unload); window.addEventListener("online", refresh); window.addEventListener("focus", refresh);
     return () => { document.removeEventListener("click", leave, true); unsubscribe(); clearInterval(poll); window.removeEventListener("beforeunload", unload); window.removeEventListener("online", refresh); window.removeEventListener("focus", refresh); cleanup.current = setTimeout(() => { scope.dispose(); if (editorScopes.get(project.id) === scope) editorScopes.delete(project.id); }, 0); };
   }, [scope, project.id, navigate]);
-  return <EditorContext.Provider value={scope}>{leaveError && <Alert variant="destructive"><AlertDescription>{leaveError}</AlertDescription></Alert>}{children}</EditorContext.Provider>;
+  return <EditorContext.Provider value={scope}>{leaveError && <Alert variant="destructive"><AlertDescription>{leaveError}</AlertDescription></Alert>}{children}<PrivilegedSaveDialog /></EditorContext.Provider>;
 }

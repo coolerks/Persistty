@@ -45,3 +45,5 @@ return tx.Commit()
 
 ## 7. 错误与正确
 错误：Commit 失败忽略错误，成功响应。正确：检查 Commit，返回明确失败，再由可恢复协调逻辑核对外部副作用。
+
+W07 迁移0005新增真实 elevation_requests 元数据，单次 CAS、重启 indeterminate、注销/项目短发布裁决见 [W07 契约](elevation-contract.md)。不缓存正文/密码或恢复执行队列。

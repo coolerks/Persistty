@@ -1,0 +1,27 @@
+[Unit]
+Description=Persistty 单文件授权 broker
+Requires=persistty-elevation.socket
+After=persistty-elevation.socket
+
+[Service]
+Type=simple
+User=developer
+Group=developer
+ExecStart=/usr/local/libexec/persistty-elevatord
+# 此例外只属于独立 broker；Web 保持 NoNewPrivileges=true。
+NoNewPrivileges=false
+UMask=0077
+LimitCORE=0
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+# 用审核后的精确目标父目录替换，并同步 root-owned 策略。
+ReadWritePaths=/var/lib/persistty-elevation /srv/persistty-privileged
+# sudo/PAM 和文件属性保持所需上界；不授予挂载/修改网络等能力。
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER CAP_SETUID CAP_SETGID CAP_AUDIT_WRITE
+TimeoutStopSec=40s
+KillMode=control-group
+Restart=no
+StandardOutput=null
+StandardError=null
+# 不添加会隐式强制 NNP 的 seccomp/SystemCallFilter/RestrictAddressFamilies。

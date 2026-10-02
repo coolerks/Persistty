@@ -35,3 +35,7 @@ search:
 git:
   binary: /usr/bin/git
   max_bytes: 536870912
+elevation:
+  # 默认禁用；完成独立授权安装及真实 sudo/PAM 验收后才开启。
+  enabled: false
+  socket_path: /run/persistty-elevation/broker.sock

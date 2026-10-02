@@ -1,0 +1,5 @@
+# 必须将 developer 替换为已审核的现有开发账户，先用 visudo -cf 验证。
+# 双引号空参数列表限定 helper 无 argv 操作数；不得添加 ALL/NOPASSWD/SETENV。
+Defaults!/usr/local/libexec/persistty-file-helper closefrom_override, timestamp_timeout=0, passwd_tries=1, env_reset
+Defaults!/usr/local/libexec/persistty-file-helper !log_input, !log_output, !log_stdin, !log_stdout, !log_stderr
+developer ALL=(root) PASSWD: NOSETENV: NOLOG_INPUT: NOLOG_OUTPUT: /usr/local/libexec/persistty-file-helper ""

@@ -348,3 +348,36 @@ W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控�
 ### Next Steps
 
 - W05/W06仍进行中，原Debian授权、真实手机和设备验收待办保留；不提交、推送或归档。
+
+
+## Session 12: W07 单文件提权实施与本机验证
+<!-- trellis-session: v=2 fp=491ae30c634a7e84 -->
+
+**Date**: 2026-10-02
+**Task**: W07 单文件提权实施与本机验证
+**Branch**: `main`
+
+### Summary
+
+已完成 W07 源码、API、同缓冲区确认流程与安装审查产物；本机门禁通过。真实 Debian 特权验收待精确目标与独立授权，任务保持 in_progress，W05/W06 统一验收后置。
+
+### Main Changes
+
+- 新增持久一次请求、独立非 root broker/固定 root helper、Linux 元数据阶段提交、默认禁用配置与部署示例；同步 W07 owner 规范、PRD/实施/检查报告。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] go test ./...、go vet ./...、go test -race ./...；前端 lint/typecheck/test/build，30文件159单测；最终 Chromium7+WebKit7专项与编辑恢复6项通过。
+- [OK] Linux amd64/CGO=0 helper、broker、TTY探针与 files.test 构建通过；记录 SHA256，未执行 Linux/root/远端安装。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 取得 Debian 地址、现有 UID/GID、隔离文件及安装差异授权，补 sudo/PAM、原生文件/账本/故障、systemd NNP/cgroup、Nginx 零正文落盘；不能提前完成或归档。

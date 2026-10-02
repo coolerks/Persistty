@@ -4,6 +4,10 @@ import { editorURI } from "./editor-model-lifecycle";
 import { draftStorage, type DraftStorage, type FileDraft } from "./editor-drafts";
 import { applyEditorChanges, applyEditorText, type TextChange } from "./editor-text";
 import { allOpenFiles, fileKey, useWorkspaceView, type OpenFile } from "./workspace-view";
+import { elevationAPI, type ElevationAPI } from "@/lib/api/elevation-client";
+import type { ElevationPrepared, ElevationResult } from "@/lib/api/elevation-decoder";
+
+export type ElevationAttempt = { buffer: FileBuffer; epoch: number; content: string; generation: number; expected: FileVersion; projectVersion: number; file: OpenFile; csrf: string; request: ElevationPrepared | null; result: ElevationResult | null; phase: "preparing" | "prepared" | "executing" | "result" | "unknown"; error: unknown; querying: boolean; controller: AbortController };
 
 export type SaveState = "saved" | "pending" | "saving" | "conflict" | "failed" | "paused";
 export type BufferState = { status: "loading" | "ready" | "error"; content: string; base: FileContent | null; generation: number; saveState: SaveState; error: unknown; draftError: string | null; drafts: FileDraft[]; comparison: FileContent | null };
@@ -49,7 +53,7 @@ export class FileBuffer {
     if (this.state.status !== "ready") return;
     const content = changes ? applyEditorChanges(this.state.content, changes) : applyEditorText(this.state.content, text);
     if (content === this.state.content) return;
-    this.update({ content, generation: this.state.generation + 1, saveState: this.suspended ? this.state.saveState : "pending" });
+    this.update({ content, generation: this.state.generation + 1, saveState: this.suspended ? (this.state.saveState === "saved" ? "paused" : this.state.saveState) : "pending" });
     void this.persist(); this.schedule();
   }
   private schedule(): void {
@@ -70,7 +74,7 @@ export class FileBuffer {
   async save(explicit = false): Promise<void> {
     clearTimeout(this.timer);
     const base = this.state.base;
-    if (!base || !this.dirty || this.saving || this.replacementHold > 0 || !this.scope.csrf || (this.suspended && !explicit)) return;
+    if (!base || !this.dirty || this.saving || this.scope.elevation?.buffer === this || this.replacementHold > 0 || !this.scope.csrf || (this.suspended && !explicit)) return;
     if (this.state.saveState === "conflict" && !this.state.comparison) return;
     const epoch = this.epoch; const content = this.state.content; const generation = this.state.generation;
     const expected = this.state.comparison ?? base;
@@ -93,7 +97,66 @@ export class FileBuffer {
       await this.persist();
     } finally { this.saving = false; if (epoch === this.epoch) this.schedule(); }
   }
-  suspend(): void { this.suspended = true; clearTimeout(this.timer); this.request?.abort(); this.epoch++; if (this.state.status === "ready" && ["pending", "saving"].includes(this.state.saveState)) this.update({ saveState: "paused" }); }
+  get canElevate(): boolean { return this.dirty && this.state.status === "ready" && !this.saving && this.state.error instanceof ApiError && this.state.error.code === "permission_denied"; }
+  async beginElevation(): Promise<void> {
+    if (!this.canElevate || this.scope.elevation || !this.scope.csrf || !this.state.base) return;
+    this.suspend();
+    const attempt: ElevationAttempt = { buffer: this, epoch: this.epoch, content: this.state.content, generation: this.state.generation, expected: { ...(this.state.comparison ?? this.state.base).version }, projectVersion: this.scope.project.version, file: { ...this.file }, csrf: this.scope.csrf, request: null, result: null, phase: "preparing", error: null, querying: false, controller: new AbortController() };
+    this.scope.elevation = attempt; this.scope.emit();
+    try {
+      const prepared = await this.scope.elevationClient.prepare(this.scope.project.id, attempt.file.folderId, { project_version: attempt.projectVersion, path: attempt.file.path, expected_version: attempt.expected, content: attempt.content }, attempt.csrf, attempt.controller.signal);
+      if (!this.currentElevation(attempt)) { void this.scope.elevationClient.cancel(prepared.id, attempt.csrf, new AbortController().signal).catch(() => {}); return; }
+      attempt.request = prepared; attempt.phase = "prepared"; this.scope.emit();
+    } catch (error) { if (this.currentElevation(attempt)) { attempt.phase = "result"; attempt.error = error; this.scope.emit(); } }
+  }
+  private currentElevation(attempt: ElevationAttempt): boolean { return this.scope.elevation === attempt && this.epoch === attempt.epoch && this.scope.project.version === attempt.projectVersion && this.scope.csrf === attempt.csrf && fileKey(this.file) === fileKey(attempt.file); }
+  async executeElevation(password: string): Promise<void> {
+    const attempt = this.scope.elevation;
+    if (!attempt || attempt.buffer !== this || !attempt.request || attempt.phase !== "prepared" || !this.currentElevation(attempt)) return;
+    if (Date.parse(attempt.request.expires_at) <= Date.now()) { this.expireElevation(); return; }
+    attempt.phase = "executing"; attempt.error = null; this.saving = true; this.update({ saveState: "saving" });
+    try {
+      const pending = this.scope.elevationClient.execute(attempt.request.id, attempt.content, password, attempt.csrf, attempt.controller.signal); password = "";
+      const result = await pending;
+      if (this.currentElevation(attempt)) await this.acceptElevationResult(attempt, result);
+    } catch (error) { if (this.currentElevation(attempt)) { attempt.phase = "unknown"; attempt.error = error; this.update({ saveState: "failed", error: new Error("提权结果尚未确认，请查询结果；输入已保留。") }); } }
+    finally { this.saving = false; }
+  }
+  private async acceptElevationResult(attempt: ElevationAttempt, result: ElevationResult): Promise<void> {
+    if (!attempt.request || result.id !== attempt.request.id) throw new Error("提权响应与当前请求不一致。");
+    attempt.result = result; attempt.phase = ["executing", "indeterminate"].includes(result.state) ? "unknown" : "result";
+    if (result.state === "applied" && result.version) {
+      const dirty = this.state.content !== attempt.content; this.suspended = dirty;
+      this.update({ base: { content: attempt.content, version: result.version, kind: "text" }, comparison: null, error: null, saveState: dirty ? "paused" : "saved" });
+      await this.draftQueue;
+      if (!this.currentElevation(attempt)) return;
+      try { await this.scope.storage.remove(this.draftId, attempt.generation); } catch (reason) { this.update({ draftError: errorMessage(reason) }); }
+      if (this.dirty) await this.persist();
+    } else {
+      const conflict = result.code === "conflict";
+      this.update({ saveState: conflict ? "conflict" : "failed", ...(conflict ? { error: new ApiError(409, "conflict", "文件已变化，请先比较后重新保存。", result.id, null), comparison: null } : {}) });
+      await this.persist();
+    }
+    this.scope.emit();
+  }
+  async queryElevation(): Promise<void> {
+    const attempt = this.scope.elevation;
+    if (!attempt || attempt.buffer !== this || !attempt.request || attempt.phase !== "unknown" || attempt.querying || !this.currentElevation(attempt)) return;
+    attempt.error = null; attempt.querying = true; this.scope.emit();
+    try { const result = await this.scope.elevationClient.status(attempt.request.id, attempt.controller.signal); if (this.currentElevation(attempt)) await this.acceptElevationResult(attempt, result); }
+    catch (error) { if (this.currentElevation(attempt)) { attempt.error = error; this.scope.emit(); } }
+    finally { attempt.querying = false; if (this.currentElevation(attempt)) this.scope.emit(); }
+  }
+  expireElevation(): void { const attempt = this.scope.elevation; if (attempt?.buffer === this && attempt.phase === "prepared" && attempt.request) { attempt.phase = "result"; attempt.result = { id: attempt.request.id, state: "expired", code: "expired", version: null }; this.scope.emit(); } }
+  dismissElevation(): void {
+    const attempt = this.scope.elevation; if (attempt?.buffer !== this) return;
+    attempt.controller.abort(); this.scope.elevation = null;
+    if (attempt.request && !["applied", "rejected", "cancelled", "expired"].includes(attempt.result?.state ?? "")) void this.scope.elevationClient.cancel(attempt.request.id, attempt.csrf, new AbortController().signal).catch(() => {});
+    if (attempt.phase === "executing" || attempt.phase === "unknown") this.update({ saveState: "failed", error: new Error("提权结果尚未确认，请重新读取服务器并比较，输入已保留。") });
+    if (attempt.result?.state === "applied" && !this.suspended) this.schedule();
+    this.scope.emit();
+  }
+  suspend(): void { this.dismissElevation(); this.suspended = true; clearTimeout(this.timer); this.request?.abort(); this.epoch++; if (this.state.status === "ready" && ["pending", "saving"].includes(this.state.saveState)) this.update({ saveState: "paused" }); }
   holdReplacement(version: FileVersion): (() => Promise<void>) | null {
     if (this.state.status !== "ready" || this.dirty || this.saving || this.suspended || this.replacementHold || this.state.saveState !== "saved" || !this.state.base || !sameVersion(this.state.base.version, version)) return null;
     this.replacementHold++; this.suspend();
@@ -131,13 +194,14 @@ export class FileBuffer {
   }
 }
 export class EditorScope {
+  elevation: ElevationAttempt | null = null;
   readonly viewId = crypto.randomUUID();
   readonly buffers = new Map<string, FileBuffer>();
   private listeners = new Set<() => void>();
   revision = 0;
   private configuration = 0;
   csrf = "";
-  constructor(public project: Project, readonly storage: DraftStorage = draftStorage, readonly client: EditorAPI = api) {}
+  constructor(public project: Project, readonly storage: DraftStorage = draftStorage, readonly client: EditorAPI = api, readonly elevationClient: ElevationAPI = elevationAPI) {}
   emit = (): void => { this.revision++; for (const listener of this.listeners) listener(); };
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   snapshot = (): number => this.revision;

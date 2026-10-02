@@ -1,0 +1,83 @@
+{
+  "prepared": {
+    "data": {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "target_id": "example",
+      "target_path": "/srv/persistty-privileged/example.txt",
+      "content_hash": "sha256:11507a0e2f5e69d5dfa40a62a1bd7b6ee57e6bcd85c67c9b8431b36fff21c437",
+      "expires_at": "2026-10-02T00:01:00Z",
+      "state": "prepared"
+    },
+    "request_id": "test-request"
+  },
+  "results": [
+    {
+      "data": {
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "prepared",
+        "code": null,
+        "version": null
+      },
+      "request_id": "test-request"
+    },
+    {
+      "data": {
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "executing",
+        "code": null,
+        "version": null
+      },
+      "request_id": "test-request"
+    },
+    {
+      "data": {
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "applied",
+        "code": null,
+        "version": {
+          "identity": "1:2",
+          "mtime": "2026-10-02T00:00:00Z",
+          "size": 3,
+          "etag": "sha256:11507a0e2f5e69d5dfa40a62a1bd7b6ee57e6bcd85c67c9b8431b36fff21c437"
+        }
+      },
+      "request_id": "test-request"
+    },
+    {
+      "data": {
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "rejected",
+        "code": "authorization_failed",
+        "version": null
+      },
+      "request_id": "test-request"
+    },
+    {
+      "data": {
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "cancelled",
+        "code": "cancelled",
+        "version": null
+      },
+      "request_id": "test-request"
+    },
+    {
+      "data": {
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "expired",
+        "code": "expired",
+        "version": null
+      },
+      "request_id": "test-request"
+    },
+    {
+      "data": {
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "state": "indeterminate",
+        "code": "outcome_unknown",
+        "version": null
+      },
+      "request_id": "test-request"
+    }
+  ]
+}

@@ -279,6 +279,8 @@ func (s *Store) Session(ctx context.Context, token string) (time.Time, error) {
 	return t, nil
 }
 func (s *Store) DeleteSession(ctx context.Context, token string) error {
+	s.projectMu.Lock()
+	defer s.projectMu.Unlock()
 	_, err := s.db.ExecContext(ctx, "DELETE FROM sessions WHERE token_hash=?", HashToken(token))
 	return err
 }

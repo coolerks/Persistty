@@ -16,6 +16,7 @@ import (
 	"modernc.org/sqlite"
 	"persistty/internal/auth"
 	"persistty/internal/config"
+	"persistty/internal/elevation"
 	"persistty/internal/files"
 	"persistty/internal/gitview"
 	"persistty/internal/search"
@@ -27,6 +28,7 @@ import (
 )
 
 type api struct {
+	elevation *elevation.Service
 	search    *search.Service
 	git       *gitview.Service
 	cfg       config.Config
@@ -52,11 +54,19 @@ type successEnvelope struct {
 }
 
 func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Engine, error) {
+	return newRouter(cfg, store, logger, elevation.Client{Enabled: cfg.Elevation.Enabled, SocketPath: cfg.Elevation.SocketPath})
+}
+
+func newRouter(cfg config.Config, store *storage.Store, logger *slog.Logger, backend elevation.Backend) (*gin.Engine, error) {
 	service, err := auth.New(store, cfg.Auth.PasswordHash, cfg.TTL())
 	if err != nil {
 		return nil, err
 	}
 	a := &api{cfg: cfg, store: store, auth: service, logger: logger}
+	a.elevation, err = elevation.New(store, backend)
+	if err != nil {
+		return nil, err
+	}
 	runner := toolrunner.New(cfg.GitOptions().Binary, cfg.SearchOptions().Binary, cfg.ToolTimeout())
 	a.search = search.New(store, runner, cfg)
 	a.git = gitview.New(store, runner, cfg)
@@ -92,6 +102,7 @@ func New(cfg config.Config, store *storage.Store, logger *slog.Logger) (*gin.Eng
 	protected := r.Group("/api/v1")
 	protected.Use(a.authenticate())
 	a.registerSearchGit(protected)
+	a.registerElevation(protected)
 	protected.GET("/auth/session", func(c *gin.Context) { a.success(c, c.MustGet("session")) })
 	protected.POST("/auth/logout", func(c *gin.Context) {
 		if err := service.Logout(c.Request.Context(), c.MustGet("token").(string)); err != nil {
@@ -194,6 +205,9 @@ func (a *api) middleware() gin.HandlerFunc {
 		if isToolRoute(c.FullPath()) {
 			timeout = a.cfg.ToolTimeout()
 		}
+		if c.FullPath() == "/api/v1/elevation-requests/:requestId/execute" {
+			timeout = 35 * time.Second
+		}
 		ctx, cancel := context.WithTimeout(c.Request.Context(), timeout)
 		defer cancel()
 		c.Request = c.Request.WithContext(ctx)
@@ -280,6 +294,30 @@ func (a *api) fail(c *gin.Context, status int, code, message string) {
 	c.AbortWithStatusJSON(status, errorEnvelope{failure{code, message}, c.GetString("request_id")})
 }
 func (a *api) error(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, elevation.ErrUnavailable):
+		a.fail(c, 503, "elevation_unavailable", "提权保存尚未配置或授权服务不可用。")
+		return
+	case errors.Is(err, elevation.ErrInvalid):
+		a.fail(c, 400, "invalid_request", "提权请求格式无效。")
+		return
+	case errors.Is(err, elevation.ErrForbidden):
+		a.fail(c, 403, "forbidden", "此文件不在提权允许范围内。")
+		return
+	case errors.Is(err, elevation.ErrExpired):
+		a.fail(c, 410, "expired", "提权请求已过期，请重新授权。")
+		return
+	case errors.Is(err, elevation.ErrRateLimited):
+		c.Header("Retry-After", "60")
+		a.fail(c, 429, "rate_limited", "提权请求过于频繁，请稍后重试。")
+		return
+	case errors.Is(err, storage.ErrRequestConsumed):
+		a.fail(c, 409, "request_consumed", "本次提权请求已使用，请查询结果或重新授权。")
+		return
+	case errors.Is(err, storage.ErrSessionInvalid):
+		a.fail(c, 401, "unauthenticated", "请重新登录。")
+		return
+	}
 	switch {
 	case errors.Is(err, context.Canceled) || errors.Is(c.Request.Context().Err(), context.Canceled):
 		c.Abort()

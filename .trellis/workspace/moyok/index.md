@@ -10,7 +10,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
+- **Total Sessions**: 12
 - **Last Active**: 2026-10-02
 <!-- @@@/auto:current-status -->
 
@@ -21,7 +21,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~350 | Active |
+| `journal-1.md` | ~383 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 12 | 2026-10-02 | W07 单文件提权实施与本机验证 | - | `main` |
 | 11 | 2026-10-02 | W06 提交与文件悬浮卡片 | - | `main` |
 | 10 | 2026-10-02 | Git 历史触底加载与右键父提交选择 | - | `main` |
 | 9 | 2026-10-02 | Git 超时预算与双区域提交图调整 | - | `main` |

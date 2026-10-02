@@ -5,12 +5,15 @@ foundation已按实际需求建立cmd/persistty及config/auth/storage/httpapi；
 
 ```text
 cmd/persistty/       命令入口（serve、password）
+cmd/persistty-elevatord/ 独立非 root 单文件授权 broker 入口
+cmd/persistty-file-helper/ 固定无参数的短命 root helper 入口
 internal/config/    配置读取、默认值、验证
 internal/httpapi/   Gin router、middleware、DTO、handler
 internal/auth/      密码校验、server-side session
 internal/terminal/  tmux 元数据协调、attach bridge
 internal/workspace/ 工作区和安全文件访问
 internal/files/     文件版本、编辑、预览、watcher
+internal/elevation/ 单文件授权请求、Unix 协议、sudo 进程、root 策略与 nonce 账本
 internal/search/    rg 搜索、替换预览
 internal/transfer/  上传状态、校验、下载
 internal/gitview/   只读 Git 数据

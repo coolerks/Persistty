@@ -22,6 +22,7 @@ func decodeJSONWithLimit(w http.ResponseWriter, r *http.Request, target any, lim
 		return errors.New("expected json")
 	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
+	defer clear(body)
 	if err != nil {
 		var large *http.MaxBytesError
 		if errors.As(err, &large) {

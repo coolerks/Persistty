@@ -28,6 +28,7 @@ Persistty是Debian单用户浏览器终端与轻量文件工作台。W01 已有�
 | [W05 保存与预览](editor-preview-contract.md) | 强版本保存、JSON 字节边界、内容识别与图片/SVG 安全 |
 | [WebSocket](websocket-protocol.md) | 帧、重连、背压、watcher |
 | [质量与测试](quality-guidelines.md) | 后端门禁、真实集成与安全检查 |
+| [W07 单文件提权](elevation-contract.md) | 一次请求、独立broker/helper、root策略、提交裁决与未验收边界 |
 
 ## 开发前必读（Pre-Development Checklist）
 先加载当前 task 的 prd/design/implement 和 JSONL。所有后端任务读目录、错误、质量；涉及外部输入再读配置/认证、HTTP；文件/命令/Terminal/DB 按归属读完整文件，不能只读索引。跨层任务同时读前端索引和 guides。

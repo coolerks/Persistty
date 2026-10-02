@@ -74,3 +74,24 @@ func TestModes(t *testing.T) {
 		t.Fatal("trusted nonloopback")
 	}
 }
+
+func TestElevationConfig(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	base := configText(filepath.Join(dir, "data/db.sqlite"))
+	for _, tt := range []struct {
+		suffix string
+		valid  bool
+	}{{"", true}, {"elevation:\n  enabled: true\n  socket_path: /run/persistty-elevation/broker.sock\n", true}, {"elevation:\n  enabled: true\n", false}, {"elevation:\n  enabled: true\n  socket_path: relative.sock\n", false}, {"elevation:\n  enabled: true\n  socket_path: /run/../unsafe.sock\n", false}, {"elevation:\n  enabled: true\n  target: /etc/shadow\n", false}} {
+		if err := os.WriteFile(path, []byte(base+tt.suffix), 0600); err != nil {
+			t.Fatal(err)
+		}
+		c, err := Load(path)
+		if (err == nil) != tt.valid {
+			t.Fatal(tt, err)
+		}
+		if tt.suffix == "" && c.Elevation.Enabled {
+			t.Fatal("enabled by default")
+		}
+	}
+}

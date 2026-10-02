@@ -16,6 +16,7 @@ W01 已有 React/Vite 登录、项目路由、严格 API 解码和三主题；�
 | [W06 搜索与 Git](search-git-workbench.md) | 面板、替换buffer保护、HEAD标记与只读比较 |
 | [主题与资源](theme-assets.md) | 统一主题、字体、图标许可 |
 | [质量](quality-guidelines.md) | lint/typecheck/test/build/E2E |
+| [W07 提权确认](elevation-workbench.md) | 同buffer冻结快照、密码字段、取消/未知结果与草稿保护 |
 
 ## 开发前必读（Pre-Development Checklist）
 加载 task PRD/design/implement/JSONL。每个前端任务读目录、组件、状态、类型、质量；网络读 clients 和 backend HTTP/WS；Monaco/xterm 读生命周期，theme/icons 读资源。涉及写入或 close 读 backend 文件与Terminal 契约，不能从 UI 推断服务器安全。

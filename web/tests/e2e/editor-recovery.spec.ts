@@ -50,7 +50,7 @@ test("409 与真实 IndexedDB 草稿刷新后零自动 PUT，desktop diff 后明
   h.files.set("one.txt", { content: "external", revision: 5 }); await page.reload(); await expect(page.getByText(/此文件有 1 份本地草稿/)).toBeVisible(); expect(h.puts).toHaveLength(1);
   await page.getByRole("button", { name: "查看草稿 1", exact: true }).click(); await expect(page.getByRole("dialog")).toBeVisible(); await expect(page.getByRole("dialog").locator(".monaco-diff-editor")).toBeVisible();
   await page.getByRole("button", { name: "恢复到编辑器", exact: true }).click(); await expect(page.getByText("已暂停自动保存", { exact: true })).toBeVisible(); await page.waitForTimeout(1200); expect(h.puts).toHaveLength(1);
-  h.reject(false); await page.getByRole("button", { name: "保存恢复内容", exact: true }).click(); await expect(page.locator(".file-editor [role=status]").first()).toHaveText("已保存"); expect(h.puts).toHaveLength(2); expect(h.puts[1]?.expected_version.etag).toBe("one.txt:5"); expect(h.files.get("one.txt")?.content).toBe("\uFEFFmine"); expect(h.errors).toEqual([]);
+  h.reject(false); await page.getByRole("button", { name: "保存当前输入", exact: true }).click(); await expect(page.locator(".file-editor [role=status]").first()).toHaveText("已保存"); expect(h.puts).toHaveLength(2); expect(h.puts[1]?.expected_version.etag).toBe("one.txt:5"); expect(h.files.get("one.txt")?.content).toBe("\uFEFFmine"); expect(h.errors).toEqual([]);
 });
 test("终端多组与上下位置恢复不创建、终止或写终端输入", async ({ page }) => {
   await page.setViewportSize({ width: 1800, height: 1000 }); const h = await fixture(page); await page.goto(url); await page.locator('[data-terminal-id="ended"]').click({ button: "right" }); await page.getByRole("menuitem", { name: "移到上方第 3 组", exact: true }).click();

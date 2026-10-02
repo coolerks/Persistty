@@ -49,3 +49,5 @@ tls Cookie为`__Host-persistty_session`（Secure）；显式vpn_http/development
 错误：`CheckOrigin = true` 或 Cookie Secure 由任意 header 控制。正确：public_origin 严格匹配 + 显式可信代理 + 生产固定安全属性。
 
 W06 新增 `search`/`git` 固定程序路径及有界配置，默认值和范围见 [搜索/Git 契约](search-git-contract.md)。`exclude_directories: []` 可清空搜索依赖排除，不解除 `.git` 强排除。
+
+W07 默认关闭的 elevation 配置、独立 broker/socket/PAM 边界及系统安装门禁见 [单文件提权契约](elevation-contract.md)。Web NNP 与非 root 边界保持。

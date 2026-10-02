@@ -31,3 +31,7 @@ Web unit无PartOf/BindsTo/tmux依赖、ExecStop不杀终端。W03 的[独立 tmu
 升级只重启 Web，不停止/重启 tmux unit。**管理员停止或重启 tmux unit 会终止运行中的 pane/job**；`Restart=no` 不声称故障后恢复进程，主机重启也不恢复进程内存。tmux unit 不设置 `NoNewPrivileges=true` 或 `ProtectSystem=strict`，避免改变用户 shell 中 `sudo` 与正常文件操作语义；Web unit 的沙箱设置不继承到 tmux。DB迁移失败拒绝服务，回滚前核查schema兼容性；不复制在线.db忽略WAL，不靠Git回滚真实文件/进程。
 
 官方配置依据：[Nginx try_files](https://nginx.org/en/docs/http/ngx_http_core_module.html#try_files)、[Nginx请求缓存](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_request_buffering)。W02/W03 已在 Debian 隔离 user unit 验证 Web 与 tmux 生命周期分离，见[恢复实验](../tests/integration/debian/recovery/README.md)；不等于正式 system unit、Nginx 和 VPN 全矩阵已安装验收，后者属于 W08。
+
+## W07 独立授权服务
+
+[安装审查稿](elevation/README.md)包含固定 helper、非 root broker、root-owned 精确允许列表、命令专用 sudoers、独立 socket/service 和回退范围。Web 保留 NoNewPrivileges=true；未安装/非 Linux/默认禁用时提权返回明确不可用。新增 Nginx W07 准备/执行路径有界内存 buffer，系统密码不进入应用日志或持久请求元数据。产物可审查不等于已安装或已通过真实 sudo/PAM 验收。

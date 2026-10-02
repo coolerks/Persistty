@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "caller_uid": 1000,
+  "caller_gid": 1000,
+  "ledger_path": "/var/lib/persistty-elevation",
+  "protected_paths": ["/var/lib/persistty", "/opt/persistty", "/run/persistty-elevation"],
+  "targets": [{"target_id": "example", "target_path": "/srv/persistty-privileged/example.txt"}]
+}

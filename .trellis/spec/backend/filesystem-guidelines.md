@@ -60,3 +60,5 @@ Darwin 目录项元数据同样用 `fstatat(dirfd, name, AT_SYMLINK_NOFOLLOW)`�
 `WalkSnapshotWithCopy` 在当前访问回调提供限生命期 SnapshotCopy，复用已枚举的 no-follow 父句柄。叶文件强内容版本、两次内容一致性、普通模式与叶identity复验保持；回调/子目录结束后重新打开目录，复验当前注册根/目录身份和目录项快照。不能保存copy回调供异步或遍历返回后使用；取消、深度32、全局entries和单目录10000上限仍生效。`WalkSnapshot` 复用该walker并同样在遍历后复验。
 
 Darwin `openMutationParent` 通过逐组件 `openat(O_DIRECTORY|O_NOFOLLOW)`，在打开前后核对注册root device/inode；每个后续操作仍复验parent/leaf。避免每个深路径前缀重复调用os.Root.Lstat导致二次遍历。普通可跟随根内链接的openConstrained独立保持；Linux继续openat2的BENEATH/NO_XDEV/NO_SYMLINKS。两平台编译和本机竞态/链接哨兵回归不能代替真实Debian验收。
+
+W07 的 PreparePrivileged/Commit 元数据/临时文件复验与 Linux 限制见 [单文件提权契约](elevation-contract.md)；普通 Save 不自动获得高权限。

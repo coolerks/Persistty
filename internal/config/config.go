@@ -19,6 +19,10 @@ import (
 )
 
 type Config struct {
+	Elevation struct {
+		Enabled    bool   `yaml:"enabled"`
+		SocketPath string `yaml:"socket_path"`
+	} `yaml:"elevation"`
 	Search SearchConfig `yaml:"search"`
 	Git    GitConfig    `yaml:"git"`
 	Server struct {
@@ -166,6 +170,12 @@ func (c Config) CookieName() string {
 }
 
 func (c Config) Validate() error {
+	if c.Elevation.SocketPath != "" && (!filepath.IsAbs(c.Elevation.SocketPath) || filepath.Clean(c.Elevation.SocketPath) != c.Elevation.SocketPath || len(c.Elevation.SocketPath) > 100 || strings.ContainsAny(c.Elevation.SocketPath, "\x00\r\n")) {
+		return errors.New("elevation.socket_path必须是有界规范绝对socket路径")
+	}
+	if c.Elevation.Enabled && c.Elevation.SocketPath == "" {
+		return errors.New("启用提权需要elevation.socket_path")
+	}
 	if os.Geteuid() == 0 {
 		return errors.New("Persistty 不允许以root运行")
 	}

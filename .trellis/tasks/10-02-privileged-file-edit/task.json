@@ -1,0 +1,55 @@
+{
+  "id": "privileged-file-edit",
+  "name": "privileged-file-edit",
+  "title": "W07 单文件提权编辑",
+  "description": "通过网页一次性系统授权与受限root-owned helper实现单文件提权保存；W05/W06剩余统一验收延期",
+  "status": "in_progress",
+  "dev_type": "fullstack",
+  "scope": "elevation",
+  "package": null,
+  "priority": "P2",
+  "creator": "moyok",
+  "assignee": "moyok",
+  "createdAt": "2026-10-02",
+  "completedAt": null,
+  "branch": "main",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    ".trellis/spec/backend/elevation-contract.md",
+    ".trellis/spec/frontend/elevation-workbench.md",
+    "deploy/elevation/README.md",
+    "tests/integration/debian/w07/README.md",
+    ".trellis/tasks/10-02-privileged-file-edit/check-report.md"
+  ],
+  "notes": "2026-10-02 用户明确开始实施。已接入 W07 API/持久请求、独立非 root broker/固定 helper、单文件元数据阶段提交和同 buffer 确认 UI；默认禁用。W05/W06 统一实机验收延期，原证据保留。尚未安装或连接目标机，真实 sudo/PAM/root/systemd/Nginx 与 Linux-only 执行门禁仍待精确授权；不完成/归档，不提交。",
+  "meta": {
+    "planning": {
+      "state": "approved",
+      "updatedAt": "2026-10-02"
+    },
+    "executionPolicy": "inline",
+    "remoteInstallation": "requires_specific_authorization",
+    "implementation": {
+      "state": "implemented_pending_privileged_validation",
+      "updatedAt": "2026-10-02",
+      "localQuality": "passed"
+    },
+    "acceptance": {
+      "state": "pending_debian_authorization",
+      "pending": [
+        "sudo_pam",
+        "root_metadata_and_faults",
+        "systemd_nnp_and_cgroup",
+        "nginx_no_body_files",
+        "linux_native_file_suite"
+      ],
+      "localBrowser": "chromium7_webkit7_mock_api"
+    }
+  }
+}

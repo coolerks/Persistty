@@ -75,3 +75,5 @@ W06 HEAD标记、只读比较及目标替换保护见 [搜索/Git工作台](sear
 ProjectWorkbench 的 useMobile 使用 `(max-width: 760px), (hover: none) and (pointer: coarse)`；粗指针且无悬停的触屏保持基础文本编辑和单内容导航，旋转超过760px不切到桌面Monaco。窄鼠标桌面继续按宽度进入单内容视图，宽鼠标桌面继续多组；终端移动控件使用同一CSS媒体条件。触屏手机/平板共用移动记录，不能以视口变宽推断连接了鼠标或销毁缓冲区。
 
 错误：只按宽度判定，844px横屏把textarea替换成桌面模型并切换恢复记录。正确：触屏条件与窄屏条件共同决定布局，横竖屏保持当前输入和自动保存。`w05-platform-matrix.spec.ts` 用hasTouch、390×844→844×390验证导航、textarea、无Monaco、正文与落盘和横向溢出；此回归不是物理软键盘/输入法验收。
+
+W07 同buffer提权保存、冻结generation与草稿/model保持见 [提权确认契约](elevation-workbench.md)。成功授权不延续到之后输入。
