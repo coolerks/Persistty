@@ -1,0 +1,32 @@
+{
+  "id": "workbench-modern-ui",
+  "name": "workbench-modern-ui",
+  "title": "新版 VS Code 风格 UI 调整",
+  "description": "参照用户截图统一微圆角、细边框、面板间距与选中态，保留工作台行为并验证响应式和主题",
+  "status": "in_progress",
+  "dev_type": "frontend",
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "moyok",
+  "assignee": "moyok",
+  "createdAt": "2026-10-02",
+  "completedAt": null,
+  "branch": "main",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "web/src/app/styles.css",
+    "web/src/features/workspaces/ProjectWorkbench.tsx",
+    "web/tests/e2e/workbench-modern-ui.spec.ts",
+    ".trellis/spec/frontend/theme-assets.md",
+    "design-qa.md"
+  ],
+  "notes": "已完成实现和本机视觉/质量检查；待用户确认提交方案，暂不归档。",
+  "meta": {}
+}

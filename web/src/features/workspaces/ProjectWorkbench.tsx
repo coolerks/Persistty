@@ -121,9 +121,9 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
       <div className="mobile-workbench-content"><div className="panel-surface" hidden={mobileView !== "files"}>{explorer}</div><div className="panel-surface" hidden={mobileView !== "search"}>{searchPanel}</div><div className="panel-surface" hidden={mobileView !== "git"}>{gitPanel}</div>{mobileView === "editor" ? editors : mobileView === "terminal" ? <TerminalWorkspace project={project} mobile /> : null}</div>
     </> : <div className="workbench-body">
       <nav className="activity-bar" aria-label="活动栏">
-        <Button variant="ghost" size="icon" aria-label="资源管理器" title="资源管理器" onClick={() => sidebar === "files" ? sidebarRef.current?.isCollapsed() ? sidebarRef.current?.expand() : sidebarRef.current?.collapse() : showSidebar("files")}><Files /></Button>
-        <Button variant="ghost" size="icon" aria-label="搜索与替换" title="搜索与替换" onClick={() => showSidebar("search")}><Search /></Button>
-        <Button variant="ghost" size="icon" aria-label="只读 Git" title="只读 Git" onClick={() => showSidebar("git")}><GitBranch /></Button>
+        <Button variant="ghost" size="icon" aria-label="资源管理器" aria-pressed={sidebar === "files"} title="资源管理器" onClick={() => sidebar === "files" ? sidebarRef.current?.isCollapsed() ? sidebarRef.current?.expand() : sidebarRef.current?.collapse() : showSidebar("files")}><Files /></Button>
+        <Button variant="ghost" size="icon" aria-label="搜索与替换" aria-pressed={sidebar === "search"} title="搜索与替换" onClick={() => showSidebar("search")}><Search /></Button>
+        <Button variant="ghost" size="icon" aria-label="只读 Git" aria-pressed={sidebar === "git"} title="只读 Git" onClick={() => showSidebar("git")}><GitBranch /></Button>
         <Link className={buttonVariants({ variant: "ghost", size: "icon" })} to="/projects" aria-label="项目面板" title="项目面板"><FolderKanban /></Link>
         <Button variant="ghost" size="icon" aria-label="终端面板" title="终端面板" onClick={() => terminalRef.current?.isCollapsed() ? terminalRef.current?.expand() : terminalRef.current?.collapse()}><TerminalSquare /></Button>
       </nav>

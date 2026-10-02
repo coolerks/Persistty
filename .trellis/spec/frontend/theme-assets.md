@@ -56,3 +56,18 @@ basename/关联键小写匹配，显示原名保留；`.env` 的 env 后缀参�
 5. 用例：正常本地 TTF 加载后 Nerd glyph 与 ASCII 等宽；基础离线资源可访问；错误只写 family 名未分发，或加载字体后只 fit 却缓存旧字符尺寸。
 6. 测试：verify-font 验 name/cmap/hmtx 中 U+0041、U+E0B0、U+F017、U+F120；生产构建带字体与原许可；editor-recovery 验 fonts.check，terminal-geometry 验字体加载后的 controller/observer 字符几何和连接复用。真实 Oh My Zsh/Powerline/手机软键盘矩阵不从字体表推定通过。
 7. 错误与正确：错误 `terminal.options.fontFamily = "JetBrains Mono Nerd Font"` 但无资源；正确先自托管已校验资源、fonts.load，更新正确别名并触发测量，保留 fallback 与生命周期门禁。
+
+
+## 工作台微圆角与细框线（2026-10-02）
+
+工作台外观归 `web/src/app/styles.css`；`--workbench-chrome/sidebar/border/tabs` 在浅色与深色定义，面板半径 `--workbench-panel-radius: 8px`、条目半径 `--workbench-item-radius: 4px`、分隔间隔 `--workbench-gap: 4px`。侧栏、各编辑器组和各终端组独立 1px 边框，禁止用阴影堆叠或整页卡片替代工作台结构。文件树 wrapper 左右 5px 内收；Git 行与终端标签保持微圆角。
+
+编辑器选中标签使用正文背景及顶部 6px 圆角，不恢复主题色顶线或 TabsTrigger 下划线。未选中保留 hover，focus 继续使用既有 shadcn 原语。右侧文件动作与可滚动 TabsList 仍同级，不把按钮放进滚动标签容器。侧栏按钮用 `aria-pressed` 表达当前 sidebar；它描述当前视图，不代表面板展开或服务器状态。
+
+底部 `.workbench .terminal-pane` 局部令 `--background: var(--workbench-sidebar)`，让 xterm 的 `colors(host)` 与 viewport 同时继承底部面板背景；上方终端跟随编辑器背景。不能只改父面板 background 而让 xterm 网格留下不同底色，也不能改全局 `--background` 影响登录、项目和 Monaco。
+
+react-resizable-panels 4.14.1 的 Panel 外层有内联 `overflow: visible`，子框边框在尺寸归零时仍可能产生最小盒子。仅在 `.workbench-body [data-panel]` 使用 `overflow: clip !important` 约束局部框边界；不靠 body 裁剪隐藏 document 溢出。默认透明 separator 占 4px，hover/focus/拖动时中央 2px 线显示主题色，现有 8px 热区不缩小。收起验收读取真实 `[data-panel]#terminal` 的 0px 高度，而非用仍有最小 border-box 的子 section 的 `toBeVisible()` 推断面板状态。
+
+移动单内容区统一一层 1px/8px 外框、4px 外边距，内层 editor-group/terminal-pane 取消双框。保留 `(max-width: 760px), (hover: none) and (pointer: coarse)`，触屏横屏不能切为桌面 Monaco。
+
+验证见 `web/tests/e2e/workbench-modern-ui.spec.ts`：键盘与鼠标调整、收展、固定动作与滚动标签、深浅主题、触屏 390×844/844×390、document 几何及零额外 mutation；继续复跑 editor-recovery、workbench-interactions 和 terminal-geometry。浏览器模拟不代替 Debian/物理手机验收。
