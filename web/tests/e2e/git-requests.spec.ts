@@ -18,7 +18,7 @@ test("Git 静置无轮询，刷新一次，慢状态请求仍可展开历史", a
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page.getByRole("heading", { name: "W06 本地开发检查" })).toBeVisible();
   await page.getByRole("treeitem", { name: "sample.txt", exact: true }).click();
-  await expect(page.getByText(/^HEAD [a-f0-9]{8}$/)).toBeVisible();
+  await expect(page.locator(".editor-breadcrumb").getByText("HEAD", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "只读 Git", exact: true }).click();
   const panel = page.getByRole("region", { name: "只读 Git" });
   await expect(panel.getByRole("button", { name: "刷新", exact: true })).toBeEnabled();

@@ -85,3 +85,6 @@ Dialog 原语的 Tailwind translate 与 transform 是独立属性；顶部搜索
 FileQuickOpen 的 Input 与 DialogClose 组合在 `.file-quick-input-row` 中，关闭按钮 right:4px/top:50%/translateY(-50%)，关闭/输入的中心一致；禁用 DialogContent 默认关闭按钮，避免两个关闭入口叠加。
 
 项目选择页用欢迎页结构：品牌标题、开始使用/已有项目两栏，760px 以下单栏；项目名称、路径、打开位置 Dialog、编辑与移除配置确认保持原语义。没有独立终端导航或 runtime；旧 `/terminals` 和 `/terminals/:id` 在鉴权后 Navigate 到 `/projects`，不发送终端创建/attach/终止请求，项目工作台终端不受影响。
+
+
+第四轮终端折叠时，ProjectWorkbench 的水平 Separator 保留原位置/ref/Panel布局身份，依据实际 onResize 可见性 disabled、height:0、关闭伪元素热区；再次 expand 后恢复4px与拖动/键盘。不能卸载 terminal runtime 或终止进程来消除间隙。状态栏固定25px、16px文字行高，直属文本块满高 align-content:center，语言入口/按钮同栏居中。浏览器断言侧栏与editor底边误差≤1px、文字Range中心误差≤2px，并等待 Separator 的实际展开属性后再验伪元素宽高。

@@ -97,3 +97,12 @@ GitFileViewToggle 组合已有 Tabs/TabsList/TabsTrigger，与 HEAD/暂存/未�
 
 
 第三轮 Git 基线与文件展示 Tabs 仅局部调整比例（28px list/22px trigger、6px/4px 圆角），选中不加描边/阴影；仓库总刷新为 icon-sm RefreshCw，保留原 discoveryRevision、禁用状态及基线失效流程。“本地引用”入口保持文字。
+
+
+## 第四轮面板细节（2026-10-02）
+
+GitSections 组合现有 Badge，变更标题展示当前 HEAD/暂存/未暂存基线实际文件数；无 status 时不伪造0。分支摘要固定18px行，保留 branch 或分离HEAD状态，隐藏对象ID。Tabs 始终在 loading/error 上方，状态完成前后位置不跳；clean 空列表不写“工作区没有变更”，错误与取消待刷新提示保留。FileEditor breadcrumb 的 tracked 状态仅写 HEAD，历史提交ID与详情仍保留用于区分。
+
+SearchPanel 复用 Input 内嵌既有 Toggle(Aa/全词/regex)，Enter/显式搜索按钮触发；范围和 include/exclude 使用既有 Collapsible，通过更多图标展开。目录搜索 intent 自动展开范围；保留隐藏面板表单、Abort/迟到、旧结果重搜、定位版本复验及替换选择/预览/明确Apply保护。结果按文件 Collapsible 展示原图标/路径title/实际匹配数，行按钮保留UTF-16坐标和定位，取消及应用反馈不变。局部CSS覆盖不更改基础组件。
+
+浏览器专项覆盖慢status加载的Tab坐标稳定、实际数量随基线、空列表不显示文案、tracked breadcrumb不带ID；search-fallback 在明确的无rg隔离实例验证过滤→UTF-16定位→原Monaco→预览默认取消焦点→明确应用，并保留浅深截图。

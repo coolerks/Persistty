@@ -36,6 +36,7 @@ type File struct {
 	Version  files.Version `json:"version"`
 	Matches  []Match       `json:"matches"`
 	Content  string        `json:"-"`
+	Native   bool          `json:"-"`
 }
 type Skipped struct {
 	FolderID string `json:"folder_id"`

@@ -31,9 +31,9 @@ W06 已接入多根搜索、选择后替换预览/应用、多仓库只读 Git �
 
 ### 搜索与替换
 
-`folder_id="",path=""` 是整个项目；选定文件夹后 `path` 可收窄目录。pattern 非空≤4096字节，不含真实 CR/LF/NUL；只支持 rg 默认正则引擎的单行模式，不启用 PCRE2。include/exclude 为≤32个、各≤256字节的 glob；前端用 `;` 分隔。include 与原忽略集合相交，不能重新纳入已忽略文件。
+`folder_id="",path=""` 是整个项目；选定文件夹后 `path` 可收窄目录。pattern 非空≤4096字节，不含真实 CR/LF/NUL；优先使用 rg 默认正则引擎的单行模式，不启用 PCRE2；工具缺失/能力失败时支持 Go RE2 单行子集，非法或不支持模式明确返回 pattern_invalid。include/exclude 为≤32个、各≤256字节的 glob；前端用 `;` 分隔。include 与原忽略集合相交，不能重新纳入已忽略文件。
 
-search file 为 `{id,folder_id,path,version,matches}`，version 沿用完整 `{mtime,size,etag,identity}`；match 为 `{id,line,column,end_column,preview}`，坐标为1-based UTF-16，包含 BOM、CRLF/裸 CR 与 emoji 的定位转换。先保留原字节快照，裸 CR 仅在等长的引擎输入中转为 LF，CRLF 使用 `--crlf`；替换依据原字节 offset 拼接，未替换的 BOM/混合换行/末尾换行保持。literal replacement 中美元符号按字面处理；regex 使用 `$1`、`${name}`、`$$`；rg JSON 缺少 replacement 能力报不可用，不能自行换另一引擎。skip 为 `{folder_id,path,reason}`。
+search file 为 `{id,folder_id,path,version,matches}`，version 沿用完整 `{mtime,size,etag,identity}`；match 为 `{id,line,column,end_column,preview}`，坐标为1-based UTF-16，包含 BOM、CRLF/裸 CR 与 emoji 的定位转换。先保留原字节快照，裸 CR 仅在等长的引擎输入中转为 LF，CRLF 使用 `--crlf`；替换依据原字节 offset 拼接，未替换的 BOM/混合换行/末尾换行保持。literal replacement 中美元符号按字面处理；regex 使用 `$1`、`${name}`、`$$`；搜索生成时固定每个文件所使用的匹配引擎（仅服务内存字段，不入 DTO）；替换预览使用同一引擎和原 offset 校验。Go 使用 ExpandString 扩展捕获组，literal 的美元符号仍为字面。rg 搜索快照在后续替换工具能力丢失时仍报不可用，必须重新搜索，不在预览中悄然切换模式。skip 为 `{folder_id,path,reason}`。
 
 replacement≤4096字节，不能含NUL。preview file 为 `{id,folder_id,path,version,count,new_hash}`，正文仅通过其 `file_id` 比较接口读取；客户端不能发送新正文或 offset。预览 `state=ready|applying|completed|cancelled`。results 为 `{id,state,reason,version}`，`state=applied|conflict|error|skipped`；非成功 version=null，成功为新完整版本。reason 如 `not_selected,unsaved_input,cancelled,version_changed,save_failed`，不回显原始 OS/stderr。取消只停止尚未发布的文件；已成功的文件不回滚。
 
@@ -131,4 +131,13 @@ HTTP 根据已注册 route pattern 为 search/Git 路由使用 `ToolTimeout()`�
 - 反例：只提高 HTTP timeout 或硬编码排除 node_modules；正例：Git 原生忽略裁决先剪枝，同时用 index 跟踪集保留真实变更，并统一有界 context。
 
 
-共享 discovery 的 `files.ErrTooLarge` 必须区分目录项/深度遍历限额与 ignore 控制文件读取限额：前者 truncated，后者原样返回 413，不能交付未完整过滤的候选。名称请求的工具兜底和 no-require-git 只在名称 owner 启用，全文搜索保留原 rg 行为，详见[名称搜索契约](file-name-search.md)。
+共享 discovery 的 `files.ErrTooLarge` 必须区分目录项/深度遍历限额与 ignore 控制文件读取限额：前者 truncated，后者原样返回 413，不能交付未完整过滤的候选。第四轮用户要求将工具兜底和 no-require-git 同时用于名称与全文搜索；共享 discovery 只在私有树运行，忽略规则和限额详见[名称搜索契约](file-name-search.md)。
+
+
+## 全文搜索缺工具兜底（2026-10-02 第四轮）
+
+selectEngine 先在私有 staging 验 rg 模式；缺失/JSON/参数能力失败后验证 Go regexp，正常 literal、大小写、全词、常见捕获表达式均无需 rg。每个文本匹配仍只对 CopySnapshot 返回的有界 UTF-8 原正文运行；binary/NUL、链接、默认排除目录和根复验不变。Go 逐物理行计算原字节 offset、1-based UTF-16，BOM 首行不计列，CRLF/裸CR分行但不更改预览/发布正文。whole_word 用 Unicode 字母/标记/数字/连接符与 joiner 检查；Go regex 的 shorthand/word-boundary 按 RE2 语法（例如 \w、\b 是 ASCII），不声称支持 rg 全部 Unicode 类扩展。常见 regex 与 rg 的位置/捕获扩展通过对照验证。
+
+filterPaths 优先私有树 rg glob，缺失/能力失败后复用已有 Go glob parser 对已忽略集合做交集，不能重新纳入忽略文件。最多32个 include/exclude；无效 query glob 400。目录项/扫描文本/结果/文件/快照额度与现有合同一致；单行临时匹配至多5001项，whole-word过滤导致未扫描完时明确413而非假空。context 在目录/逐行/匹配间检查，取消/超限/身份/控制文件错误保留原映射。
+
+Native 字段不进入 HTTP/日志；搜索→选中→预览→Apply 保留 session、项目版本、文件版本和目标保护契约。native_engine_test 验缺 Git/rg 的忽略/glob/二进制/根外链接、中文/emoji/BOM/混合换行、命中限额、非法表达式、取消与原字节选择替换/应用；真实 rg 对照 literal、全词和常见 regex 的 Match/捕获扩展。

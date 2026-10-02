@@ -115,12 +115,14 @@ export function GitPanel({ project, mobile, visible }: { project: Project; mobil
     {repository?.state === "unavailable" && <Alert><AlertDescription>{repository.reason}</AlertDescription></Alert>}
     {!discovering && !error && !repositories.length && <Empty><EmptyHeader><EmptyTitle>未发现 Git 仓库</EmptyTitle><EmptyDescription>仅查看已注册文件夹中的本地仓库。</EmptyDescription></EmptyHeader></Empty>}
     {repository?.state === "available" && <GitSections
+      changesCount={status ? changeFiles.length : undefined}
       changesActions={<><GitFileViewToggle label="变更文件展示" value={changesView} onChange={setChangesView} /><Button variant="ghost" size="icon-sm" aria-label="刷新变更" title="刷新变更" disabled={pending || statusPending} onClick={() => void refreshStatus()}><RefreshCw /></Button></>}
       historyActions={<><GitBranch className="git-branch-icon" /><span className="git-branch-label truncate">{status?.branch || "历史"}</span><GitFileViewToggle label="历史文件展示" value={historyView} onChange={setHistoryView} /></>}
-      changes={<>{statusPending && <Loading />}{statusError && <Alert variant="destructive"><AlertDescription>{statusError}</AlertDescription></Alert>}{status && <p className="git-branch-summary truncate" title={status.head}>{status.branch || "分离 HEAD"} · {status.head.slice(0, 12) || "尚无提交"}</p>}
+      changes={<><p className="git-branch-summary truncate">{status ? status.branch || "分离 HEAD" : "\u00a0"}</p>
         <Tabs value={changeKind} onValueChange={setChangeKind}><TabsList aria-label="比较基线"><TabsTrigger value="head">HEAD</TabsTrigger><TabsTrigger value="staged">暂存</TabsTrigger><TabsTrigger value="unstaged">未暂存</TabsTrigger></TabsList></Tabs>
+        {statusPending && <Loading />}{statusError && <Alert variant="destructive"><AlertDescription>{statusError}</AlertDescription></Alert>}
         <GitFiles files={changeFiles} view={changesView} disabled={pending} onSelect={path => compare(path, changeKind === "staged" ? "staged" : changeKind === "unstaged" ? "unstaged" : "head")} />
-        {status && !changeFiles.length && <p>工作区没有变更。</p>}{!status && !statusPending && !statusError && <p>点击刷新变更读取状态。</p>}
+        {!status && !statusPending && !statusError && <p>点击刷新变更读取状态。</p>}
       </>}
       history={<><GitHistory history={history} detail={detail} expanded={expanded} branch={status?.branch ?? ""} view={historyView} pending={pending}
         preview={details.preview} onPreview={(commit, parent, open) => { if (open) { statusController.current?.abort(); setStatusPending(false); } details.show(commit, parent, open); }}

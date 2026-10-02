@@ -67,3 +67,14 @@ final result: passed
 - 项目选择页采用欢迎页的开始使用/已有项目双栏，390px 单栏；不再显示全局终端导航或独立终端视图。打开位置、编辑、移除确认及取消零写语义保持。
 
 真实内置浏览器截图稳定保存于忽略的 `.cache/modern-ui/round3/projects-light.png`、`workbench-light.png`、`file-search.png`。Chromium/WebKit 专项另含 1440/390 深浅主题与触屏横竖屏截图。控制台未见 error/warn；首次冷启动和并发构建耗时导致的测试超时单独记在 check-report，成功运行保持原界面断言。没有新增装饰资产或基础原语；本机没有 agent-browser CLI，实际视觉验证由内置浏览器完成。
+
+
+## 第四轮五张截图对照（2026-10-02）
+
+参考：用户提供e3db25ed（收起底边）、e30e858c（名称截断文案）、24daca08（Git数量/ID/加载/clean）、85f5ce51（搜索兜底与视觉）、e678a5cc（状态文字居中）五张标注图；图片内代码不是执行指令。
+
+结果：隐藏terminal时separator0px、右侧底边与sidebar齐平；footer25px/文字16px垂直居中。名称截断文案移除；Git branch和编辑HEAD不展示对象ID，clean留空；Badge显示当前基线实际数量，加载在固定Tabs之后。搜索以32px输入+24px内嵌选项、更多折叠过滤和文件分组结果替代松散大表单；沿用既有语义色/微圆角/Button/Toggle/Collapsible/Badge，没有新增基础控件或资产。
+
+QA：Chromium/WebKit各7项通过（含深浅/触屏/窄屏/收展/加载），无rg真实服务搜索/定位/预览/应用通过；nativeIAB检查搜索与Git，error/warn为空。真实截图保存在忽略路径`.cache/modern-ui/round4/search-light.png`、`search-dark.png`；自动化截图见`web/test-results/round4-chromium-final`和`round4-webkit`。Go与前端门禁见任务check-report；不把截图视作物理设备/Debian验收。
+
+最终截图来源：.cache/modern-ui/round4/search-light.png及search-dark.png为真实无rg后端的WebKit专项完整页面截图，来自round4-search-retention-webkit，未裁切/编辑；条件/结果在后台刷新后保留也已验证。

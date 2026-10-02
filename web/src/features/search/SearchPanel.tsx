@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { ChevronRight, Ellipsis, Search } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { FileTypeIcon } from "@/features/workspaces/FileTypeIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,6 +33,7 @@ export function SearchPanel({ project, mobile, intent, visible, onOpen }: { proj
   const [pattern, setPattern] = useState(""), [replacement, setReplacement] = useState("");
   const [folder, setFolder] = useState(""), [path, setPath] = useState("");
   const [regex, setRegex] = useState(false), [caseSensitive, setCaseSensitive] = useState(false), [wholeWord, setWholeWord] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [include, setInclude] = useState(""), [exclude, setExclude] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null), [selected, setSelected] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<ReplacePreview | null>(null), [previewOpen, setPreviewOpen] = useState(false);
@@ -45,7 +49,7 @@ export function SearchPanel({ project, mobile, intent, visible, onOpen }: { proj
   const request = useRef<AbortController | null>(null), epoch = useRef(0);
   const snapshots = useRef<{ search: string | null; preview: string | null }>({ search: null, preview: null });
   useEffect(() => {
-    if (intent) { setFolder(intent.folderId); setPath(intent.path); }
+    if (intent) { setFolder(intent.folderId); setPath(intent.path); setDetailsOpen(true); }
   }, [intent]);
   useEffect(() => () => {
     epoch.current++; request.current?.abort();
@@ -118,23 +122,26 @@ export function SearchPanel({ project, mobile, intent, visible, onOpen }: { proj
     if (preview && preview.state !== "applying") await run(async signal => { await searchGitAPI.cancelPreview(project.id, preview.id, csrf, signal); if (!signal.aborted) { setPreview(null); snapshots.current.preview = null; } });
     setPreviewOpen(false);
   }
-  return <section className="feature-panel" aria-label="搜索与替换"><h2>搜索与替换</h2>
-    <form onSubmit={event => { event.preventDefault(); void search(); }}><FieldGroup>
-      <Field><FieldLabel htmlFor="search-pattern">搜索内容</FieldLabel><Input ref={patternInput} id="search-pattern" value={pattern} onChange={event => setPattern(event.target.value)} maxLength={4096} required disabled={pending} /></Field>
-      <div className="flex flex-wrap gap-1"><Toggle aria-label="区分大小写" pressed={caseSensitive} onPressedChange={setCaseSensitive} disabled={pending}>Aa</Toggle><Toggle aria-label="全词匹配" pressed={wholeWord} onPressedChange={setWholeWord} disabled={pending}>全词</Toggle><Toggle aria-label="正则表达式" pressed={regex} onPressedChange={setRegex} disabled={pending}>.*</Toggle></div>
-      <Field><FieldLabel>搜索范围</FieldLabel><Select value={folder || "all"} onValueChange={value => { setFolder(value === "all" ? "" : value ?? ""); setPath(""); }} disabled={pending}><SelectTrigger aria-label="搜索范围"><SelectValue>{folder ? project.folders.find(item => item.id === folder)?.path : "整个项目"}</SelectValue></SelectTrigger><SelectContent><SelectGroup><SelectItem value="all">整个项目</SelectItem>{project.folders.map(item => <SelectItem key={item.id} value={item.id}>{item.path}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
-      {folder && <Field><FieldLabel htmlFor="search-path">子目录（可选）</FieldLabel><Input id="search-path" value={path} onChange={event => setPath(event.target.value)} disabled={pending} /></Field>}
-      <Field><FieldLabel htmlFor="search-include">包含文件</FieldLabel><Input id="search-include" value={include} onChange={event => setInclude(event.target.value)} disabled={pending} placeholder="src/**; *.go" /><FieldDescription>用 ; 分隔 glob；忽略规则仍生效。</FieldDescription></Field>
-      <Field><FieldLabel htmlFor="search-exclude">排除文件</FieldLabel><Input id="search-exclude" value={exclude} onChange={event => setExclude(event.target.value)} disabled={pending} /></Field>
-      <Button type="submit" disabled={pending || !pattern}>搜索</Button>
-    </FieldGroup></form>
+  return <section className="feature-panel search-panel" aria-label="搜索与替换"><h2>搜索与替换</h2>
+    <form className="search-form" onSubmit={event => { event.preventDefault(); void search(); }}>
+      <Field className="search-pattern-field"><FieldLabel className="sr-only" htmlFor="search-pattern">搜索内容</FieldLabel><div className="search-input-row"><Input ref={patternInput} id="search-pattern" placeholder="搜索" value={pattern} onChange={event => setPattern(event.target.value)} maxLength={4096} required disabled={pending} /><div className="search-input-options"><Toggle size="sm" aria-label="区分大小写" title="区分大小写" pressed={caseSensitive} onPressedChange={setCaseSensitive} disabled={pending}>Aa</Toggle><Toggle size="sm" aria-label="全词匹配" title="全词匹配" pressed={wholeWord} onPressedChange={setWholeWord} disabled={pending}>ab</Toggle><Toggle size="sm" aria-label="正则表达式" title="正则表达式" pressed={regex} onPressedChange={setRegex} disabled={pending}>.*</Toggle></div></div></Field>
+      <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="search-details">
+        <div className="search-form-actions"><Button type="submit" size="sm" variant="ghost" disabled={pending || !pattern}><Search />搜索</Button><CollapsibleTrigger render={<Button type="button" size="icon-sm" variant="ghost" aria-label="搜索范围与文件过滤" title="搜索范围与文件过滤" />}><Ellipsis /></CollapsibleTrigger></div>
+        <CollapsibleContent><FieldGroup className="search-filters">
+          <Field><FieldLabel>搜索范围</FieldLabel><Select value={folder || "all"} onValueChange={value => { setFolder(value === "all" ? "" : value ?? ""); setPath(""); }} disabled={pending}><SelectTrigger aria-label="搜索范围"><SelectValue>{folder ? project.folders.find(item => item.id === folder)?.path : "整个项目"}</SelectValue></SelectTrigger><SelectContent><SelectGroup><SelectItem value="all">整个项目</SelectItem>{project.folders.map(item => <SelectItem key={item.id} value={item.id}>{item.path}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
+          {folder && <Field><FieldLabel htmlFor="search-path">子目录（可选）</FieldLabel><Input id="search-path" value={path} onChange={event => setPath(event.target.value)} disabled={pending} /></Field>}
+          <Field><FieldLabel htmlFor="search-include">包含文件</FieldLabel><Input id="search-include" value={include} onChange={event => setInclude(event.target.value)} disabled={pending} placeholder="src/**; *.go" title="用 ; 分隔 glob；忽略规则仍生效。" /></Field>
+          <Field><FieldLabel htmlFor="search-exclude">排除文件</FieldLabel><Input id="search-exclude" value={exclude} onChange={event => setExclude(event.target.value)} disabled={pending} placeholder="例如 **/*.test.ts" /></Field>
+        </FieldGroup></CollapsibleContent>
+      </Collapsible>
+    </form>
     {pending && <><Loading /><Button variant="outline" onClick={() => { request.current?.abort(); epoch.current++; setPending(false); if (preview?.state === "applying" || preview?.state === "ready") void searchGitAPI.cancelPreview(project.id, preview.id, csrf, new AbortController().signal).catch(cause => setError(errorMessage(cause))); }}>取消当前操作</Button></>}
     {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {result && <>
       <p role="status">{result.files.length} 个文件 · {result.files.reduce((sum, file) => sum + file.matches.length, 0)} 处匹配{result.truncated ? "（结果已截断）" : ""} · {result.skipped.length} 项跳过</p>
       {searchedKey !== queryKey && <p role="status">搜索条件已变化，请重新搜索后生成替换预览。</p>}
       <FieldGroup><Field><FieldLabel htmlFor="search-replacement">替换为</FieldLabel><Input id="search-replacement" value={replacement} onChange={event => setReplacement(event.target.value)} disabled={pending} /><FieldDescription>{regex ? "捕获组使用 $1 或 ${name}；$$ 表示美元符号。" : "按字面文本替换。"}</FieldDescription></Field><Button variant="outline" disabled={pending || selected.size === 0 || searchedKey !== queryKey} onClick={() => void makePreview()}>预览选中项替换（{selected.size}）</Button></FieldGroup>
-      <FieldSet><FieldLegend>搜索结果</FieldLegend><FieldGroup>{result.files.map(file => <FieldSet key={file.id}><FieldLegend className="break-all">{project.folders.find(item => item.id === file.folder_id)?.path}/{file.path}</FieldLegend><Field orientation="horizontal"><Checkbox aria-label={`选择文件 ${file.path}`} checked={file.matches.every(match => selected.has(match.id))} onCheckedChange={checked => toggle(file.matches.map(match => match.id), checked)} disabled={pending} /><FieldLabel>选择此文件全部匹配</FieldLabel></Field>{file.matches.map(match => <Field key={match.id} orientation="horizontal"><Checkbox aria-label={`选择 ${file.path}:${match.line}:${match.column}`} checked={selected.has(match.id)} onCheckedChange={checked => toggle([match.id], checked)} disabled={pending} /><Button variant="ghost" className="search-result-button" disabled={pending} onClick={() => void locate(file, match)}><span>{match.line}:{match.column}</span><span className="truncate">{match.preview}</span></Button></Field>)}</FieldSet>)}</FieldGroup></FieldSet>
+      <FieldSet className="search-results"><FieldLegend className="sr-only">搜索结果</FieldLegend><FieldGroup>{result.files.map(file => <Collapsible key={file.id} defaultOpen className="search-result-file"><CollapsibleTrigger render={<Button variant="ghost" size="sm" className="search-file-heading" />} title={`${project.folders.find(item => item.id === file.folder_id)?.path}/${file.path}`}><ChevronRight className="search-file-chevron" /><FileTypeIcon path={file.path} /><span className="truncate">{file.path}</span><span className="search-match-count">{file.matches.length}</span></CollapsibleTrigger><CollapsibleContent><Field orientation="horizontal"><Checkbox aria-label={`选择文件 ${file.path}`} checked={file.matches.every(match => selected.has(match.id))} onCheckedChange={checked => toggle(file.matches.map(match => match.id), checked)} disabled={pending} /><FieldLabel>选择此文件全部匹配</FieldLabel></Field>{file.matches.map(match => <Field key={match.id} orientation="horizontal"><Checkbox aria-label={`选择 ${file.path}:${match.line}:${match.column}`} checked={selected.has(match.id)} onCheckedChange={checked => toggle([match.id], checked)} disabled={pending} /><Button variant="ghost" className="search-result-button" disabled={pending} onClick={() => void locate(file, match)}><span>{match.line}:{match.column}</span><span className="truncate">{match.preview}</span></Button></Field>)}</CollapsibleContent></Collapsible>)}</FieldGroup></FieldSet>
       {!result.files.length && <Empty><EmptyHeader><EmptyTitle>没有匹配结果</EmptyTitle><EmptyDescription>调整搜索内容或范围后重试。</EmptyDescription></EmptyHeader></Empty>}
       {result.skipped.length > 0 && <details><summary>查看跳过项目</summary>{result.skipped.map((item, index) => <p key={index} className="break-all">{item.path} · {item.reason}</p>)}</details>}
     </>}

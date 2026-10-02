@@ -36,7 +36,7 @@ type expanded struct {
 	Replacement string
 }
 
-func engine(ctx context.Context, r *toolrunner.Runner, dir string, q Query, content string, replacement *string) ([]expanded, error) {
+func rgEngine(ctx context.Context, r *toolrunner.Runner, dir string, q Query, content string, replacement *string) ([]expanded, error) {
 	args := []string{"--no-config", "--encoding", "none", "--json", "--engine", "default", "--crlf", "--max-count", "5001"}
 	if !q.Regex {
 		args = append(args, "--fixed-strings")

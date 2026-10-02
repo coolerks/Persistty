@@ -137,7 +137,7 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
         <Separator className="workbench-separator vertical" />
         <Panel id="main" minSize="40%"><Group orientation="vertical" defaultLayout={verticalLayout.defaultLayout} onLayoutChanged={verticalLayout.onLayoutChanged}>
           <Panel id="editors" defaultSize="62%" minSize={160}>{editors}</Panel>
-          <Separator className="workbench-separator horizontal" />
+          <Separator className="workbench-separator horizontal" data-collapsed={!terminalOpen} disabled={!terminalOpen} />
           <Panel id="terminal" onResize={size => setTerminalOpen(size.inPixels > 0)} panelRef={terminalRef} defaultSize="38%" minSize={110} collapsible collapsedSize={0}><Group orientation="horizontal" defaultLayout={bottomLayout.defaultLayout} onLayoutChanged={bottomLayout.onLayoutChanged}>{Array.from({ length: view?.lowerCount ?? 1 }, (_, index) => <Fragment key={index}>{index > 0 && <Separator className="workbench-separator vertical" />}<Panel id={`terminal-group-${index}`} minSize="15%"><TerminalWorkspace project={project} group={index as GroupIndex} upperIds={upperTerminals.map(item => item.id)} onMoveToTop={moveToTop} onMoveToBottom={id => moveToBottom(id, index as GroupIndex)} focusRequest={bottomFocusRequest} onHide={() => terminalRef.current?.collapse()} /></Panel></Fragment>)}</Group></Panel>
         </Group></Panel>
       </Group>

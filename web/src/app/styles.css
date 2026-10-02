@@ -110,6 +110,8 @@
 .workbench-separator { position: relative; z-index: 1; flex: none; background: transparent; }
 .workbench-separator.vertical { width: var(--workbench-gap); cursor: col-resize; }
 .workbench-separator.horizontal { height: var(--workbench-gap); cursor: row-resize; }
+.workbench-separator.horizontal[data-collapsed="true"] { height: 0; pointer-events: none; }
+.workbench-separator.horizontal[data-collapsed="true"]::before, .workbench-separator.horizontal[data-collapsed="true"]::after { display: none; }
 .workbench-separator::before { content: ""; position: absolute; background: transparent; border-radius: 2px; }
 .workbench-separator.vertical::before { inset: 0; }
 .workbench-separator.horizontal::before { inset: 0; }
@@ -223,8 +225,8 @@
 .terminal-shortcuts { display: none; }
 .terminal-page { display: flex; flex-direction: column; max-width: none; min-height: 75vh; padding: 0; }
 .terminal-page .terminal-pane { min-height: 75vh; border-top: 1px solid var(--border); }
-.workbench-status { height: 25px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 8px; background: var(--workbench-chrome); color: var(--muted-foreground); font-size: 11px; }
-.workbench-status > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workbench-status { height: 25px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 8px; background: var(--workbench-chrome); color: var(--muted-foreground); font-size: 11px; line-height: 16px; }
+.workbench-status > span { height: 100%; align-content: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .workbench-status > span:first-child { flex: 1; }
 .status-controls { display: flex; gap: 1px; margin-left: auto; }
 .status-controls button { width: 23px; height: 23px; }
@@ -299,6 +301,28 @@
 .feature-panel { display: flex; flex-direction: column; gap: .75rem; height: 100%; min-width: 0; overflow: auto; padding: .75rem; }
 .feature-panel h2 { font-size: .875rem; font-weight: 600; }
 .search-result-button { min-width: 0; justify-content: flex-start; gap: .5rem; flex: 1; }
+.search-panel { gap: 12px; font-size: 12px; }
+.search-form { flex: none; }
+.search-input-row { position: relative; }
+.search-input-row > input { height: 32px; padding-right: 86px; font-size: 12px; border-radius: 4px; }
+.search-input-options { position: absolute; top: 50%; right: 4px; translate: 0 -50%; display: flex; gap: 1px; }
+.search-input-options > button { width: 25px; min-width: 25px; height: 24px; padding: 0; font-size: 11px; border-radius: 3px; }
+.search-input-options > button[aria-label="全词匹配"] { text-decoration: underline; text-underline-offset: 3px; }
+.search-form-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.search-filters { gap: 10px; padding-top: 8px; }
+.search-panel [data-slot="field"] { gap: 5px; }
+.search-panel [data-slot="field-label"], .search-panel [data-slot="field-description"] { font-size: 11px; }
+.search-panel [data-slot="input"], .search-panel [data-slot="select-trigger"] { height: 32px; font-size: 12px; border-radius: 4px; }
+.search-results > [data-slot="field-group"] { gap: 8px; }
+.search-file-heading { width: 100%; justify-content: flex-start; padding: 0 4px; gap: 5px; font-size: 12px; }
+.search-file-heading[aria-expanded] { background: transparent; }
+.search-file-heading:hover { background: var(--accent); }
+.search-file-heading[aria-expanded="true"] .search-file-chevron { rotate: 90deg; }
+.search-match-count { margin-left: auto; color: var(--muted-foreground); font-size: 11px; }
+.search-result-file [data-slot="field"] { padding-left: 10px; gap: 5px; }
+.search-result-file [data-slot="field-label"] { color: var(--muted-foreground); }
+.search-result-button { height: 28px; padding: 0 4px; font-size: 12px; }
+.search-result-button > span:first-child { color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
 .git-file-button { width: 100%; min-width: 0; justify-content: space-between; gap: .5rem; }
 .replace-preview-files { max-height: 25vh; overflow: auto; min-width: 0; }
 .mobile-comparison { display: flex; flex-direction: column; gap: .75rem; max-height: 55vh; overflow: auto; min-width: 0; }
@@ -320,6 +344,8 @@
 .git-branch-icon { width: 14px; height: 14px; flex-shrink: 0; }
 .git-branch-label { max-width: 5rem; font-size: .75rem; color: var(--muted-foreground); }
 .git-branch-summary, .git-commit-author { color: var(--muted-foreground); font-size: .75rem; }
+.git-branch-summary { min-height: 18px; line-height: 18px; }
+.git-change-count { margin-left: auto; min-width: 20px; height: 18px; padding: 0 5px; font-size: 11px; }
 .git-file-row { display: flex; width: 100%; min-width: 0; height: 28px; padding: 0 .25rem; justify-content: flex-start; gap: .4rem; border-radius: var(--workbench-item-radius); }
 .git-file-row > .file-type-icon { flex-shrink: 0; }
 .git-file-parent { flex: 1; color: var(--muted-foreground); font-size: .75rem; text-align: left; }

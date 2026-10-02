@@ -54,3 +54,16 @@
 
 
 第三轮预算检查补充：名称路由未进入 isToolRoute，HTTP 10秒与服务配置预算不一致。归属 router.middleware/isToolRoute，将精确注册的 file-names 纳入既有 ToolTimeout，路由专项覆盖3/15/25秒；不修改普通文件请求预算。
+
+
+## 第四轮截图细化（2026-10-02，用户授权“看图调整”）
+
+最新五张截图覆盖第三轮“全文搜索仍依赖 rg”及第二轮“名称截断提示可见”的限制。
+- 底部终端折叠时分隔器不占布局空间；保留 Panel/ref/runtime 和恢复布局，编辑区与侧栏底边对齐。状态栏每项采用固定行高和垂直居中。
+- 名称搜索去除截断文案，保留响应 truncated 与实际限额；Git 摘要不显示对象 ID，编辑 breadcrumb 仅保留 HEAD 状态；无变更留空，错误仍可见。
+- 变更标题复用现有 Badge 显示当前基线文件数量，Tabs/分支摘要固定在加载区上方；空状态或取消不显示假数量。
+- 搜索面板复用 Input/Toggle/Collapsible/Button 紧凑组合，选项内嵌输入、范围/包含/排除可展开，保留显式搜索和替换预览确认。
+- 全文搜索优先 rg，缺失或能力失败时使用 Go regexp/安全占位树忽略与 glob 过滤。只能对已有安全文件快照匹配；权限/超限/取消/版本错误不兜底。搜索快照固定匹配引擎，替换预览复用相同引擎和原字节 offset，未改正文保留。Go 正则支持 RE2 子集，非法/不支持模式明确报 pattern_invalid，不静默转 literal。
+
+先实施 UI 和 matcher/discovery，补缺工具搜索→定位→预览→应用、Unicode/混合换行/忽略/glob/限额与 rg 对照；再执行门禁与浏览器几何、慢加载、深浅色/触屏检查，记录真实证据及未执行环境。
+复用查找：现有 badge/collapsible/input/toggle/field 已可满足，核对官方 https://ui.shadcn.com/docs/components/base/badge 和 https://ui.shadcn.com/docs/components/base/collapsible ；Go RE2 和扩展规则参照 https://pkg.go.dev/regexp 。无新增依赖/API/布局 schema，不提交或部署。

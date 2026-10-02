@@ -49,3 +49,16 @@
 - 项目选择页改为 VS Code 欢迎页结构：品牌标题、开始使用、已有项目两栏，窄屏单栏；保留新建/刷新/编辑/移除/当前页与新标签页打开。移除全局终端导航与选择页终端视图，旧 /terminals 路径回到项目页，不终止既有 tmux 进程。
 
 归属：GitPanel/styles.css 处理视觉；FileQuickOpen 使用既有 DialogClose/Button 组合修复位置；App/ProjectsPage 处理欢迎页和旧路由；search discovery 的名称专用选项及 staged ignore matcher 实现工具兜底，不改变内容搜索行为。补缺工具/不支持参数、ignore 对照、取消/截断与 UI 几何回归，再执行前后端门禁和 Chromium/WebKit 专项。
+
+
+## 第四轮截图细化（2026-10-02，用户授权“看图调整”）
+
+最新五张截图覆盖第三轮“全文搜索仍依赖 rg”及第二轮“名称截断提示可见”的限制。
+- 底部终端折叠时分隔器不占布局空间；保留 Panel/ref/runtime 和恢复布局，编辑区与侧栏底边对齐。状态栏每项采用固定行高和垂直居中。
+- 名称搜索去除截断文案，保留响应 truncated 与实际限额；Git 摘要不显示对象 ID，编辑 breadcrumb 仅保留 HEAD 状态；无变更留空，错误仍可见。
+- 变更标题复用现有 Badge 显示当前基线文件数量，Tabs/分支摘要固定在加载区上方；空状态或取消不显示假数量。
+- 搜索面板复用 Input/Toggle/Collapsible/Button 紧凑组合，选项内嵌输入、范围/包含/排除可展开，保留显式搜索和替换预览确认。
+- 全文搜索优先 rg，缺失或能力失败时使用 Go regexp/安全占位树忽略与 glob 过滤。只能对已有安全文件快照匹配；权限/超限/取消/版本错误不兜底。搜索快照固定匹配引擎，替换预览复用相同引擎和原字节 offset，未改正文保留。Go 正则支持 RE2 子集，非法/不支持模式明确报 pattern_invalid，不静默转 literal。
+
+先实施 UI 和 matcher/discovery，补缺工具搜索→定位→预览→应用、Unicode/混合换行/忽略/glob/限额与 rg 对照；再执行门禁与浏览器几何、慢加载、深浅色/触屏检查，记录真实证据及未执行环境。
+复用查找：现有 badge/collapsible/input/toggle/field 已可满足，核对官方 https://ui.shadcn.com/docs/components/base/badge 和 https://ui.shadcn.com/docs/components/base/collapsible ；Go RE2 和扩展规则参照 https://pkg.go.dev/regexp 。无新增依赖/API/布局 schema，不提交或部署。

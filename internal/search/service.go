@@ -170,7 +170,8 @@ func (s *Service) Search(ctx context.Context, owner, project string, q Query) (R
 	}
 	defer clean()
 	// Validate the pattern even if there are no candidate text files.
-	if _, err = engine(ctx, s.Runner, dir, q, "", nil); err != nil {
+	native, err := selectEngine(ctx, s.Runner, dir, q)
+	if err != nil {
 		return Result{}, err
 	}
 	result := Result{ID: NewID(), ProjectVersion: p.Version, Files: []File{}, Skipped: []Skipped{}, ExpiresAt: time.Now().UTC().Add(5 * time.Minute).Format(time.RFC3339Nano)}
@@ -206,27 +207,9 @@ func (s *Service) Search(ctx context.Context, owner, project string, q Query) (R
 		}
 		entriesSeen, controlBytes = budget.entries, budget.controlBytes
 		result.Truncated = result.Truncated || budget.truncated
-		var out []byte
-		var code int
-		// Globs are applied to a second discovery, then intersected with the ignore set.
-		if len(q.Include)+len(q.Exclude) > 0 {
-			filtered := []string{"--no-config", "--files", "--hidden", "--null"}
-			for _, glob := range q.Include {
-				filtered = append(filtered, "--glob", glob)
-			}
-			for _, glob := range q.Exclude {
-				filtered = append(filtered, "--glob", "!"+glob)
-			}
-			filtered = append(filtered, "--glob", "!.git/**", "--glob", "!**/.git/**", "--", ".")
-			out, code, err = s.Runner.Run(ctx, "rg", tree, nil, filtered...)
-			if err != nil {
-				return Result{}, err
-			}
-			if code != 0 && code != 1 {
-				return Result{}, ErrInvalid
-			}
-		} else {
-			out = []byte(strings.Join(sortedKeys(allowed), "\x00"))
+		out, err := s.filterPaths(ctx, tree, q, allowed)
+		if err != nil {
+			return Result{}, err
 		}
 		for _, raw := range bytes.Split(out, []byte{0}) {
 			relative := strings.TrimPrefix(string(raw), "./")
@@ -256,14 +239,19 @@ func (s *Service) Search(ctx context.Context, owner, project string, q Query) (R
 				break
 			}
 			scanned += int64(len(text))
-			found, err := engine(ctx, s.Runner, dir, q, text, nil)
+			found, err := engine(ctx, s.Runner, dir, q, text, nil, native)
+			fileNative := native
+			if !native && errors.Is(err, toolrunner.ErrUnavailable) {
+				found, err = nativeEngine(ctx, q, text, nil)
+				fileNative = true
+			}
 			if err != nil {
 				return Result{}, err
 			}
 			if len(found) == 0 {
 				continue
 			}
-			file := File{ID: NewID(), FolderID: folder.ID, Path: relative, Version: version, Matches: []Match{}, Content: text}
+			file := File{ID: NewID(), FolderID: folder.ID, Path: relative, Version: version, Matches: []Match{}, Content: text, Native: fileNative}
 			for _, v := range found {
 				if matches >= options.MaxResults {
 					result.Truncated = true
@@ -365,7 +353,7 @@ func (s *Service) Preview(ctx context.Context, owner, project string, input Prev
 		if count == 0 {
 			continue
 		}
-		values, err := engine(ctx, s.Runner, dir, source.query, file.Content, &input.Replacement)
+		values, err := engine(ctx, s.Runner, dir, source.query, file.Content, &input.Replacement, file.Native)
 		if err != nil {
 			return Preview{}, err
 		}

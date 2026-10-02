@@ -98,3 +98,27 @@
 
 
 最终结算：Names 最终源码通过全量普通 test/vet、`go test -race -p 1 ./...`（round3-go-race-final，HTTP 64.455s，搜索3.515s，其余含缓存）；最后只补精确名称路由预算及其无状态测试，普通全量 test/vet 与路由专项 race 重新验证。前端31/162、Chromium/WebKit各5项均通过。Markdown本地链接与diff清洁检查通过。第三轮改动25个文件，暂无未识别修改，不提交、不部署、不归档。
+
+
+## 第四轮截图调整（2026-10-02）
+
+第三轮已由用户提交 `978097d`。本轮只处理最新五张标注图：折叠终端分隔占位、状态栏居中、指定提示/ID移除、Git数量及加载布局、紧凑搜索面板和全文缺工具兜底。
+
+| 检查 | 第四轮实际结果 |
+| --- | --- |
+| frontend lint/typecheck/test/build | 通过；31 文件/162 Vitest 测试；build 含字体/许可验证，既有 canvas/chunk 提示保留。新增 E2E 后再次 lint/typecheck 通过。 |
+| go test ./... / go vet ./... | 通过；缺 rg 的安全发现/glob/UTF-16/BOM/混合换行/捕获替换/应用、二进制与外链、取消/结果/字节限额、新 rg 能力失败专项实际执行。 |
+| go test -race -p 1 ./... | 通过，HTTP 82.056s、search4.044s，其余包含缓存，日志 round4-go-race。随后只优化native坐标增量计算与长行preview分配、补能力失败/全词预算测试；最终search普通/race与全量vet再次通过，日志 round4-search-race-final。 |
+| Chromium | 7项通过：工作台4（新增慢加载/数量/clean留空）+欢迎页1+原交互1+真实无rg搜索1，round4-chromium-final。 |
+| WebKit | 相同7项通过，round4-webkit；包含390×844与844×390触屏/浅深色、原标签与树交互。 |
+| 真实内置浏览器 | 故意缺rg隔离后端的全文结果/原Monaco、HEAD无ID、搜索紧凑选项、Git真实数量与branch、浅深主题；控制台error/warn为空。静态截图 .cache/modern-ui/round4。 |
+
+几何证据：底部Panel实际0时editor/侧栏底边差≤1px；状态文字Range与footer中心差≤2px；恢复后separator恢复4px与2px圆头；慢status响应前后基线Tabs y差≤1px。truncated=true名称响应保留结果但不出现“结果已截断”提示。Git Badge 2→暂存1→clean0，用实际响应和当前基线统计，不隐藏错误。
+
+失败与修正：第一次前端类型检查发现exactOptionalPropertyTypes的count属性及FileTypeIcon props写错，已修正后通过全部门禁。初次 Chromium 在刚expand后立即读伪元素，读取到尚未提交的collapsed样式auto；增加等待实际data-collapsed=false，产品收展实际正常，保留全部4px几何断言，最终7项全部通过。新增rg对照中a*遇到旧rg parser在Unicode空匹配处能力错误；该场景通过搜索逐文件native fallback处理并固定File.Native（不进DTO），不将错误记为通过；常见literal/全词/^/$/捕获表达式继续真实对照。
+
+规范一致性检查发现第三轮提交中的file-name-search.md被误写为HTTP测试源码；恢复e7b44a1的规范正文，并同步第三轮工具兜底/HTTP预算与第四轮提示规则。明确保留HTTP测试原文件，没有删除测试。源码与规范均使用中文说明，机器字段/协议不变。Go RE2兜底支持范围见search-git-contract，不声称覆盖rg全部regex扩展；原rg快照在预览工具丢失时要求重新搜索，不隐式改变捕获语义。
+
+未执行：Firefox、物理手机软键盘、Debian/systemd/部署；本机浏览器和模拟触屏不替代这些验收。W05/W06/W07状态不改，任务保持in_progress；不自动提交/归档。临时fixture/服务仅归本轮，完成后清理自己的资源，旧用户预览保留。
+
+最终补充：内置浏览器截图采集时观察到表单临时重置，独立Chromium/WebKit以clock推进16秒跨过项目后台刷新后，条件与结果保留专项均通过，未在产品代码加入推测修复。最终浅深截图使用该真实无rg专项的稳定产物（round4-search-retention-*），复制到.cache/modern-ui/round4，保留完整页面无编辑。最终search race 3.856s通过（含真实rg Unicode空匹配兜底/预览零写入）；新增E2E后的lint通过。8个修改文档本地链接及task JSON、git diff --check通过；最终30个修改/新增文件均已识别，未提交/部署/归档。

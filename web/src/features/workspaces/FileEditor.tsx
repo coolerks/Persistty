@@ -46,7 +46,7 @@ export function FileEditor({ project, file, mobile }: { project: Project; file: 
   const svg = ready && /^\s*(?:<\?xml[^>]*>\s*)?<svg[\s>]/.test(editorText(state.content));
   return <div className="file-editor"><div className="editor-breadcrumb">
     <span className="truncate" title={file.path}>{project.folders.find(folder => folder.id === file.folderId)?.path}/{file.path}</span>
-    {ready && <span className="text-muted-foreground" title="HEAD 与当前输入的差异">{baseline?.state === "tracked" ? `HEAD ${baseline.head.slice(0, 8)}` : baseline?.state === "untracked" ? "Git 未跟踪" : baseline?.state === "unavailable" ? "Git 基线不可用" : ""}</span>}
+    {ready && <span className="text-muted-foreground" title="HEAD 与当前输入的差异">{baseline?.state === "tracked" ? "HEAD" : baseline?.state === "untracked" ? "Git 未跟踪" : baseline?.state === "unavailable" ? "Git 基线不可用" : ""}</span>}
     {svg && <Button size="sm" variant="outline" onClick={() => setSource(value => !value)}>{source ? "查看图片" : "编辑源码"}</Button>}
     {ready && ["conflict", "failed", "paused"].includes(state.saveState) && <Badge className="editor-save-warning" role="status" aria-live="polite" variant={state.saveState === "paused" ? "secondary" : "destructive"}>{labels[state.saveState]}</Badge>}
   </div>

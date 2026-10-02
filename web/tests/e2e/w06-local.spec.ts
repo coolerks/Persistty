@@ -15,7 +15,7 @@ test("W06 本机真实搜索定位、冲突与应用、Git 比较和移动视图
   const endpoint = `/api/v1/projects/${projectID}/folders/${project.main_folder_id}/content`, headers = { Origin: process.env.PERSISTTY_E2E_BASE_URL!, "X-CSRF-Token": session.csrf_token };
   const initial = (await (await page.request.get(`${endpoint}?project_version=1&path=sample.txt`)).json()).data;
   if (initial.content !== "😀hit\nsecond hit\n") expect((await page.request.put(endpoint, { headers, data: { project_version: 1, path: "sample.txt", expected_version: initial.version, content: "😀hit\nsecond hit\n" } })).ok()).toBe(true);
-  await page.keyboard.press("ControlOrMeta+Shift+f"); await expect(page.getByLabel("搜索内容")).toBeFocused(); await page.getByLabel("搜索内容").fill("hit"); await page.getByLabel("包含文件").fill("sample.txt;ignored.txt"); await page.getByRole("button", { name: "搜索", exact: true }).click();
+  await page.keyboard.press("ControlOrMeta+Shift+f"); await expect(page.getByLabel("搜索内容")).toBeFocused(); await page.getByLabel("搜索内容").fill("hit"); await page.getByRole("button", { name: "搜索范围与文件过滤", exact: true }).click(); await page.getByLabel("包含文件").fill("sample.txt;ignored.txt"); await page.getByRole("button", { name: "搜索", exact: true }).click();
   await expect(page.getByText("1 个文件 · 2 处匹配 · 0 项跳过", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /^1:3/ }).click(); await expect(page.locator(".monaco-editor").first()).toBeVisible();
   if (browserName === "chromium") { await page.keyboard.press("ControlOrMeta+c"); await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("hit"); }

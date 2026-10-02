@@ -8,13 +8,13 @@ async function fixture(page: Page) {
     const request = route.request(), url = new URL(request.url());
     if (request.method() !== "GET") mutations.push(url.pathname);
     const data = url.pathname === "/api/v1/terminals" ? { items: [] } :
-      url.pathname.endsWith("/file-names") ? { project_version: 1, items: [{ folder_id: "root", path: "file-0.ts" }, { folder_id: "other", path: "file-1.ts" }], truncated: false } :
+      url.pathname.endsWith("/file-names") ? { project_version: 1, items: [{ folder_id: "root", path: "file-0.ts" }, { folder_id: "other", path: "file-1.ts" }], truncated: true } :
       url.pathname.endsWith("/repositories") ? { items: [{ id: "repo", folder_id: "root", path: "", name: "repo", state: "available", reason: "" }], truncated: false } :
       url.pathname.endsWith("/log") ? { head: "a".repeat(40), items: [], next_offset: -1 } :
       url.pathname.endsWith("/status") ? { repo_id: "repo", head: "a".repeat(40), branch: "main", changes: [], total_paths: [] } :
       url.pathname.endsWith("/entries") ? { project_version: 1, next_cursor: "", items: url.pathname.includes("/other/") ? [] : Array.from({ length: 30 }, (_, i) => ({ name: `file-${i}.ts`, kind: "file", identity: `file-${i}`, size: 19, mtime: "2026-10-02T00:00:00Z" })) } :
       url.pathname.endsWith("/content") ? { kind: "text", content: "const answer = 42;\n", version: { mtime: "2026-10-02T00:00:00Z", size: 19, etag: "fixture", identity: url.searchParams.get("path") } } :
-      url.pathname.endsWith("/git-baseline") ? { state: "no_repository", repo_id: "", head: "", content: "", version: null } : null;
+      url.pathname.endsWith("/git-baseline") ? { state: "tracked", repo_id: "repo", head: "a".repeat(40), content: "const answer = 42;\n", version: { mtime: "2026-10-02T00:00:00Z", size: 19, etag: "fixture", identity: url.searchParams.get("path") } } : null;
     if (!data) throw new Error(`未预期的请求 ${url.pathname}`);
     await route.fulfill({ json: { data, request_id: "fixture" } });
   });
@@ -31,6 +31,8 @@ test("微圆角面板保持几何边界、可调整分隔器、标签滚动及�
   const h = await fixture(page);
   await page.getByRole("treeitem", { name: "file-0.ts", exact: true }).click();
   await expect(page.locator(".monaco-editor")).toBeVisible();
+  await expect(page.locator(".editor-breadcrumb")).toContainText("HEAD");
+  await expect(page.locator(".editor-breadcrumb")).not.toContainText("aaaaaaaa");
   await expect(page.getByRole("button", { name: "资源管理器", exact: true })).toHaveAttribute("aria-pressed", "true");
   for (const label of ["资源管理器", "搜索与替换", "只读 Git"]) {
     const button = page.getByRole("button", { name: label, exact: true });
@@ -61,10 +63,23 @@ test("微圆角面板保持几何边界、可调整分隔器、标签滚动及�
   await expect.poll(async () => (await sidebar.boundingBox())!.width).toBeGreaterThan(resized);
   await page.getByRole("button", { name: "切换终端面板", exact: true }).click();
   await expect(page.getByTestId("terminal")).toHaveCSS("height", "0px");
+  await expect.poll(async () => {
+    const left = (await sidebar.boundingBox())!, right = (await page.locator(".editor-group").boundingBox())!;
+    return Math.abs(left.y + left.height - right.y - right.height);
+  }).toBeLessThanOrEqual(1);
+  const centering = await page.locator(".workbench-status").evaluate(element => {
+    const footer = element.getBoundingClientRect();
+    return Array.from(element.querySelectorAll(":scope > span")).map(span => {
+      const range = document.createRange(); range.selectNodeContents(span); const text = range.getBoundingClientRect();
+      return Math.abs((text.top + text.bottom - footer.top - footer.bottom) / 2);
+    });
+  });
+  expect(centering.every(offset => offset <= 2)).toBe(true);
   await expect(page.getByRole("button", { name: "终端面板", exact: true })).toHaveAttribute("aria-pressed", "false");
   await page.getByRole("button", { name: "切换终端面板", exact: true }).click();
   await expect(page.locator(".terminal-pane")).toBeVisible();
   const horizontal = page.locator(".workbench-separator.horizontal").first();
+  await expect(horizontal).toHaveAttribute("data-collapsed", "false");
   await horizontal.focus();
   const crossLine = await horizontal.evaluate(element => ({ height: getComputedStyle(element, "::before").height, width: getComputedStyle(element, "::before").width, own: element.getBoundingClientRect().width }));
   await expect.poll(() => horizontal.evaluate(element => getComputedStyle(element, "::before").borderRadius)).toBe("2px");
@@ -85,6 +100,34 @@ test("微圆角面板保持几何边界、可调整分隔器、标签滚动及�
     }
     await page.screenshot({ path: info.outputPath(`desktop-${dark ? "dark" : "light"}.png`) });
   }
+  expect(h.errors).toEqual([]); expect(h.mutations).toEqual([]);
+});
+
+test("Git 变更数量随基线变化，慢状态加载不移动标签，干净状态留空", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 845 });
+  const h = await fixture(page);
+  let release: () => void = () => {}; let pending = false;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/repositories/repo/status?*", async route => {
+    pending = true; await gate;
+    await route.fulfill({ json: { data: { repo_id: "repo", head: "a".repeat(40), branch: "main", changes: [
+      { path: "file-0.ts", old_path: "", index: "M", worktree: " " }, { path: "file-1.ts", old_path: "", index: " ", worktree: "M" },
+    ], total_paths: ["file-0.ts", "file-1.ts"] }, request_id: "fixture" } });
+  });
+  await page.getByRole("button", { name: "只读 Git", exact: true }).click();
+  await expect.poll(() => pending).toBe(true);
+  const tabs = page.getByRole("tablist", { name: "比较基线" });
+  const before = (await tabs.boundingBox())!.y;
+  release();
+  await expect(page.getByLabel("2 个变更文件", { exact: true })).toBeVisible();
+  expect(Math.abs((await tabs.boundingBox())!.y - before)).toBeLessThanOrEqual(1);
+  await expect(page.locator(".git-branch-summary")).toHaveText("main");
+  await page.getByRole("tab", { name: "暂存", exact: true }).click();
+  await expect(page.getByLabel("1 个变更文件", { exact: true })).toBeVisible();
+  await page.route("**/repositories/repo/status?*", route => route.fulfill({ json: { data: { repo_id: "repo", head: "a".repeat(40), branch: "main", changes: [], total_paths: [] }, request_id: "fixture" } }));
+  await page.getByRole("button", { name: "刷新变更", exact: true }).click();
+  await expect(page.getByLabel("0 个变更文件", { exact: true })).toBeVisible();
+  await expect(page.getByText("工作区没有变更。", { exact: true })).toHaveCount(0);
   expect(h.errors).toEqual([]); expect(h.mutations).toEqual([]);
 });
 
@@ -124,6 +167,7 @@ test("顶栏按名称快速打开保留多根文件身份、键盘导航与取�
   const input = page.getByRole("textbox", { name: "文件名关键词" });
   await expect(input).toBeFocused(); await input.fill("file");
   await expect(page.getByRole("button", { name: "打开 file-1.ts", exact: true })).toBeVisible();
+  await expect(dialog).not.toContainText("结果已截断");
   await input.press("ArrowDown"); await input.press("Enter");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "file-1.ts", exact: true })).toBeVisible();

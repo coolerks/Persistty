@@ -21,10 +21,10 @@ type discoveryBudget struct {
 
 // discover supplies rg only a private tree of placeholders and safely copied ignore controls.
 func (s *Service) discover(ctx context.Context, root storage.RegisteredFolder, tree string, budget *discoveryBudget, skip func(string, string)) (map[string]bool, error) {
-	return s.discoverTree(ctx, root, tree, budget, skip, false)
+	return s.discoverTree(ctx, root, tree, budget, skip)
 }
 
-func (s *Service) discoverTree(ctx context.Context, root storage.RegisteredFolder, tree string, budget *discoveryBudget, skip func(string, string), names bool) (map[string]bool, error) {
+func (s *Service) discoverTree(ctx context.Context, root storage.RegisteredFolder, tree string, budget *discoveryBudget, skip func(string, string)) (map[string]bool, error) {
 	options := s.Config.SearchOptions()
 	if err := os.Mkdir(tree, 0700); err != nil {
 		return nil, err
@@ -94,12 +94,9 @@ func (s *Service) discoverTree(ctx context.Context, root storage.RegisteredFolde
 			return nil, err
 		}
 	}
-	args := []string{"--no-config", "--files", "--hidden", "--null", "--glob", "!.git/**", "--glob", "!**/.git/**", "--", "."}
-	if names {
-		args = append([]string{"--no-require-git"}, args...)
-	}
+	args := []string{"--no-require-git", "--no-config", "--files", "--hidden", "--null", "--glob", "!.git/**", "--glob", "!**/.git/**", "--", "."}
 	out, code, err := s.Runner.Run(ctx, "rg", tree, nil, args...)
-	if names && (errors.Is(err, toolrunner.ErrUnavailable) || err == nil && code != 0 && code != 1) {
+	if errors.Is(err, toolrunner.ErrUnavailable) || err == nil && code != 0 && code != 1 {
 		return nativeNames(ctx, tree)
 	}
 	if err != nil {

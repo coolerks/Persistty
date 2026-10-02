@@ -61,7 +61,6 @@ export function FileQuickOpen({ project, onOpen }: { project: Project; onOpen(fi
         </Button>)}
         {!keyword ? <p className="file-quick-status">输入关键词，在当前项目中按文件名搜索。</p> : !valid ? <p role="alert" className="file-quick-status">关键词过长，请缩短后重试。</p> : current?.error ? <p role="alert" className="file-quick-status">{current.error}</p> : !current ? <p role="status" className="file-quick-status">正在搜索…</p> : !items.length ? <p role="status" className="file-quick-status">没有匹配的文件</p> : null}
       </div>
-      {current?.data?.truncated && <p role="status" className="file-quick-status">结果已截断，请输入更完整的文件名。</p>}
     </DialogContent>
   </Dialog>;
 }
