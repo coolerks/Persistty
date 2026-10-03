@@ -49,14 +49,14 @@ test("多文件夹无仓库禁用选择器，新仓库无提交可查看并全�
   await page.goto(`/projects/${empty.id}`); await page.getByRole("button", { name: "只读 Git", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "选择仓库" })).toBeDisabled();
   await expect(page.getByText("未发现 Git 仓库", { exact: true })).toHaveCount(2);
-  await page.getByRole("button", { name: "刷新", exact: true }).click();
+  await page.getByRole("button", { name: "刷新仓库", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "选择仓库" })).toBeDisabled();
   await page.goto(`/projects/${unborn.id}`); await page.getByRole("button", { name: "只读 Git", exact: true }).click();
-  await expect(page.getByText("main · 尚无提交", { exact: true })).toBeVisible();
+  await expect(page.locator(".git-branch-summary")).toHaveText("main");
   await expect(page.getByRole("combobox", { name: "选择仓库" })).toBeEnabled();
   const refreshed = page.waitForResponse(response => /\/repositories\/[^/]+\/status\?/.test(response.url()) && response.ok());
-  await page.getByRole("button", { name: "刷新", exact: true }).click(); await refreshed;
-  await expect(page.getByText("main · 尚无提交", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "刷新仓库", exact: true }).click(); await refreshed;
+  await expect(page.locator(".git-branch-summary")).toHaveText("main");
   await expect(page.getByText("尚无提交历史。", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "本地引用", exact: true }).click(); await expect(page.getByRole("combobox", { name: "本地分支或标签" })).toBeDisabled();
   await page.getByRole("button", { name: "关闭引用", exact: true }).click(); await page.getByRole("button", { name: /^new.txt/ }).click();

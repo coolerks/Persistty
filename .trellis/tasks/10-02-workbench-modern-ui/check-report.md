@@ -122,3 +122,48 @@
 未执行：Firefox、物理手机软键盘、Debian/systemd/部署；本机浏览器和模拟触屏不替代这些验收。W05/W06/W07状态不改，任务保持in_progress；不自动提交/归档。临时fixture/服务仅归本轮，完成后清理自己的资源，旧用户预览保留。
 
 最终补充：内置浏览器截图采集时观察到表单临时重置，独立Chromium/WebKit以clock推进16秒跨过项目后台刷新后，条件与结果保留专项均通过，未在产品代码加入推测修复。最终浅深截图使用该真实无rg专项的稳定产物（round4-search-retention-*），复制到.cache/modern-ui/round4，保留完整页面无编辑。最终search race 3.856s通过（含真实rg Unicode空匹配兜底/预览零写入）；新增E2E后的lint通过。8个修改文档本地链接及task JSON、git diff --check通过；最终30个修改/新增文件均已识别，未提交/部署/归档。
+
+
+## 第五轮：真实大项目搜索超时与名称请求误取消（2026-10-02）
+
+第四轮已由用户提交 `acfc15b`。本轮处理用户实际项目 version=3、三个根的 `Backend` 全文搜索 503 timeout，以及 `project` 文件名搜索约15秒后被取消；保留此前 UI 验收证据。
+
+根因与修复：
+
+- 旧 discovery 先遍历整个树并创建私有占位文件，再裁决 ignore；正文阶段逐文件重新打开深层父目录、启动 rg。真实三根测量：目录发现约2.654/14.051/0.167秒，正文复制约6.473/21.514/0.127秒。修复前完整请求有 rg 时15.776秒超时、无 rg 时17.444秒超时。
+- 新 `WalkSnapshotPrepared` 在目录回调内安全复制控制文件；候选路径内存裁决，进入忽略目录前剪枝。正文在同一次安全遍历中复制并保留两次内容/身份与最终目录复验；literal 复用 Go matcher，regex 使用最多64文件的已验证快照批量 rg。名称不创建占位树，也不读取普通正文。旧占位树仅保留为测试中的独立真实 rg 对照。
+- ProjectPage 每15秒刷新生成新的 folders 数组，FileQuickOpen 依赖数组引用，导致未完成请求被 effect 清理并重新发起。改为稳定 folder ID 集合；实际 query/version/根集合改变或关闭仍取消，后台轮询不误取消。
+
+真实项目仅执行只读搜索，存储使用 `.cache/search-timeout/` 中独立 SQLite backup，未写源项目和用户数据库；耗时不是已鉴权 HTTP 成功断言，也不是 Debian 验收。
+
+| 测量 | 实际结果 |
+| --- | --- |
+| 最终真实三根名称 `project` | 5.350秒，22项，未截断，无错误 |
+| 最终真实三根 literal `Backend` | 8.147秒，122文件/319匹配，未截断，无错误 |
+| 前一轮真实三根缺 rg | 名称5.106秒；literal6.918秒，仍122文件/319匹配；regex6.508秒，到5000匹配上限明确截断 |
+| 前一轮真实三根有 rg regex | 9.440秒，到5000匹配上限明确截断；不将完整扫描写成已完成 |
+
+保留15秒请求预算，不靠延长超时掩盖低效扫描。名称仍实时扫描，当前这个项目约5秒；没有引入缺少文件系统失效机制的索引缓存，不承诺瞬时返回。
+
+| 检查 | 本轮实际结果 |
+| --- | --- |
+| go test ./... / go vet ./... | 全量通过；最后快照 Stat 错误传播调整后 files/search/gitview/httpapi 普通测试与 vet 再次通过 |
+| go test -race ./... | 全量通过，HTTP79.955秒、search7.425秒、files4.179秒、gitview14.471秒；最后相关包复验见下方补充 |
+| 前端 lint/typecheck/test/build | 通过，31文件/163项 Vitest；生产构建含字体/37许可证验证，既有 chunk 提示保留；新增 E2E 后 lint 再次通过 |
+| Chromium / WebKit | 各2项通过，分别6.2秒/8.4秒；真实 App + ProjectRoute 轮询跨16秒仍只有1个名称请求、无 requestfailed，解除延迟后显示结果；原顶部搜索/打开/关闭键盘行为同时通过 |
+| Linux amd64 编译 | files/search 的 go test -c 成功；只表示编译，不表示真实 Linux/Debian 运行 |
+| 性能与安全专项 | 10001项忽略树、MaxEntries20仍正常命中；140文件/每次工具启动30ms/2秒预算下批量 regex 成功；rg独立候选集对照、BOM/Unicode/混合换行/源文件名含LF/捕获预览原字节、准备回调路径与目录变更拒绝全部实际通过 |
+| 本地服务加载 | scripts/dev.sh restart 成功，5173 API 未登录响应401；15个原 tmux pane PID 全部保留 |
+
+首次 Chromium 在 page.goto 超时：本轮 trace 输出放入 web/.cache，Vite 监听 trace HTML 引发反复 reload/依赖扫描。仅清理本轮失败产物，将浏览器输出改到仓库 `.cache/modern-ui/round5/{chromium,webkit}` 并重启本轮专属5198预览，串行重跑2项全部成功。该失败保留为测试运行环境问题，不记为产品通过。专属5198服务已停止；用户5173开发服务和旧5178预览保留。
+
+未执行 Firefox、物理手机、Debian/systemd 或正式部署；没有修改提权执行、安全配置、用户终端进程或 W05/W06/W07 状态。规范同步了安全目录准备、扫描/批量限额及轮询依赖规则；任务保持 in_progress，本轮未提交/归档。
+
+最终复验：最后快照错误传播改动后 `go test -race ./internal/files ./internal/search ./internal/gitview ./internal/httpapi` 全部通过（files2.823秒、search6.269秒、gitview11.907秒、HTTP64.861秒）；相关包vet通过。9个修改Markdown本地链接、task JSON解析、git diff --check均通过。真实项目数据库副本与本轮私有staging已清理；性能测试和浏览器报告仍在忽略目录，便于复查。
+
+
+## 2026-10-03 本轮收尾结果
+
+本机可运行验收已完成：Chromium/WebKit各51个不同用例获最终通过证据，共102个“浏览器×用例”；前端四门禁与31文件163单测、全量Go test/vet/race、独立bridgego普通/vet/race、45项Python探针通过。完整首轮失败、复验、真实HTTP/tmux、六种图片/三主题、缺rg搜索与清理证据见[统一验收报告](overnight-acceptance.md)。W07其中7项/浏览器为mock权限服务，不代表真实sudo/PAM。名称搜索真实三根仍约5秒，重负载有15秒超时反例，不宣称即时响应。
+
+Firefox启动、实体设备/IME/触控板、Debian原生/systemd与精确提权安装阻塞按用户要求跳过并记录；本机执行localChecks=completed，任务和整体验收保持in_progress，原pending保留。没有自动提交、推送或归档，没有修改用户真实文件或终止用户终端。

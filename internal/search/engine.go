@@ -25,6 +25,7 @@ type rgSub struct {
 type rgMessage struct {
 	Type string `json:"type"`
 	Data struct {
+		Path       rgText  `json:"path"`
 		Lines      rgText  `json:"lines"`
 		LineNumber int     `json:"line_number"`
 		Offset     int     `json:"absolute_offset"`
@@ -37,6 +38,22 @@ type expanded struct {
 }
 
 func rgEngine(ctx context.Context, r *toolrunner.Runner, dir string, q Query, content string, replacement *string) ([]expanded, error) {
+	args := append(rgArguments(q, replacement), "--", "-")
+	input := normalizedInput(content)
+	out, code, err := r.Run(ctx, "rg", dir, input, args...)
+	if err != nil {
+		return nil, err
+	}
+	if code == 2 {
+		return nil, ErrPattern
+	}
+	if code != 0 && code != 1 {
+		return nil, toolrunner.ErrUnavailable
+	}
+	return parseRG(out, content, replacement)
+}
+
+func rgArguments(q Query, replacement *string) []string {
 	args := []string{"--no-config", "--encoding", "none", "--json", "--engine", "default", "--crlf", "--max-count", "5001"}
 	if !q.Regex {
 		args = append(args, "--fixed-strings")
@@ -54,23 +71,22 @@ func rgEngine(ctx context.Context, r *toolrunner.Runner, dir string, q Query, co
 		}
 		args = append(args, "--replace", value)
 	}
-	args = append(args, "-e", q.Pattern, "--", "-")
+	args = append(args, "-e", q.Pattern)
+	return args
+}
+
+func normalizedInput(content string) []byte {
 	input := []byte(content)
 	for i := range input {
 		if input[i] == '\r' && (i+1 == len(input) || input[i+1] != '\n') {
 			input[i] = '\n'
 		}
 	}
-	out, code, err := r.Run(ctx, "rg", dir, input, args...)
-	if err != nil {
-		return nil, err
-	}
-	if code == 2 {
-		return nil, ErrPattern
-	}
-	if code != 0 && code != 1 {
-		return nil, toolrunner.ErrUnavailable
-	}
+	return input
+}
+
+func parseRG(out []byte, content string, replacement *string) ([]expanded, error) {
+	input := normalizedInput(content)
 	lineStarts := []int{0}
 	for i := 0; i < len(content); i++ {
 		if content[i] == '\r' {

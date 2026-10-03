@@ -62,3 +62,6 @@ Darwin 目录项元数据同样用 `fstatat(dirfd, name, AT_SYMLINK_NOFOLLOW)`�
 Darwin `openMutationParent` 通过逐组件 `openat(O_DIRECTORY|O_NOFOLLOW)`，在打开前后核对注册root device/inode；每个后续操作仍复验parent/leaf。避免每个深路径前缀重复调用os.Root.Lstat导致二次遍历。普通可跟随根内链接的openConstrained独立保持；Linux继续openat2的BENEATH/NO_XDEV/NO_SYMLINKS。两平台编译和本机竞态/链接哨兵回归不能代替真实Debian验收。
 
 W07 的 PreparePrivileged/Commit 元数据/临时文件复验与 Linux 限制见 [单文件提权契约](elevation-contract.md)；普通 Save 不自动获得高权限。
+
+
+`WalkSnapshotPrepared(ctx,root,start,maxEntries,prepare,visit)` 是 W06 搜索目录准备入口；`SnapshotPrepare(directory,entries,copy)` 在逐项visit之前加载ignore。copy只接受当次枚举的普通叶名称，其他名称/目录/链接返回ErrUnsupported；使用同一个no-follow父句柄，核对叶Identity与枚举身份、两次内容一致性，再由walker退出复验整个目录。entries传副本，两个复制回调均不可保存到异步或访问结束后；原WalkSnapshotWithCopy继续传nil准备器，取消/深度/容量边界保持。回归拒绝../与链接，准备器造成目录新增必须ErrConflict。

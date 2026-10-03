@@ -13,6 +13,10 @@ import (
 // A search snapshot pins its engine, so preview never silently changes the
 // interpretation of captures after a tool installation or removal.
 func selectEngine(ctx context.Context, runner *toolrunner.Runner, dir string, q Query) (bool, error) {
+	if !q.Regex {
+		_, err := nativePattern(q)
+		return true, err
+	}
 	_, err := rgEngine(ctx, runner, dir, q, "", nil)
 	if err == nil {
 		return false, nil
@@ -66,6 +70,10 @@ func nativeEngine(ctx context.Context, q Query, content string, replacement *str
 	if err != nil {
 		return nil, err
 	}
+	return nativeMatches(ctx, q, re, content, replacement)
+}
+
+func nativeMatches(ctx context.Context, q Query, re *regexp.Regexp, content string, replacement *string) ([]expanded, error) {
 	result := []expanded{}
 	// Match each physical line while retaining byte offsets into the original
 	// snapshot. BOM and every newline byte survive preview/apply unchanged.

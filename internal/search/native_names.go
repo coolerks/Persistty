@@ -2,9 +2,6 @@ package search
 
 import (
 	"context"
-	"os"
-	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -17,114 +14,59 @@ type nameIgnore struct {
 	negated, directory bool
 }
 
-// nativeNames reads only the private, already bounded placeholder tree. It never
-// walks a registered root or reads ordinary source contents a second time.
-func nativeNames(ctx context.Context, tree string) (map[string]bool, error) {
-	allowed := map[string]bool{}
-	rulesCount, comparisons, outputBytes := 0, 0, 0
-	var walk func(string, [4][]nameIgnore) error
-	walk = func(directory string, rules [4][]nameIgnore) error {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		entries, err := os.ReadDir(filepath.Join(tree, filepath.FromSlash(directory)))
+// The discovery walker and staged compatibility checks share one ignore owner.
+type ignoreRules [4][]nameIgnore
+type ignoreBudget struct{ rules, comparisons int }
+
+func loadIgnoreRules(ctx context.Context, directory string, rules ignoreRules, budget *ignoreBudget, load func(string) ([]byte, error)) (ignoreRules, error) {
+	for rank, filename := range []string{".git/info/exclude", ".gitignore", ".ignore", ".rgignore"} {
+		content, err := load(filename)
 		if err != nil {
-			return err
+			return rules, err
 		}
-		for _, entry := range entries {
-			if entry.Name() == ".git" && entry.IsDir() {
-				// A nested repository's Git rules do not inherit outer Git rules.
-				rules[0], rules[1] = nil, nil
-				break
-			}
-		}
-		for rank, filename := range []string{".git/info/exclude", ".gitignore", ".ignore", ".rgignore"} {
-			control := filepath.Join(tree, filepath.FromSlash(path.Join(directory, filename)))
-			info, err := os.Lstat(control)
-			if os.IsNotExist(err) {
-				continue
-			}
-			if err != nil {
-				return err
-			}
-			if !info.Mode().IsRegular() {
-				continue
-			}
-			content, err := os.ReadFile(control)
-			if os.IsNotExist(err) {
-				continue
-			}
-			if err != nil {
-				return err
-			}
-			// Force child append to allocate, keeping sibling rule stacks independent.
-			rules[rank] = rules[rank][:len(rules[rank]):len(rules[rank])]
-			for _, line := range strings.Split(string(content), "\n") {
-				if err := ctx.Err(); err != nil {
-					return err
-				}
-				rule, ok := parseNameIgnore(directory, strings.TrimSuffix(line, "\r"))
-				if !ok {
-					continue
-				}
-				rulesCount++
-				if rulesCount > 10000 {
-					return toolrunner.ErrLimit
-				}
-				rules[rank] = append(rules[rank], rule)
-			}
-		}
-		for _, entry := range entries {
+		rules[rank] = rules[rank][:len(rules[rank]):len(rules[rank])]
+		for _, line := range strings.Split(string(content), "\n") {
 			if err := ctx.Err(); err != nil {
-				return err
+				return rules, err
 			}
-			if entry.Name() == ".git" || entry.Type()&os.ModeSymlink != 0 {
+			rule, ok := parseNameIgnore(directory, strings.TrimSuffix(line, "\r"))
+			if !ok {
 				continue
 			}
-			relative := path.Join(directory, entry.Name())
-			ignored, matched := false, false
-			// File type priority is independent of depth: rgignore > ignore > gitignore > exclude.
-			for rank := len(rules) - 1; rank >= 0 && !matched; rank-- {
-				for i := len(rules[rank]) - 1; i >= 0; i-- {
-					if err := ctx.Err(); err != nil {
-						return err
-					}
-					comparisons++
-					if comparisons > 2000000 {
-						return toolrunner.ErrLimit
-					}
-					rule := rules[rank][i]
-					if rule.directory && !entry.IsDir() {
-						continue
-					}
-					local := relative
-					if rule.scope != "" {
-						local = strings.TrimPrefix(relative, rule.scope+"/")
-					}
-					if rule.pattern.MatchString(local) {
-						ignored, matched = !rule.negated, true
-						break
-					}
-				}
+			budget.rules++
+			if budget.rules > 10000 {
+				return rules, toolrunner.ErrLimit
 			}
-			if ignored {
+			rules[rank] = append(rules[rank], rule)
+		}
+	}
+	return rules, nil
+}
+
+func ignoredName(ctx context.Context, relative string, directory bool, rules ignoreRules, budget *ignoreBudget) (bool, error) {
+	for rank := len(rules) - 1; rank >= 0; rank-- {
+		for i := len(rules[rank]) - 1; i >= 0; i-- {
+			if err := ctx.Err(); err != nil {
+				return false, err
+			}
+			budget.comparisons++
+			if budget.comparisons > 2000000 {
+				return false, toolrunner.ErrLimit
+			}
+			rule := rules[rank][i]
+			if rule.directory && !directory {
 				continue
 			}
-			if entry.IsDir() {
-				if err := walk(relative, rules); err != nil {
-					return err
-				}
-			} else if entry.Type().IsRegular() {
-				outputBytes += len(relative) + 1
-				if outputBytes > 32<<20 {
-					return toolrunner.ErrLimit
-				}
-				allowed[relative] = true
+			local := relative
+			if rule.scope != "" {
+				local = strings.TrimPrefix(relative, rule.scope+"/")
+			}
+			if rule.pattern.MatchString(local) {
+				return !rule.negated, nil
 			}
 		}
-		return nil
 	}
-	return allowed, walk("", [4][]nameIgnore{})
+	return false, nil
 }
 
 func parseNameIgnore(scope, line string) (nameIgnore, bool) {

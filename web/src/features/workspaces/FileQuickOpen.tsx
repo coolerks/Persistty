@@ -16,6 +16,9 @@ export function FileQuickOpen({ project, onOpen }: { project: Project; onOpen(fi
   const [selected, setSelected] = useState(0);
   const results = useRef<HTMLDivElement>(null);
   const keyword = query.trim(), key = `${project.id}:${project.version}:${keyword}`;
+  // Project polling creates fresh arrays without changing folder identities.
+  // That refresh must not cancel a slow search with the same project version.
+  const folderIDs = project.folders.map(folder => folder.id).join("\0");
   const current = response?.key === key ? response : null;
   const items = current?.data?.items ?? [];
   const valid = new TextEncoder().encode(keyword).length <= 256;
@@ -30,15 +33,16 @@ export function FileQuickOpen({ project, onOpen }: { project: Project; onOpen(fi
   useEffect(() => {
     if (!open || !keyword || !valid) return;
     const controller = new AbortController();
+    const folders = new Set(folderIDs.split("\0"));
     const timer = setTimeout(() => {
       void searchGitAPI.fileNames(project.id, project.version, keyword, controller.signal).then(data => {
         if (controller.signal.aborted) return;
-        if (data.project_version !== project.version || data.items.some(item => !project.folders.some(folder => folder.id === item.folder_id))) throw new Error("项目配置已变化，请刷新项目后重试。");
+        if (data.project_version !== project.version || data.items.some(item => !folders.has(item.folder_id))) throw new Error("项目配置已变化，请刷新项目后重试。");
         setResponse({ key, data });
       }).catch(cause => { if (!controller.signal.aborted) setResponse({ key, error: errorMessage(cause) }); });
     }, 250);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [open, keyword, valid, key, project.id, project.version, project.folders]);
+  }, [open, keyword, valid, key, project.id, project.version, folderIDs]);
   function choose(index: number) {
     const item = items[index]; if (!item) return;
     onOpen({ folderId: item.folder_id, path: item.path }); setOpen(false);

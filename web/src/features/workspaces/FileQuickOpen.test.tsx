@@ -6,6 +6,26 @@ import { searchGitAPI } from "@/lib/api/search-git-client";
 import type { FileNames } from "@/lib/api/search-git-decoder";
 const project = { id: "p", name: "项目", version: 1, main_folder_id: "f", folders: [{ id: "f", path: "/fixture" }, { id: "other", path: "/other" }] };
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
+test("同版本项目轮询不取消文件名搜索，配置版本变化仍取消", async () => {
+  let signal: AbortSignal | undefined;
+  let finish: (data: FileNames) => void = () => {};
+  const load = vi.spyOn(searchGitAPI, "fileNames").mockImplementation((_p, _v, _q, pending) => {
+    signal = pending; return new Promise(resolve => { finish = resolve; });
+  });
+  const onOpen = vi.fn();
+  const view = render(<FileQuickOpen project={project} onOpen={onOpen} />);
+  await userEvent.click(screen.getByRole("button", { name: "按名称搜索文件" }));
+  vi.useFakeTimers();
+  fireEvent.change(screen.getByRole("textbox", { name: "文件名关键词" }), { target: { value: "project" } });
+  await act(() => vi.advanceTimersByTimeAsync(250));
+  view.rerender(<FileQuickOpen project={{ ...project, folders: project.folders.map(folder => ({ ...folder })) }} onOpen={onOpen} />);
+  await act(() => vi.advanceTimersByTimeAsync(16000));
+  expect(signal?.aborted).toBe(false); expect(load).toHaveBeenCalledTimes(1);
+  await act(async () => finish({ project_version: 1, items: [{ folder_id: "f", path: "project.go" }], truncated: false }));
+  expect(screen.getByRole("button", { name: "打开 project.go" })).toBeInTheDocument();
+  view.rerender(<FileQuickOpen project={{ ...project, version: 2 }} onOpen={onOpen} />);
+  expect(signal?.aborted).toBe(true);
+});
 test("防抖取消旧请求，迟到结果不覆盖新关键词；键盘打开第二根文件", async () => {
   let finish: (data: FileNames) => void = () => {}; let first: AbortSignal | undefined;
   const api = vi.spyOn(searchGitAPI, "fileNames").mockImplementation((_p, _v, query, signal) => {

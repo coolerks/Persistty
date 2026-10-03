@@ -37,12 +37,12 @@
     "web/tests/e2e/terminal-scrolling.spec.ts",
     "web/tests/e2e/w05-feedback-live.spec.ts"
   ],
-  "notes": "2026-10-01：W05 既有功能完成；截图批次 U01～U04 已实施：标签灰点、固定右侧文件操作、底部语言入口、空历史保留 live。最终 lint/typecheck/128 项单测/build、Go test/vet/race、18 项 Chromium 与 2 项真实 Debian 专项通过；两个专属实例均已清理，见 feedback-check-report.md。本轮修改未提交。真实手机软键盘、触控板手感与完整图片/平台矩阵未验收，保留 in_progress，不自动归档。 2026-10-01 用户要求恢复 W05/W06 验收；本地主会话已修复触屏横屏/替换默认焦点，实际结果见 acceptance-report.md。Debian 本轮上传被自动审批拒绝，等待明确目标与载荷授权；实机手机/触控板未验收。 2026-10-01 五张截图反馈 F01–F05 已修正并通过本机回归，见 ../10-01-search-readonly-git/screenshot-adjustments.md；账户默认 shell 仅影响新终端，实机验收状态不变。 2026-10-02 用户要求先推进W07，W05/W06剩余统一验收后移；status保持in_progress，acceptance执行安排deferred，原pending保留。",
+  "notes": "2026-10-01：W05 既有功能完成；截图批次 U01～U04 已实施：标签灰点、固定右侧文件操作、底部语言入口、空历史保留 live。最终 lint/typecheck/128 项单测/build、Go test/vet/race、18 项 Chromium 与 2 项真实 Debian 专项通过；两个专属实例均已清理，见 feedback-check-report.md。本轮修改未提交。真实手机软键盘、触控板手感与完整图片/平台矩阵未验收，保留 in_progress，不自动归档。 2026-10-01 用户要求恢复 W05/W06 验收；本地主会话已修复触屏横屏/替换默认焦点，实际结果见 acceptance-report.md。Debian 本轮上传被自动审批拒绝，等待明确目标与载荷授权；实机手机/触控板未验收。 2026-10-01 五张截图反馈 F01–F05 已修正并通过本机回归，见 ../10-01-search-readonly-git/screenshot-adjustments.md；账户默认 shell 仅影响新终端，实机验收状态不变。 2026-10-02 用户要求先推进W07，W05/W06剩余统一验收后移；status保持in_progress，acceptance执行安排deferred，原pending保留。 2026-10-03本轮可运行统一验收与最终门禁已完成，最新localChecks=completed及pending见meta.acceptance和统一报告，覆盖此前deferred执行安排；不完成/归档，不自动提交。",
   "meta": {
     "acceptance": {
-      "state": "deferred",
-      "updatedAt": "2026-10-02",
-      "reason": "用户明确要求先规划并实施W07，W05/W06剩余统一验收后边再完成；已通过证据及pending保留",
+      "state": "in_progress",
+      "updatedAt": "2026-10-03",
+      "reason": "用户要求继续直至完成；本机可运行范围已完成，环境和精确安装授权阻塞已跳过并记录",
       "report": "acceptance-report.md",
       "pending": [
         "debian_target_authorization",
@@ -50,7 +50,24 @@
         "physical_trackpad",
         "firefox_environment",
         "shell_theme_output"
-      ]
+      ],
+      "unifiedReport": "../10-02-workbench-modern-ui/overnight-acceptance.md",
+      "localChecks": "completed",
+      "browserMatrix": {
+        "chromium": 51,
+        "webkit": 51,
+        "counting": "distinct_browser_cases_final_pass_after_documented_rechecks"
+      },
+      "quality": {
+        "go_test": "passed",
+        "go_vet": "passed",
+        "go_race": "passed",
+        "bridgego_test_vet_race": "passed",
+        "frontend_lint_typecheck_build": "passed",
+        "vitest": 163,
+        "python": 45
+      },
+      "notes": "Linux交叉编译不计原生运行；W07浏览器7项/浏览器为mock服务；真实三根名称约5秒且重负载超时反例保留"
     },
     "screenshotFeedback": {
       "state": "implemented",

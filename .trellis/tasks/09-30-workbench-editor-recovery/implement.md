@@ -35,3 +35,15 @@ M01～M06 完成代码与对应自动化；M07 最终 Chromium 9 项、前端 12
 变更边界：FileEditor/ProjectWorkbench 负责编辑 UI 与活动组，LanguageSelect/新增 EditorFileActions/EditorLanguageStatus 复用现有 shadcn 原语；styles.css 只调整对应区域。TerminalSession 只处理历史读取与展示边界，不改变 WS/终止/接管协议或真实进程生命周期。真实资源验证继续使用专属 harness，不操作截图中的用户项目或终端。
 
 截图批次 U01～U04 完成；最终 128 项单测、18 项 Chromium 与 2 项真实 Debian 专项通过，隔离资源全部清理。实施/失败修正/未验收边界见 [截图反馈检查报告](feedback-check-report.md)。本轮修改未提交；W05 仍进行中。
+
+
+## 2026-10-02 本轮统一验收
+
+用户明确授权直接开展剩余E2E与验收，覆盖此前延期安排；阻塞项跳过并记录，不停下等待。执行资源、顺序和实时结果见[统一验收报告](../10-02-workbench-modern-ui/overnight-acceptance.md)。任务保持in_progress，未执行真实设备/系统项不计为通过。
+
+
+## 2026-10-03 本轮收尾结果
+
+本机可运行验收已完成：Chromium/WebKit各51个不同用例获最终通过证据，共102个“浏览器×用例”；前端四门禁与31文件163单测、全量Go test/vet/race、独立bridgego普通/vet/race、45项Python探针通过。完整首轮失败、复验、真实HTTP/tmux、六种图片/三主题、缺rg搜索与清理证据见[统一验收报告](../10-02-workbench-modern-ui/overnight-acceptance.md)。W07其中7项/浏览器为mock权限服务，不代表真实sudo/PAM。名称搜索真实三根仍约5秒，重负载有15秒超时反例，不宣称即时响应。
+
+Firefox启动、实体设备/IME/触控板、Debian原生/systemd与精确提权安装阻塞按用户要求跳过并记录；本机执行localChecks=completed，任务和整体验收保持in_progress，原pending保留。没有自动提交、推送或归档，没有修改用户真实文件或终止用户终端。

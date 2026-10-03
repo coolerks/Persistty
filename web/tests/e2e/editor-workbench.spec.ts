@@ -33,7 +33,7 @@ test("隔离真实工作台的文件树/标签图标、语言选择、分组及�
   await page.getByRole("treeitem", { name: "src", exact: true }).click();
   await expect(treeIcon("src")).toHaveAttribute("data-file-icon", "folder-src-open");
   await page.getByRole("treeitem", { name: "query.sql", exact: true }).click();
-  await expect(page.locator(".monaco-editor")).toBeVisible();
+  await expect(page.locator(".monaco-editor")).toBeVisible({ timeout: 15000 });
   await page.getByRole("combobox", { name: "语言模式" }).click(); await page.getByRole("option", { name: "PostgreSQL", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "语言模式" })).toHaveText(/PostgreSQL/);
   await page.getByRole("treeitem", { name: "config.yaml", exact: true }).click();

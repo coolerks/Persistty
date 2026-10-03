@@ -21,9 +21,9 @@ test("Git 双区域默认平分，可拖动、折叠并切换带 Material 图标
   await page.mouse.move(box.x + box.width / 2, box.y + .5); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2, box.y + 65, { steps: 10 }); await page.mouse.up();
   await expect.poll(async () => (await sizes())[0]!).toBeGreaterThan(initial[0]! + 30);
   const resized = await sizes();
-  await panel.getByRole("button", { name: "变更", exact: true }).click(); await expect(changes).toBeHidden(); await expect(history).toBeVisible();
+  await panel.getByRole("button", { name: /^变更(?:\s+\d+)?$/ }).click(); await expect(changes).toBeHidden(); await expect(history).toBeVisible();
   await panel.getByRole("button", { name: "历史", exact: true }).click(); await expect(history).toBeHidden();
-  await panel.getByRole("button", { name: "变更", exact: true }).click(); await expect(changes).toBeVisible();
+  await panel.getByRole("button", { name: /^变更(?:\s+\d+)?$/ }).click(); await expect(changes).toBeVisible();
   await panel.getByRole("button", { name: "历史", exact: true }).click(); await expect(history).toBeVisible();
   await expect.poll(async () => (await sizes())[0]!).toBeCloseTo(resized[0]!, 0);
   await panel.getByRole("tab", { name: "变更文件展示：文件树", exact: true }).click();

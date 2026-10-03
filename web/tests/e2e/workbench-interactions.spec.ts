@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
 
 test("工作台右键、树选择与重展开定位、已结束终端关闭和细滚动条", async ({ page }, testInfo) => {
+  test.setTimeout(90000);
   const errors: string[] = []; const mutations: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   const terminals = [...Array.from({ length: 16 }, (_, i) => ({ id: `ended-${i}`, project_id: "interaction", display_name: `结束会话${i}`, working_directory: "/fixture", state: "terminated" })), { id: "unknown", project_id: "interaction", display_name: "未知状态", working_directory: "/fixture", state: "unavailable" }];

@@ -67,3 +67,10 @@
 
 先实施 UI 和 matcher/discovery，补缺工具搜索→定位→预览→应用、Unicode/混合换行/忽略/glob/限额与 rg 对照；再执行门禁与浏览器几何、慢加载、深浅色/触屏检查，记录真实证据及未执行环境。
 复用查找：现有 badge/collapsible/input/toggle/field 已可满足，核对官方 https://ui.shadcn.com/docs/components/base/badge 和 https://ui.shadcn.com/docs/components/base/collapsible ；Go RE2 和扩展规则参照 https://pkg.go.dev/regexp 。无新增依赖/API/布局 schema，不提交或部署。
+
+
+## 搜索超时修复边界（2026-10-02）
+当前差距在搜索 owner，而非 HTTP/Vite：忽略目录晚过滤、每文件重复打开深父路径、每文件启动匹配工具。修改 internal/files/snapshot.go 提供目录准备回调（作用域内安全复制控制文件，结束仍复验目录）；internal/search/discovery.go 复用已有 ignore matcher 在进入源子目录前剪枝；native_names.go 抽取同一规则裁决防止语义分叉；service.go 通过 WalkSnapshotWithCopy 只读取候选并复用父句柄。字面匹配直接使用已验证的 Go matcher，每请求编译一次；正则保留 rg 语义及缺工具兜底，评估有界批量匹配以避免逐文件进程。既有完整版本、项目交付复验、原字节 offset、预览引擎固定、无 source CLI 和无 source 写入继续保持。
+本轮不增加超时、并发、后台重试、数据库迁移或前端 API，也不部署。测试证明剪枝与原私有树 rg 集合一致、忽略超大目录不遍历、源控制文件超限不能伪成功、取消/身份变动保留错误；真实三根只读复测覆盖有/无 rg 与 literal/regex。
+
+用户补充 file-names?query=project 在15秒后被取消；同轮纳入名称发现性能与FileQuickOpen取消修复。最终源发现改用单遍安全内存裁决/提前剪枝，不创建普通占位文件；旧私有树实现仅保留为独立真实rg对照测试。全文在同次访问中复制正文，literal复用Go编译器，regex采用有界批量rg；顶栏绑定稳定的ID集合，真实配置/关键词变化仍取消。

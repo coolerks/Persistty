@@ -47,6 +47,8 @@ W01 工程基础、W02 Debian 实验和 W04 多文件夹项目与文件管理已
 
 2026-10-02 用户明确要求先规划并实施 [W07 单文件提权编辑](.trellis/tasks/10-02-privileged-file-edit/prd.md)，W05/W06 剩余统一验收后移，覆盖上一段的执行优先级。W05/W06 继续 `in_progress`，验收安排为 `deferred`，原证据与未执行项保留；W07 用户已明确批准“开始实施”，源码与本机专项已接入，默认禁用，任务保持 `in_progress`；最新检查与未执行项见 [W07 检查报告](.trellis/tasks/10-02-privileged-file-edit/check-report.md)。root-owned helper、独立授权执行服务及 sudoers/PAM/systemd 修改必须在精确产物可审查后获得目标机操作授权，不能把本地规划或非特权测试写成真实提权已可用。
 
+2026-10-02 用户再次明确直接执行剩余统一验收与E2E，遇阻塞跳过并记录、不等待中途回复；覆盖上一段deferred执行安排，W05/W06/W07及新版UI任务继续in_progress。2026-10-03本机可运行范围已完成：Chromium/WebKit共102个不同浏览器用例获最终通过证据，前端163单测及Go全量/独立桥接门禁通过；名称仍约5秒、重负载超时保留。最新首轮/复验、真实HTTP/终端、门禁、环境阻塞和资源清理见[本轮统一验收报告](.trellis/tasks/10-02-workbench-modern-ui/overnight-acceptance.md)。物理设备与精确系统安装/远端载荷授权不足仍不记通过，不自动提交或归档。
+
 ## 需求与规范的使用顺序
 
 先读取当前任务的 `prd.md`，再读取存在的 `design.md`、`implement.md` 及相关规范。后端入口为 [.trellis/spec/backend/index.md](.trellis/spec/backend/index.md)，前端入口为 [.trellis/spec/frontend/index.md](.trellis/spec/frontend/index.md)，跨层修改同时读取 [思考指南](.trellis/spec/guides/index.md) 及其对应文档。

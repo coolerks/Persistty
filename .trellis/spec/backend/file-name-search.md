@@ -14,10 +14,10 @@ UI `FileQuickOpen({project,onOpen})`，onOpen 传现有 `{folderId,path}`；桌�
 
 - query 原始 UTF-8 最多 256 字节、无 NUL/CR/LF，去首尾空白后非空。字面文件 basename 子串匹配，不区分大小写；没有 regex/glob/目录/绝对路径参数，也不按内容匹配。客户端单输入最多 256 字符并补 UTF-8 字节检查。
 - 覆盖当前项目所有注册根，按配置根顺序及各根相对路径排序；重叠根同一真实路径去重，保留第一个根身份。结果最多 100 项，只有实际超限或扫描截断才标 truncated；不是完整项目原子快照。
-- `discover` 是与内容搜索共享的安全发现 owner：句柄枚举/复验，私有 0700 staging 中建立空占位文件及安全复制的 ignore 控制文件；优先固定 rg `--no-config --no-require-git --files --hidden --null` 只访问 staging，不交付源 cwd，不使用 shell。普通文件正文不复制，二进制/大文件也可按名称发现。
+- `walkCandidates/discoverCandidates` 与内容搜索共用安全发现 owner：`WalkSnapshotPrepared` 在枚举目录内先通过同一 no-follow 父句柄读取有界 ignore，再裁决文件和目录。忽略目录在进入前剪枝，名称集合仅在内存构建，不创建空占位文件树、不启动 CLI。普通文件正文不复制，二进制/大文件也可按名称发现。
 - `.git` 强排除；范围内 `.gitignore,.ignore,.rgignore,.git/info/exclude` 与搜索配置的默认排除目录继续生效，不读取父级/全局规则。符号链接与特殊文件不纳入结果。只安全读取有界 ignore 控制文件，失败不静默忽略。
-- 累计目录项/深度/单目录、ignore 控制字节、工具输出、并发槽与 timeout 沿用搜索/files/toolrunner 配额。context 取消释放槽与 staging。没有跨请求名称/正文缓存或搜索 snapshot ID。响应前复验项目版本。
-- 顶栏点击或 Ctrl/Cmd+P 打开 shadcn Dialog；输入法合成、已有 Dialog 或多余修饰键时不抢快捷键。250ms 防抖，改词/关闭/卸载/项目配置变化 abort；迟到响应必须检查 signal，按项目 ID/version/关键词 key 展示，并拒绝版本或 folder_id 不属于当前项目的结果。
+- 累计目录项/深度/单目录、ignore 控制字节、工具输出、并发槽与 timeout 沿用搜索/files/toolrunner 配额。context 取消释放槽；名称请求没有 staging。没有跨请求名称/正文缓存或搜索 snapshot ID。响应前复验项目版本。
+- 顶栏点击或 Ctrl/Cmd+P 打开 shadcn Dialog；输入法合成、已有 Dialog 或多余修饰键时不抢快捷键。250ms 防抖，改词/关闭/卸载/项目 ID/version/文件夹 ID 集合变化 abort；同版本轮询产生的新数组不能取消相同关键词的请求；迟到响应必须检查 signal，按项目 ID/version/关键词 key 展示，并拒绝版本或 folder_id 不属于当前项目的结果。
 - Input 自动获焦，上下键选择、Enter 打开、Esc 关闭，鼠标或 Tab 可访问每个 Button。空词、加载、无结果、过长和 API 失败可见；按用户第四轮要求不展示截断提示，但保留 truncated DTO；不自动重试。标题入口不伪造 combobox/listbox 原语；组合已有 Dialog/Input/Button 与文件图标。
 
 ## 4. 验证与错误矩阵
@@ -51,17 +51,20 @@ GET 沿用后端鉴权，不新增写权限；打开结果仍由既有文件接�
 
 错误：`rg --files` 直接以用户注册根为 cwd，或调用内容搜索后拿匹配正文代替名称；每次输入立即发送且接受旧响应。
 
-正确：安全枚举→私有占位树/有界 ignore→固定 rg→有界名称 DTO→防抖/abort/key/版本校验→现有编辑器按 `{folderId,path}` 打开。
+正确：安全句柄枚举→有界 ignore→忽略目录先剪枝→内存有界名称 DTO→防抖/abort/key/版本校验→现有编辑器按 `{folderId,path}` 打开。
 
 
 ## 工具兜底与边界（第三、四轮）
 
-rg 缺失或能力失败时，nativeNames 仅遍历同一私有占位树，按 rgignore > ignore > gitignore > info/exclude 优先级、各层否定/嵌套规则过滤；非 Git 目录的 .gitignore 同样生效。普通正文不读，源访问仍由 files.WalkSnapshot/CopySnapshot 的注册句柄和复验负责。共享 discovery 同样供全文搜索使用，名称 API 不依赖 Git 或 rg 必须已安装。
+第三、四轮曾使用私有占位树与 rg/Go 兜底；搜索超时修复后按同一 Go ignore owner 在安全源枚举回调中直接裁决：rgignore > ignore > gitignore > info/exclude，各层否定/嵌套规则、非 Git 目录 .gitignore 和嵌套仓库 Git 规则重置保持。普通正文不读，源访问由 files.WalkSnapshotPrepared/CopySnapshot 注册句柄和复验负责。真实私有树 rg 仅在 reference 测试中作为独立集合对照，不是产品查询路径。
 
 Go glob 支持 *、?、**、字符类、花括号、转义及目录模式；无效 ignore 模式不匹配而不崩溃。规则最多10000条、比较2000000次、每根路径输出32MiB，超过直接413。控制文件每份1MiB且累计受 MaxBytes 约束；读取超限失败，不能当成目录遍历 truncated。单目录/深度/累计目录项超限才允许交付 truncated=true。
 
-工具缺失/参数能力失败可兜底；权限、根身份、ignore 读取、取消、超时和资源超限不兜底。工具只执行于私有树，不能扩大源读取。HTTP 精确注册的 file-names route 与搜索/Git 共用 ToolTimeout，默认15秒；普通文件请求仍10秒，配置3/15/25秒由实际middleware测试覆盖。
+名称发现不启动外部工具；权限、根身份、ignore 读取、取消、超时和资源超限保留失败语义，不能扩大源读取。HTTP 精确注册的 file-names route 与搜索/Git 共用 ToolTimeout，默认15秒；普通文件请求仍10秒，配置3/15/25秒由实际middleware测试覆盖。
 
 FileQuickOpen 的 DialogContent 禁用默认外部关闭按钮，Input 与 DialogClose/Button/X 在同一相对定位行，关闭按钮垂直居中，不越输入右边界。结果最多100项，250ms 防抖、旧请求取消、跨项目根身份及版本漂移拒绝规则保持。
 
 测试追加：独立无工具 fixture，ignore 优先/嵌套/反选/转义/字符类/花括号与真实 rg 对照，非仓库 ignore、同名目录/畸形规则、控制文件/目录/结果限额；浏览器断言关闭居中及 truncated 响应不出现指定文案。
+
+
+回归：scan_performance_test 的忽略目录超过10000项，同时全局MaxEntries=20，名称和内容仍仅返回真实可见文件且不截断；file_names_test 将快速集合与完整私有树真实rg集合对照。FileQuickOpen unit 和 Chromium/WebKit 慢请求跨16秒真实项目轮询仍只发一次名称请求，配置版本变化仍取消。

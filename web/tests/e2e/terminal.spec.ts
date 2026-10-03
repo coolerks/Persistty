@@ -1,16 +1,36 @@
 import { menuAction, controlled } from "./terminal-actions";
 import { expect, test, type Page } from "@playwright/test";
+import { decodeEnvelope, decodeProject } from "../../src/lib/api/decoder";
+
+test.beforeEach(() => {
+  test.setTimeout(60000);
+  const local = process.env.PERSISTTY_E2E_W06_ROOT?.startsWith("/private/tmp/persistty-w06-browser-");
+  const remote = /^\/tmp\/persistty-browser-[A-Za-z0-9]{8}$/.test(process.env.PERSISTTY_E2E_REMOTE_ROOT ?? "");
+  test.skip(!local && !remote, "仅操作显式指定的本轮隔离项目与终端");
+});
 
 async function openProject(page: Page) {
   await page.goto("/projects");
   await page.getByRole("textbox", { name: "访问密码" }).fill(process.env.PERSISTTY_E2E_PASSWORD!);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  const login = page.getByRole("button", { name: "登录", exact: true });
+  let [response] = await Promise.all([page.waitForResponse(item => item.url().endsWith("/api/v1/auth/login")), login.click()]);
+  if (response.status() === 429) {
+    // 快速串行验收也遵守真实登录冷却，不关闭限流或绕过认证。
+    test.setTimeout(150000);
+    await expect(login).toBeEnabled({ timeout: 70000 });
+    [response] = await Promise.all([page.waitForResponse(item => item.url().endsWith("/api/v1/auth/login")), login.click()]);
+  }
+  expect(response.status()).toBe(200);
   await page.getByRole("button", { name: `打开 ${process.env.PERSISTTY_E2E_PROJECT}` }).click();
   await page.getByRole("button", { name: "当前标签页" }).click();
-  await expect(page.getByRole("heading", { name: process.env.PERSISTTY_E2E_PROJECT! })).toBeVisible();
+  await expect(page.getByRole("main", { name: `${process.env.PERSISTTY_E2E_PROJECT} 工作台`, exact: true })).toBeVisible();
+  const projectPath = new URL(page.url()).pathname;
+  const project = decodeEnvelope(await (await page.request.get(`/api/v1${projectPath}`)).json(), decodeProject);
+  const expectedRoot = process.env.PERSISTTY_E2E_W06_ROOT ?? `${process.env.PERSISTTY_E2E_REMOTE_ROOT}/project`;
+  expect(project.folders.some(folder => folder.path === expectedRoot)).toBe(true);
 }
 
-test("桌面终端与历史快照", async ({ page }) => {
+test("桌面终端与历史快照", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await openProject(page);
   const [createdResponse] = await Promise.all([
@@ -26,14 +46,18 @@ test("桌面终端与历史快照", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(runtime.locator(".terminal-live .xterm-screen")).toBeVisible();
   await expect(runtime.locator(".terminal-live .xterm-rows")).toContainText("pwd");
-  await page.screenshot({ path: "test-results/w03-desktop.png" });
+  await page.keyboard.type("i=0; while [ $i -lt 100 ]; do printf 'history-%s\\n' \"$i\"; i=$((i+1)); done");
+  await page.keyboard.press("Enter");
+  await expect(runtime.locator(".terminal-live .xterm-rows")).toContainText("history-99");
+  await page.screenshot({ path: testInfo.outputPath("w03-desktop.png") });
   await menuAction(page, runtime, "查看终端历史");
-  await expect(page.getByText("普通历史快照")).toBeVisible();
+  await expect(runtime.getByLabel("终端历史", { exact: true })).toBeVisible();
+  await expect(runtime.locator(".terminal-history .xterm-rows")).toContainText("history-");
   await expect(page.getByRole("alert")).toHaveCount(0);
   await menuAction(page, runtime, "返回实时终端");
 });
 
-test("手机终端快捷键和窄屏布局", async ({ page }) => {
+test("手机终端快捷键和窄屏布局", async ({ page }, testInfo) => {
   const inputs: Buffer[] = [];
   let id = "";
   page.on("websocket", socket => socket.on("framesent", frame => {
@@ -69,7 +93,7 @@ test("手机终端快捷键和窄屏布局", async ({ page }) => {
   await page.keyboard.press("Control+q");
   await shortcuts.getByRole("button", { name: "^C", exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
-  await page.screenshot({ path: "test-results/w03-mobile.png" });
+  await page.screenshot({ path: testInfo.outputPath("w03-mobile.png") });
 });
 
 test("终端粘贴和 Ctrl 点击原样打开链接", async ({ page }) => {
@@ -117,15 +141,18 @@ test("双端接管、取消终止并在闭页后恢复", async ({ page }) => {
   const created = await createdResponse.json() as { data: { id: string } };
   const runtime = page.locator(`.terminal-runtime[data-terminal-id="${created.data.id}"]`);
   await controlled(runtime);
-  const url = `/terminals/${created.data.id}`;
+  const url = new URL(page.url()).pathname;
+  const target = `.terminal-runtime[data-terminal-id="${created.data.id}"]`;
+  const tab = `.terminal-tab[data-terminal-id="${created.data.id}"]`;
   const second = await page.context().newPage();
   await second.goto(url);
-  await expect(second.locator(".terminal-runtime")).toHaveAttribute("data-role", "observer");
-  await menuAction(second, second.locator(".terminal-runtime"), "接管");
-  await controlled(second.locator(".terminal-runtime:visible"));
+  await second.locator(tab).click();
+  await expect(second.locator(target)).toHaveAttribute("data-role", "observer");
+  await menuAction(second, second.locator(target), "接管");
+  await controlled(second.locator(target));
   await expect(runtime).toHaveAttribute("data-role", "observer");
 
-  await menuAction(second, second.locator(".terminal-runtime"), "关闭当前");
+  await menuAction(second, second.locator(target), "关闭当前");
   await second.getByRole("button", { name: "接管并关闭" }).click();
   await expect(page.getByRole("dialog", { name: "终端终止状态" })).toBeVisible();
   const third = await page.context().newPage();
@@ -142,7 +169,8 @@ test("双端接管、取消终止并在闭页后恢复", async ({ page }) => {
   await page.close();
   const reopened = await page.context().newPage();
   await reopened.goto(url);
-  await controlled(reopened.locator(".terminal-runtime"));
+  await reopened.locator(tab).click();
+  await controlled(reopened.locator(target));
 });
 
 test("终端在上下宿主移动并保留控制权", async ({ page }) => {
@@ -208,7 +236,7 @@ test("倒计时到期后显示已结束且其他会话继续", async ({ page }) 
   for (const item of before.filter(item => item.id !== id && item.state === "running")) expect(after.find(other => other.id === item.id)?.state).toBe("running");
 });
 
-test("手机外链确认和深色终端", async ({ page }) => {
+test("手机外链确认和深色终端", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openProject(page);
   await page.getByRole("navigation", { name: "工作区视图" }).getByRole("button", { name: "终端" }).click();
@@ -243,5 +271,5 @@ test("手机外链确认和深色终端", async ({ page }) => {
   const popup = await popupPromise;
   await expect.poll(() => popup.url()).toBe(url);
   await popup.close();
-  await page.screenshot({ path: "test-results/w03-mobile-dark.png" });
+  await page.screenshot({ path: testInfo.outputPath("w03-mobile-dark.png") });
 });

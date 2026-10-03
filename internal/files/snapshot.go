@@ -121,6 +121,15 @@ func WalkSnapshot(ctx context.Context, root storage.RegisteredFolder, start stri
 type SnapshotCopy func(io.Writer, int64) (Version, os.FileMode, error)
 
 func WalkSnapshotWithCopy(ctx context.Context, root storage.RegisteredFolder, start string, maxEntries int, visit func(string, Entry, SnapshotCopy) (bool, error)) error {
+	return WalkSnapshotPrepared(ctx, root, start, maxEntries, nil, visit)
+}
+
+// SnapshotPrepare runs before a directory's entries are visited. copy reads only
+// an enumerated regular leaf, through the same no-follow parent handle. Neither
+// copy nor the entry visitor's SnapshotCopy may outlive its callback.
+type SnapshotPrepare func(directory string, entries []Entry, copy func(string, io.Writer, int64) (Version, os.FileMode, error)) error
+
+func WalkSnapshotPrepared(ctx context.Context, root storage.RegisteredFolder, start string, maxEntries int, prepare SnapshotPrepare, visit func(string, Entry, SnapshotCopy) (bool, error)) error {
 	if !ValidRelative(start, true) {
 		return ErrInvalidPath
 	}
@@ -153,6 +162,53 @@ func WalkSnapshotWithCopy(ctx context.Context, root storage.RegisteredFolder, st
 		if err != nil {
 			return err
 		}
+		copyEntry := func(entry Entry, w io.Writer, limit int64) (Version, os.FileMode, error) {
+			if err := ctx.Err(); err != nil {
+				return Version{}, 0, err
+			}
+			file, err := snapshotLeaf(dir, entry.Name)
+			if err != nil {
+				return Version{}, 0, err
+			}
+			defer file.Close()
+			before, err := file.Stat()
+			if err != nil {
+				return Version{}, 0, err
+			}
+			if !before.Mode().IsRegular() {
+				return Version{}, 0, ErrUnsupported
+			}
+			v, err := copyOpenedVerified(ctx, file, w, limit)
+			if err != nil {
+				return Version{}, 0, err
+			}
+			next, err := snapshotLeaf(dir, entry.Name)
+			if err != nil {
+				return Version{}, 0, err
+			}
+			defer next.Close()
+			after, err := next.Stat()
+			if err != nil {
+				return Version{}, 0, err
+			}
+			if !os.SameFile(before, after) || v.Identity != entry.Identity {
+				return Version{}, 0, ErrConflict
+			}
+			return v, before.Mode().Perm(), nil
+		}
+		if prepare != nil {
+			err = prepare(relative, append([]Entry(nil), snap.items...), func(name string, w io.Writer, limit int64) (Version, os.FileMode, error) {
+				for _, entry := range snap.items {
+					if entry.Name == name && entry.Kind == "file" {
+						return copyEntry(entry, w, limit)
+					}
+				}
+				return Version{}, 0, ErrUnsupported
+			})
+			if err != nil {
+				return err
+			}
+		}
 		for _, entry := range snap.items {
 			if !ValidRelative(entry.Name, false) {
 				return ErrUnsupported
@@ -166,35 +222,7 @@ func WalkSnapshotWithCopy(ctx context.Context, root storage.RegisteredFolder, st
 			}
 			p := path.Join(relative, entry.Name)
 			copyLeaf := func(w io.Writer, limit int64) (Version, os.FileMode, error) {
-				if err := ctx.Err(); err != nil {
-					return Version{}, 0, err
-				}
-				file, err := snapshotLeaf(dir, entry.Name)
-				if err != nil {
-					return Version{}, 0, err
-				}
-				defer file.Close()
-				before, err := file.Stat()
-				if err != nil {
-					return Version{}, 0, err
-				}
-				v, err := copyOpenedVerified(ctx, file, w, limit)
-				if err != nil {
-					return Version{}, 0, err
-				}
-				next, err := snapshotLeaf(dir, entry.Name)
-				if err != nil {
-					return Version{}, 0, err
-				}
-				defer next.Close()
-				after, err := next.Stat()
-				if err != nil {
-					return Version{}, 0, err
-				}
-				if !os.SameFile(before, after) {
-					return Version{}, 0, ErrConflict
-				}
-				return v, before.Mode().Perm(), nil
+				return copyEntry(entry, w, limit)
 			}
 			descend, e := visit(p, entry, copyLeaf)
 			if e != nil {

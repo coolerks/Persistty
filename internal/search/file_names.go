@@ -4,7 +4,6 @@ import (
 	"context"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -42,17 +41,12 @@ func (s *Service) Names(ctx context.Context, project string, version int64, quer
 	if p.Version != version {
 		return FileNames{}, storage.ErrConflict
 	}
-	dir, clean, err := s.Runner.Stage(s.Config.ToolStagingPath())
-	if err != nil {
-		return FileNames{}, err
-	}
-	defer clean()
 	result := FileNames{ProjectVersion: version, Items: []FileName{}}
 	budget := discoveryBudget{}
 	seen := map[string]bool{}
 	options := s.Config.SearchOptions()
 	query = strings.ToLower(query)
-	for index, folder := range p.Folders {
+	for _, folder := range p.Folders {
 		if budget.entries >= options.MaxEntries {
 			result.Truncated = true
 			break
@@ -61,7 +55,7 @@ func (s *Service) Names(ctx context.Context, project string, version int64, quer
 		if err != nil {
 			return FileNames{}, err
 		}
-		allowed, err := s.discoverTree(ctx, root, filepath.Join(dir, "names-"+strconv.Itoa(index)), &budget, func(string, string) {})
+		allowed, err := s.discoverCandidates(ctx, root, &budget, func(string, string) {})
 		if err != nil {
 			return FileNames{}, err
 		}

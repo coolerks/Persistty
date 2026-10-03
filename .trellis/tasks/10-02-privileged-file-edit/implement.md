@@ -61,3 +61,15 @@ Linux构建使用实际GOOS=linux/GOARCH=amd64/CGO_ENABLED=0并隔离输出；�
 ## 高风险与回滚点
 
 helper策略、保存元数据和发布锁为高风险，不以UI通过替代安全检查。Web继续非root/NNP，授权broker的安装/命令策略单独审查。元数据或凭据管道契约不满足时停止开放提权能力，不回退到rootWeb/shell/无版本写入。禁用elevation后普通保存/终端保持，已落盘文件不由代码回滚撤销。迁移不可修改checksum或删除已应用表来兼容旧版本。
+
+
+## 2026-10-02 本轮统一验收
+
+用户明确授权直接开展剩余E2E与验收，覆盖此前延期安排；阻塞项跳过并记录，不停下等待。执行资源、顺序和实时结果见[统一验收报告](../10-02-workbench-modern-ui/overnight-acceptance.md)。任务保持in_progress，未执行真实设备/系统项不计为通过。
+
+
+## 2026-10-03 本轮收尾结果
+
+本机可运行验收已完成：Chromium/WebKit各51个不同用例获最终通过证据，共102个“浏览器×用例”；前端四门禁与31文件163单测、全量Go test/vet/race、独立bridgego普通/vet/race、45项Python探针通过。完整首轮失败、复验、真实HTTP/tmux、六种图片/三主题、缺rg搜索与清理证据见[统一验收报告](../10-02-workbench-modern-ui/overnight-acceptance.md)。W07其中7项/浏览器为mock权限服务，不代表真实sudo/PAM。名称搜索真实三根仍约5秒，重负载有15秒超时反例，不宣称即时响应。
+
+Firefox启动、实体设备/IME/触控板、Debian原生/systemd与精确提权安装阻塞按用户要求跳过并记录；本机执行localChecks=completed，任务和整体验收保持in_progress，原pending保留。没有自动提交、推送或归档，没有修改用户真实文件或终止用户终端。

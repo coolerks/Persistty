@@ -15,12 +15,16 @@ test("全部 91 个模式实际加载语法，包含无后缀变体", async ({ p
       const sample = samples[id]!;
       const model = monaco.editor.createModel(sample, id);
       if (id !== "plaintext") {
-        let highlighted = false;
-        for (let retry = 0; retry < 100; retry++) {
+        // 公共异步 API 等待真实 tokenizer；固定2秒会误判冷加载。
+        let highlighted: boolean;
+        const deadline = performance.now() + 10000;
+        do {
+          await monaco.editor.colorize(sample, id, {});
           highlighted = monaco.editor.tokenize(sample, id).flat().some(token => token.type !== "" && !token.type.startsWith("white"));
           if (highlighted) break;
+          // JSON 等语言的 provider 注册本身也是异步，必须给实际模块执行机会。
           await new Promise(resolve => setTimeout(resolve, 20));
-        }
+        } while (performance.now() < deadline);
         if (!highlighted) failed.push(`${id}: 无语法 token`);
       }
       model.dispose();

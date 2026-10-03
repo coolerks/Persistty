@@ -9,11 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"persistty/internal/config"
 	"persistty/internal/files"
 	"persistty/internal/storage"
 	"persistty/internal/toolrunner"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -174,6 +174,17 @@ func (s *Service) Search(ctx context.Context, owner, project string, q Query) (R
 	if err != nil {
 		return Result{}, err
 	}
+	var compiled *regexp.Regexp
+	if native {
+		compiled, err = nativePattern(q)
+		if err != nil {
+			return Result{}, err
+		}
+	}
+	accept, err := compileCandidateFilter(q)
+	if err != nil {
+		return Result{}, err
+	}
 	result := Result{ID: NewID(), ProjectVersion: p.Version, Files: []File{}, Skipped: []Skipped{}, ExpiresAt: time.Now().UTC().Add(5 * time.Minute).Format(time.RFC3339Nano)}
 	options := s.Config.SearchOptions()
 	seen := map[string]bool{}
@@ -187,7 +198,7 @@ func (s *Service) Search(ctx context.Context, owner, project string, q Query) (R
 			result.Truncated = true
 		}
 	}
-	for index, folder := range p.Folders {
+	for _, folder := range p.Folders {
 		if entriesSeen >= options.MaxEntries {
 			result.Truncated = true
 			break
@@ -199,59 +210,15 @@ func (s *Service) Search(ctx context.Context, owner, project string, q Query) (R
 		if err != nil {
 			return Result{}, err
 		}
-		tree := filepath.Join(dir, "tree-"+hex.EncodeToString([]byte{byte(index)}))
 		budget := discoveryBudget{entries: entriesSeen, controlBytes: controlBytes}
-		allowed, err := s.discover(ctx, root, tree, &budget, func(relative, reason string) { skip(folder.ID, relative, reason) })
-		if err != nil {
-			return Result{}, err
-		}
-		entriesSeen, controlBytes = budget.entries, budget.controlBytes
-		result.Truncated = result.Truncated || budget.truncated
-		out, err := s.filterPaths(ctx, tree, q, allowed)
-		if err != nil {
-			return Result{}, err
-		}
-		for _, raw := range bytes.Split(out, []byte{0}) {
-			relative := strings.TrimPrefix(string(raw), "./")
-			if !allowed[relative] || q.Path != "" && relative != q.Path && !strings.HasPrefix(relative, q.Path+"/") {
-				continue
+		stop := false
+		record := func(file File, found []expanded) {
+			if len(found) == 0 || stop {
+				return
 			}
-			var b bytes.Buffer
-			version, _, err := files.CopySnapshot(ctx, root, relative, &b, 8<<20)
-			if err != nil {
-				if errors.Is(err, files.ErrTooLarge) || errors.Is(err, files.ErrUnsupported) {
-					skip(folder.ID, relative, "unsupported")
-					continue
-				}
-				return Result{}, err
-			}
-			if seen[version.Identity] {
-				continue
-			}
-			seen[version.Identity] = true
-			text := b.String()
-			if !utf8.ValidString(text) || strings.ContainsRune(text, 0) {
-				skip(folder.ID, relative, "binary")
-				continue
-			}
-			if scanned+int64(len(text)) > options.MaxBytes {
-				result.Truncated = true
-				break
-			}
-			scanned += int64(len(text))
-			found, err := engine(ctx, s.Runner, dir, q, text, nil, native)
-			fileNative := native
-			if !native && errors.Is(err, toolrunner.ErrUnavailable) {
-				found, err = nativeEngine(ctx, q, text, nil)
-				fileNative = true
-			}
-			if err != nil {
-				return Result{}, err
-			}
-			if len(found) == 0 {
-				continue
-			}
-			file := File{ID: NewID(), FolderID: folder.ID, Path: relative, Version: version, Matches: []Match{}, Content: text, Native: fileNative}
+			file.ID = NewID()
+			file.Matches = []Match{}
+
 			for _, v := range found {
 				if matches >= options.MaxResults {
 					result.Truncated = true
@@ -263,12 +230,115 @@ func (s *Service) Search(ctx context.Context, owner, project string, q Query) (R
 			}
 			if len(file.Matches) > 0 {
 				result.Files = append(result.Files, file)
-				size += int64(len(text))
+				size += int64(len(file.Content))
 			}
-			if result.Truncated || len(result.Files) >= 2000 {
+			if matches >= options.MaxResults || len(result.Files) >= 2000 {
 				result.Truncated = true
-				break
+				stop = true
+				return
 			}
+		}
+		batch := []File{}
+		batchBytes := 0
+		flush := func() error {
+			if len(batch) == 0 {
+				return nil
+			}
+			values, failures, err := rgBatch(ctx, s.Runner, dir, q, batch)
+			if err != nil && !errors.Is(err, toolrunner.ErrUnavailable) {
+				return err
+			}
+			unavailable := err != nil
+			for i, file := range batch {
+				if stop {
+					break
+				}
+				var found []expanded
+				if !unavailable {
+					found, err = values[i], failures[i]
+				} else {
+					err = toolrunner.ErrUnavailable
+				}
+				if errors.Is(err, toolrunner.ErrUnavailable) {
+					if compiled == nil {
+						compiled, err = nativePattern(q)
+					} else {
+						err = nil
+					}
+					if err == nil {
+						found, err = nativeMatches(ctx, q, compiled, file.Content, nil)
+					}
+					file.Native = true
+				}
+				if err != nil {
+					return err
+				}
+				record(file, found)
+			}
+			batch, batchBytes = nil, 0
+			return nil
+		}
+		err = s.walkCandidates(ctx, root, &budget, func(relative, reason string) { skip(folder.ID, relative, reason) }, func(relative string, e files.Entry, copy files.SnapshotCopy) (bool, error) {
+			if stop {
+				return false, nil
+			}
+			if e.Kind == "directory" {
+				return q.Path == "" || relative == q.Path || strings.HasPrefix(q.Path, relative+"/") || strings.HasPrefix(relative, q.Path+"/"), nil
+			}
+			if !accept(relative) || q.Path != "" && relative != q.Path && !strings.HasPrefix(relative, q.Path+"/") {
+				return false, nil
+			}
+			var b bytes.Buffer
+			version, _, err := copy(&b, 8<<20)
+			if err != nil {
+				if errors.Is(err, files.ErrTooLarge) || errors.Is(err, files.ErrUnsupported) {
+					skip(folder.ID, relative, "unsupported")
+					return false, nil
+				}
+				return false, err
+			}
+			if seen[version.Identity] {
+				return false, nil
+			}
+			seen[version.Identity] = true
+			text := b.String()
+			if !utf8.ValidString(text) || strings.ContainsRune(text, 0) {
+				skip(folder.ID, relative, "binary")
+				return false, nil
+			}
+			if scanned+int64(len(text)) > options.MaxBytes {
+				result.Truncated = true
+				stop = true
+				return false, nil
+			}
+			scanned += int64(len(text))
+			file := File{FolderID: folder.ID, Path: relative, Version: version, Content: text, Native: native}
+			if native {
+				found, err := nativeMatches(ctx, q, compiled, text, nil)
+				if err != nil {
+					return false, err
+				}
+				record(file, found)
+			} else {
+				batch = append(batch, file)
+				batchBytes += len(text)
+				if len(batch) >= 64 || batchBytes >= 1<<20 {
+					if err := flush(); err != nil {
+						return false, err
+					}
+				}
+			}
+
+			return false, nil
+		})
+		if err != nil {
+			return Result{}, err
+		}
+		entriesSeen, controlBytes = budget.entries, budget.controlBytes
+		result.Truncated = result.Truncated || budget.truncated
+
+		if err := flush(); err != nil {
+			return Result{}, err
 		}
 		if result.Truncated {
 			break

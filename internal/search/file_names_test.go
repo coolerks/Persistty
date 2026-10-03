@@ -171,6 +171,24 @@ func TestNamesNativeFallbackAndIgnoreParity(t *testing.T) {
 		if !reflect.DeepEqual(native, primary) {
 			t.Fatal("native and rg differ")
 		}
+		registered, err := s.Store.RegisteredFolder(context.Background(), p.ID, p.Folders[0].ID, p.Version)
+		if err != nil {
+			t.Fatal(err)
+		}
+		dir, clean, err := s.Runner.Stage(s.Config.ToolStagingPath())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer clean()
+		reference, err := s.discoverTree(context.Background(), registered, filepath.Join(dir, "reference"), &discoveryBudget{}, func(string, string) {})
+		if err != nil {
+			t.Fatal(err)
+		}
+		fast, err := s.discoverCandidates(context.Background(), registered, &discoveryBudget{}, func(string, string) {})
+		if err != nil || !reflect.DeepEqual(sortedKeys(reference), sortedKeys(fast)) {
+			t.Fatalf("pruned discovery differs from real rg: %v", err)
+		}
+		clean()
 	}
 	s.Runner.Rg = filepath.Join(t.TempDir(), "missing")
 	for i := 0; i < 105; i++ {
@@ -192,7 +210,7 @@ func TestNamesNativeFallbackAndIgnoreParity(t *testing.T) {
 		t.Fatalf("cancel %v", err)
 	}
 	entries, err := os.ReadDir(s.Config.ToolStagingPath())
-	if err != nil || len(entries) != 0 {
+	if err != nil && !os.IsNotExist(err) || len(entries) != 0 {
 		t.Fatalf("staging leak %v", err)
 	}
 }

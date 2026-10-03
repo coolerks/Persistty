@@ -73,3 +73,15 @@ PRD 已按目标/背景/需求/边界/延期/产物收敛，无阻塞用户产�
 ## 功能交付（2026-10-01）
 
 M01–M09 的功能与开发检查已完成，详见[交付报告](implementation-report.md)及新 owner；上述详细风险矩阵仍需后续统一实机验收。任务保持 in_progress/acceptance deferred；规划检查中的 planning/无产品代码仅是此前阶段记录。单代理、未提交/推送/归档，不连接 Debian。
+
+
+## 2026-10-02 本轮统一验收
+
+用户明确授权直接开展剩余E2E与验收，覆盖此前延期安排；阻塞项跳过并记录，不停下等待。执行资源、顺序和实时结果见[统一验收报告](../10-02-workbench-modern-ui/overnight-acceptance.md)。任务保持in_progress，未执行真实设备/系统项不计为通过。
+
+
+## 2026-10-03 本轮收尾结果
+
+本机可运行验收已完成：Chromium/WebKit各51个不同用例获最终通过证据，共102个“浏览器×用例”；前端四门禁与31文件163单测、全量Go test/vet/race、独立bridgego普通/vet/race、45项Python探针通过。完整首轮失败、复验、真实HTTP/tmux、六种图片/三主题、缺rg搜索与清理证据见[统一验收报告](../10-02-workbench-modern-ui/overnight-acceptance.md)。W07其中7项/浏览器为mock权限服务，不代表真实sudo/PAM。名称搜索真实三根仍约5秒，重负载有15秒超时反例，不宣称即时响应。
+
+Firefox启动、实体设备/IME/触控板、Debian原生/systemd与精确提权安装阻塞按用户要求跳过并记录；本机执行localChecks=completed，任务和整体验收保持in_progress，原pending保留。没有自动提交、推送或归档，没有修改用户真实文件或终止用户终端。

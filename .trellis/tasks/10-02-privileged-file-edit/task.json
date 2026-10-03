@@ -2,7 +2,7 @@
   "id": "privileged-file-edit",
   "name": "privileged-file-edit",
   "title": "W07 单文件提权编辑",
-  "description": "通过网页一次性系统授权与受限root-owned helper实现单文件提权保存；W05/W06剩余统一验收延期",
+  "description": "单文件提权编辑源码与非特权本机验收已接入；默认禁用，真实系统安装与sudo/PAM验收待精确授权",
   "status": "in_progress",
   "dev_type": "fullstack",
   "scope": "elevation",
@@ -27,7 +27,7 @@
     "tests/integration/debian/w07/README.md",
     ".trellis/tasks/10-02-privileged-file-edit/check-report.md"
   ],
-  "notes": "2026-10-02 用户明确开始实施。已接入 W07 API/持久请求、独立非 root broker/固定 helper、单文件元数据阶段提交和同 buffer 确认 UI；默认禁用。W05/W06 统一实机验收延期，原证据保留。尚未安装或连接目标机，真实 sudo/PAM/root/systemd/Nginx 与 Linux-only 执行门禁仍待精确授权；不完成/归档，不提交。",
+  "notes": "2026-10-02 用户明确开始实施。已接入 W07 API/持久请求、独立非 root broker/固定 helper、单文件元数据阶段提交和同 buffer 确认 UI；默认禁用。W05/W06 统一实机验收延期，原证据保留。尚未安装或连接目标机，真实 sudo/PAM/root/systemd/Nginx 与 Linux-only 执行门禁仍待精确授权；不完成/归档，不提交。 2026-10-03本轮可运行统一验收与最终门禁已完成，最新localChecks=completed及pending见meta.acceptance和统一报告，覆盖此前deferred执行安排；不完成/归档，不自动提交。",
   "meta": {
     "planning": {
       "state": "approved",
@@ -41,7 +41,7 @@
       "localQuality": "passed"
     },
     "acceptance": {
-      "state": "pending_debian_authorization",
+      "state": "in_progress",
       "pending": [
         "sudo_pam",
         "root_metadata_and_faults",
@@ -49,7 +49,26 @@
         "nginx_no_body_files",
         "linux_native_file_suite"
       ],
-      "localBrowser": "chromium7_webkit7_mock_api"
+      "localBrowser": "chromium7_webkit7_mock_api",
+      "updatedAt": "2026-10-03",
+      "reason": "用户要求继续直至完成；本机可运行范围已完成，环境和精确安装授权阻塞已跳过并记录",
+      "unifiedReport": "../10-02-workbench-modern-ui/overnight-acceptance.md",
+      "localChecks": "completed",
+      "browserMatrix": {
+        "chromium": 51,
+        "webkit": 51,
+        "counting": "distinct_browser_cases_final_pass_after_documented_rechecks"
+      },
+      "quality": {
+        "go_test": "passed",
+        "go_vet": "passed",
+        "go_race": "passed",
+        "bridgego_test_vet_race": "passed",
+        "frontend_lint_typecheck_build": "passed",
+        "vitest": 163,
+        "python": 45
+      },
+      "notes": "Linux交叉编译不计原生运行；W07浏览器7项/浏览器为mock服务；真实三根名称约5秒且重负载超时反例保留"
     }
   }
 }

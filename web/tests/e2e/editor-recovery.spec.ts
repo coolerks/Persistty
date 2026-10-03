@@ -62,13 +62,17 @@ test("终端多组与上下位置恢复不创建、终止或写终端输入", as
 
 test("本地草稿不可写时最后标签关闭保留输入且不触发保存", async ({ page }) => {
   const h = await fixture(page);
+  await page.clock.install({ time: new Date("2026-10-02T00:00:00Z") });
   await page.addInitScript(() => { Object.defineProperty(IDBFactory.prototype, "open", { configurable: true, value() { throw new DOMException("quota", "QuotaExceededError"); } }); });
-  await page.goto(url); await page.getByRole("treeitem", { name: "one.txt", exact: true }).click(); await edit(page, "important");
+  await page.goto(url); await page.getByRole("treeitem", { name: "one.txt", exact: true }).click();
+  await expect(page.locator(".monaco-editor").first()).toBeVisible();
+  // 明确在1秒autosave之前关闭；宿主机器的操作耗时不能改变测试前提。
+  await page.clock.pauseAt(new Date("2026-10-02T00:01:00Z")); await edit(page, "important");
   await page.getByRole("button", { name: "关闭 one.txt", exact: true }).click();
   await expect(page.getByText("草稿保存失败，文件仍保持打开，请导出内容。", { exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "one.txt", exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.editorRecovery.monaco.editor.getModels()[0]?.getValue())).toBe("important");
-  await page.waitForTimeout(1200); expect(h.puts).toEqual([]); expect(h.errors).toEqual([]);
+  await page.clock.runFor(1200); expect(h.puts).toEqual([]); expect(h.errors).toEqual([]);
 });
 
 test("手机基线变化的草稿只能保留或导出，不恢复或自动写入", async ({ page }) => {
@@ -86,6 +90,7 @@ test("手机基线变化的草稿只能保留或导出，不恢复或自动写�
 
 test("标签灰点、固定右侧文件操作与底部无边框语言入口", async ({ page }, testInfo) => {
   const h = await fixture(page);
+  await page.clock.install({ time: new Date("2026-10-02T00:00:00Z") });
   h.files.set("Sample.java", { content: "public class Sample {}", revision: 1 });
   for (let i = 0; i < 8; i++) h.files.set(`long-filename-for-tabs-${i}.txt`, { content: "text", revision: 1 });
   await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(url);
@@ -96,11 +101,14 @@ test("标签灰点、固定右侧文件操作与底部无边框语言入口", as
   await expect(page.locator(".editor-breadcrumb")).not.toContainText("已保存");
   await expect(page.locator(".editor-breadcrumb").getByRole("combobox")).toHaveCount(0);
   await expect(page.locator(".editor-tab-actions").getByRole("button", { name: "刷新文件", exact: true })).toBeVisible();
+  await expect(page.locator(".monaco-editor").first()).toBeVisible();
+  await page.clock.pauseAt(new Date("2026-10-02T00:01:00Z"));
   await edit(page, "public class Sample { int n; }", "Sample.java"); await page.mouse.move(0, 0);
   const dot = page.getByRole("img", { name: "未保存", exact: true }); await expect(dot).toBeVisible();
   expect(await dot.evaluate(element => getComputedStyle(element).width)).toBe("8px");
   await page.screenshot({ path: testInfo.outputPath("workbench-feedback-dirty.png") });
   await page.getByRole("button", { name: "保存文件", exact: true }).click();
+  await page.clock.resume();
   await expect(dot).toHaveCount(0); expect(h.puts).toHaveLength(1);
   await language.click(); await page.getByRole("option", { name: "Plain Text", exact: true }).click();
   await expect(language.locator("[data-slot=select-value]")).toHaveText("Plain Text"); expect(h.puts).toHaveLength(1);

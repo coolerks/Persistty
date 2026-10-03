@@ -58,3 +58,21 @@
 复用查找：现有 badge/collapsible/input/toggle/field 已可满足，核对官方 https://ui.shadcn.com/docs/components/base/badge 和 https://ui.shadcn.com/docs/components/base/collapsible ；Go RE2 和扩展规则参照 https://pkg.go.dev/regexp 。无新增依赖/API/布局 schema，不提交或部署。
 
 第四轮执行结算：五张截图对应产品修改及缺工具搜索/替换均接入，前后端门禁、Chromium/WebKit各7项和真实内置浏览器通过。测试细节、失败修正及未执行项见check-report.md。第三轮已由用户提交978097d，第四轮待一次工作提交确认。
+
+
+## 搜索超时修复执行计划（2026-10-02）
+第四轮已由用户提交 acfc15b；本轮在同一任务修复新反馈。先记录分段复现，再改安全目录准备/ignore剪枝、候选批量复制、匹配进程成本。补大项目预算、深路径/忽略目录与原字节/引擎回归；运行 Go test/vet/race 和规范/本地链接/diff 检查，实际项目只读复测。无前端源码变更时不重复此前 UI 浏览器矩阵；结果单独记录，不声称 Debian/真机或部署已完成。
+
+用户补充 file-names?query=project 在15秒后被取消；同轮纳入名称发现性能与FileQuickOpen取消修复。最终源发现改用单遍安全内存裁决/提前剪枝，不创建普通占位文件；旧私有树实现仅保留为独立真实rg对照测试。全文在同次访问中复制正文，literal复用Go编译器，regex采用有界批量rg；顶栏绑定稳定的ID集合，真实配置/关键词变化仍取消。
+
+
+## 2026-10-02 本轮统一验收
+
+用户明确授权直接开展剩余E2E与验收，覆盖此前延期安排；阻塞项跳过并记录，不停下等待。执行资源、顺序和实时结果见[统一验收报告](../10-02-workbench-modern-ui/overnight-acceptance.md)。任务保持in_progress，未执行真实设备/系统项不计为通过。
+
+
+## 2026-10-03 本轮收尾结果
+
+本机可运行验收已完成：Chromium/WebKit各51个不同用例获最终通过证据，共102个“浏览器×用例”；前端四门禁与31文件163单测、全量Go test/vet/race、独立bridgego普通/vet/race、45项Python探针通过。完整首轮失败、复验、真实HTTP/tmux、六种图片/三主题、缺rg搜索与清理证据见[统一验收报告](overnight-acceptance.md)。W07其中7项/浏览器为mock权限服务，不代表真实sudo/PAM。名称搜索真实三根仍约5秒，重负载有15秒超时反例，不宣称即时响应。
+
+Firefox启动、实体设备/IME/触控板、Debian原生/systemd与精确提权安装阻塞按用户要求跳过并记录；本机执行localChecks=completed，任务和整体验收保持in_progress，原pending保留。没有自动提交、推送或归档，没有修改用户真实文件或终止用户终端。

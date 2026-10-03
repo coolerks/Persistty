@@ -13,17 +13,7 @@ import (
 	"strings"
 )
 
-type discoveryBudget struct {
-	entries      int
-	controlBytes int64
-	truncated    bool
-}
-
-// discover supplies rg only a private tree of placeholders and safely copied ignore controls.
-func (s *Service) discover(ctx context.Context, root storage.RegisteredFolder, tree string, budget *discoveryBudget, skip func(string, string)) (map[string]bool, error) {
-	return s.discoverTree(ctx, root, tree, budget, skip)
-}
-
+// Historical staged discovery remains only as an independent real-rg oracle.
 func (s *Service) discoverTree(ctx context.Context, root storage.RegisteredFolder, tree string, budget *discoveryBudget, skip func(string, string)) (map[string]bool, error) {
 	options := s.Config.SearchOptions()
 	if err := os.Mkdir(tree, 0700); err != nil {

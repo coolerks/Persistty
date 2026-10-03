@@ -44,6 +44,39 @@ func TestBatchSnapshotRevalidatesParentAndRejectsLeafLinks(t *testing.T) {
 	}
 }
 
+func TestPreparedSnapshotCopiesOnlyEnumeratedLeavesAndRevalidates(t *testing.T) {
+	root, base := rootFixture(t)
+	os.WriteFile(filepath.Join(root.Path, ".ignore"), []byte("ignored/\n"), 0600)
+	outside := filepath.Join(base, "outside")
+	os.Mkdir(outside, 0700)
+	os.WriteFile(filepath.Join(outside, "secret"), []byte("outside sentinel"), 0600)
+	os.Symlink(filepath.Join(outside, "secret"), filepath.Join(root.Path, "link"))
+	prepared := false
+	err := WalkSnapshotPrepared(context.Background(), root, "", 20, func(_ string, _ []Entry, copy func(string, io.Writer, int64) (Version, os.FileMode, error)) error {
+		for _, name := range []string{"../outside/secret", "link", "missing"} {
+			var b bytes.Buffer
+			if _, _, err := copy(name, &b, 100); err == nil || b.Len() != 0 {
+				t.Fatalf("unsafe prepared copy: %q %v", name, err)
+			}
+		}
+		var b bytes.Buffer
+		if _, _, err := copy(".ignore", &b, 100); err != nil || b.String() != "ignored/\n" {
+			t.Fatal(err)
+		}
+		prepared = true
+		os.WriteFile(filepath.Join(root.Path, "new"), []byte("changed"), 0600)
+		return nil
+	}, func(_ string, _ Entry, _ SnapshotCopy) (bool, error) {
+		if !prepared {
+			t.Fatal("entry preceded preparation")
+		}
+		return false, nil
+	})
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("directory change accepted: %v", err)
+	}
+}
+
 func (w *changingWriter) Write(b []byte) (int, error) {
 	if w.change != nil {
 		change := w.change

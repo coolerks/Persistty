@@ -3,21 +3,24 @@ import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 const projectID = process.env.PERSISTTY_E2E_W06_PROJECT, root = process.env.PERSISTTY_E2E_W06_ROOT;
 test("W06 本机真实搜索定位、冲突与应用、Git 比较和移动视图", async ({ page, context, browserName }, testInfo) => {
+  test.setTimeout(90000);
   test.skip(!projectID || !root?.startsWith("/private/tmp/persistty-w06-browser-"), "仅操作本轮显式隔离 fixture");
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   const hash = (value: Buffer) => createHash("sha256").update(value).digest("hex");
   const originalIndex = hash(await readFile(`${root}/.git/index`)), originalHEAD = hash(await readFile(`${root}/.git/HEAD`));
   if (browserName === "chromium") await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto(`/projects/${projectID}`); await page.getByLabel("访问密码").fill(process.env.PERSISTTY_E2E_PASSWORD!); await page.getByRole("button", { name: "登录", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "W06 本地开发检查" })).toBeVisible();
+  await expect(page.getByRole("main", { name: "W06 本地开发检查 工作台", exact: true })).toBeVisible();
   const session = (await (await page.request.get("/api/v1/auth/session")).json()).data;
   const project = (await (await page.request.get(`/api/v1/projects/${projectID}`)).json()).data;
   const endpoint = `/api/v1/projects/${projectID}/folders/${project.main_folder_id}/content`, headers = { Origin: process.env.PERSISTTY_E2E_BASE_URL!, "X-CSRF-Token": session.csrf_token };
   const initial = (await (await page.request.get(`${endpoint}?project_version=1&path=sample.txt`)).json()).data;
   if (initial.content !== "😀hit\nsecond hit\n") expect((await page.request.put(endpoint, { headers, data: { project_version: 1, path: "sample.txt", expected_version: initial.version, content: "😀hit\nsecond hit\n" } })).ok()).toBe(true);
-  await page.keyboard.press("ControlOrMeta+Shift+f"); await expect(page.getByLabel("搜索内容")).toBeFocused(); await page.getByLabel("搜索内容").fill("hit"); await page.getByRole("button", { name: "搜索范围与文件过滤", exact: true }).click(); await page.getByLabel("包含文件").fill("sample.txt;ignored.txt"); await page.getByRole("button", { name: "搜索", exact: true }).click();
+  await page.keyboard.press("ControlOrMeta+Shift+f"); await expect(page.getByLabel("搜索内容")).toBeFocused(); await page.getByLabel("搜索内容").fill("hit");
+  if (!(await page.getByLabel("包含文件").isVisible())) await page.getByRole("button", { name: "搜索范围与文件过滤", exact: true }).click();
+  await expect(page.getByLabel("包含文件")).toBeVisible(); await page.getByLabel("包含文件").fill("sample.txt;ignored.txt"); await page.getByRole("button", { name: "搜索", exact: true }).click();
   await expect(page.getByText("1 个文件 · 2 处匹配 · 0 项跳过", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /^1:3/ }).click(); await expect(page.locator(".monaco-editor").first()).toBeVisible();
+  await page.getByRole("button", { name: /^1:3/ }).click(); await expect(page.locator(".monaco-editor").first()).toBeVisible({ timeout: 15000 });
   if (browserName === "chromium") { await page.keyboard.press("ControlOrMeta+c"); await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("hit"); }
   else await expect(page.locator(".monaco-editor .selected-text").first()).toBeVisible();
   await page.getByLabel("替换为").fill("done"); await page.getByRole("button", { name: /预览选中项替换/ }).click();
@@ -39,7 +42,7 @@ test("W06 本机真实搜索定位、冲突与应用、Git 比较和移动视图
 });
 test("W06 替换传输等待时可明确停止剩余项，取消零写入", async ({ page }) => {
   test.skip(!projectID || !root?.startsWith("/private/tmp/persistty-w06-browser-"), "仅操作本轮显式隔离 fixture");
-  await page.goto(`/projects/${projectID}`); await page.getByLabel("访问密码").fill(process.env.PERSISTTY_E2E_PASSWORD!); await page.getByRole("button", { name: "登录", exact: true }).click(); await expect(page.getByRole("heading", { name: "W06 本地开发检查" })).toBeVisible();
+  await page.goto(`/projects/${projectID}`); await page.getByLabel("访问密码").fill(process.env.PERSISTTY_E2E_PASSWORD!); await page.getByRole("button", { name: "登录", exact: true }).click(); await expect(page.getByRole("main", { name: "W06 本地开发检查 工作台", exact: true })).toBeVisible();
   const before = await readFile(`${root}/sample.txt`);
   await page.getByRole("button", { name: "搜索与替换", exact: true }).click(); await page.getByLabel("搜索内容").fill(before.toString().includes("done") ? "done" : "hit"); await page.getByRole("button", { name: "搜索", exact: true }).click(); await page.getByLabel("替换为").fill("never written"); await page.getByRole("button", { name: /预览选中项替换/ }).click();
   let release: () => void = () => {}; const gate = new Promise<void>(resolve => { release = resolve; });

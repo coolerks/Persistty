@@ -154,6 +154,37 @@ test.describe("触屏单内容视图", () => {
   });
 });
 
+test("同版本项目轮询不取消正在等待的文件名搜索", async ({ page }) => {
+  const h = await fixture(page);
+  let projectReads = 0, searches = 0;
+  const cancelled: string[] = [];
+  let release = () => {};
+  page.on("requestfailed", request => { if (request.url().includes("/file-names?")) cancelled.push(request.failure()?.errorText ?? "failed"); });
+  await page.route("**/api/v1/auth/session", route => route.fulfill({ json: { data: { authenticated: true, csrf_token: "fixture", expires_at: "2099-01-01T00:00:00Z" }, request_id: "fixture" } }));
+  await page.route("**/api/v1/projects/interaction", route => {
+    projectReads++;
+    return route.fulfill({ json: { data: { id: "interaction", name: "交互验收", version: 1, main_folder_id: "root", folders: [{ id: "root", path: "/fixture" }, { id: "other", path: "/other" }] }, request_id: "fixture" } });
+  });
+  await page.route("**/file-names?*", async route => {
+    searches++;
+    await new Promise<void>(resolve => { release = resolve; });
+    await route.fulfill({ json: { data: { project_version: 1, items: [{ folder_id: "root", path: "project.ts" }], truncated: false }, request_id: "fixture" } });
+  });
+  await page.clock.install();
+  await page.goto("/projects/interaction");
+  await page.getByRole("button", { name: "按名称搜索文件" }).click();
+  await page.getByRole("textbox", { name: "文件名关键词" }).fill("project");
+  await page.clock.runFor(300);
+  await expect.poll(() => searches).toBe(1);
+  await page.clock.runFor(16000);
+  await expect.poll(() => projectReads).toBeGreaterThanOrEqual(2);
+  expect(searches).toBe(1); expect(cancelled).toEqual([]);
+  release();
+  await expect(page.getByRole("button", { name: "打开 project.ts" })).toBeVisible();
+  await page.getByRole("button", { name: "关闭搜索" }).click();
+  expect(h.errors).toEqual([]); expect(h.mutations).toEqual([]);
+});
+
 test("顶栏按名称快速打开保留多根文件身份、键盘导航与取消", async ({ page }) => {
   const h = await fixture(page);
   await page.getByRole("button", { name: "项目菜单", exact: true }).click();
