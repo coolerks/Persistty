@@ -1,0 +1,86 @@
+name: 构建并发布 Persistty
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: persistty-release-main
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: web/package.json
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: 安装测试运行依赖与锁定 npm
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux ripgrep
+          npm install -g "$(node -p "require('./web/package.json').packageManager")"
+          npm --prefix web ci
+      - name: 工程门禁
+        env:
+          PERSISTTY_DEV_INTEGRATION: "1"
+        run: |
+          mkdir -p .cache
+          go test -p 1 -json ./... > .cache/release-go-tests.jsonl
+          python3 scripts/check-go-test-log.py .cache/release-go-tests.jsonl
+          go -C tests/integration/debian/bridgego test -p 1 -json ./... > .cache/release-bridge-tests.jsonl
+          python3 scripts/check-go-test-log.py .cache/release-bridge-tests.jsonl
+          go -C tests/integration/debian/bridgego vet ./...
+          go vet ./...
+          npm --prefix web run lint
+          npm --prefix web run typecheck
+          npm --prefix web test
+          python3 -W error::ResourceWarning -m unittest discover -s tests/deploy -v
+      - name: 版本标识
+        id: version
+        run: echo "version=build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:12}" >> "$GITHUB_OUTPUT"
+      - name: 构建同提交前后端及校验清单
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/package-release.sh "$RELEASE_VERSION"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: release
+          path: dist/release/*
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release
+          path: release
+      - name: 校验并公布完整 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          cd release
+          sha256sum -c SHA256SUMS
+          gh release create "$RELEASE_VERSION" --target "$RELEASE_COMMIT" --draft --title "Persistty $RELEASE_VERSION" --notes "main 自动构建；提交 $RELEASE_COMMIT。安装及升级步骤见包内 deploy/README.md。"
+          gh release upload "$RELEASE_VERSION" ./*
+          gh release edit "$RELEASE_VERSION" --draft=false --latest

@@ -13,8 +13,8 @@ HTTP 登录 `POST /api/v1/auth/login` body `{"password":"..."}`；登出 `POST /
 ```yaml
 server:
   listen: 127.0.0.1:8080
-  public_origin: http://10.66.66.1
-  mode: vpn_http
+  public_origin: http://LAN_IP
+  mode: lan_http
   trusted_proxies: [127.0.0.1]
 auth:
   password_hash: '$argon2id$...'
@@ -23,9 +23,9 @@ storage:
   path: /var/lib/persistty/metadata.db
 ```
 
-PHC须由password CLI实际生成，10.66.66.1必须替换成真实VPN地址。旧workspace字段及旧默认数值已废止。W01拒绝未知/重复键、多个YAML文档、配置超过64KiB、无效hash/origin、非规范绝对DB路径、非owner或group/other可读配置；TTL为1分钟到30天，默认7天。不隐式建HOME项目。三种模式的Go监听均限loopback；tls要求HTTPS public_origin，development还要求loopback HTTP origin，vpn_http是批准的WireGuard内HTTP生产特例，由Nginx绑定VPN地址，不自动降低模式。VPN隔离是部署实测前提，不以字段证明公网隔离通过。服务拒绝root运行，trusted_proxies仅明确loopback IP。
+PHC须由password CLI实际生成。局域网部署使用lan_http，模板的LAN_IP由安装器首次--host替换，不保存用户真实IP；手动配置也须替换占位。旧workspace字段及旧默认数值已废止。W01拒绝未知/重复键、多个YAML文档、配置超过64KiB、无效hash/origin、非规范绝对DB路径、非owner或group/other可读配置；TTL为1分钟到30天，默认7天。不隐式建HOME项目。四种模式的Go监听均限loopback：lan_http要求HTTP私有IP origin，地址由首次部署指定，不要求WireGuard；tls要求HTTPS public_origin；development还要求loopback HTTP origin；vpn_http保留兼容原VPN配置。不因新增模式改变鉴权或代理信任。服务拒绝root运行，trusted_proxies仅明确loopback IP。
 Argon2id 基线 m=65536 KiB、t=3、p=1、随机 16-byte salt、32-byte key；密码 CLI benchmark 目标 Debian 后可提高，验证 hash 参数有上下界以防 DoS。比较用恒定时间，支持版本校验，密码输入有合理字节上限并在 task 中固化。
-tls Cookie为`__Host-persistty_session`（Secure）；显式vpn_http/development为`persistty_session`（不可伪造Secure属性）。均HttpOnly、SameSite=Strict、Path=/、无Domain；32-byte CSPRNG secret，每次登录生成独立会话，其他设备不失效。DB只保存token hash、expiry与CSRF绑定信息。绝对TTL到期/登出仅撤销对应认证/attach，不kill Terminal；应用密码变更撤销全部登录会话而不杀任务。
+tls Cookie为`__Host-persistty_session`（Secure）；显式lan_http/vpn_http/development为`persistty_session`（不可伪造Secure属性）。均HttpOnly、SameSite=Strict、Path=/、无Domain；32-byte CSPRNG secret，每次登录生成独立会话，其他设备不失效。DB只保存token hash、expiry与CSRF绑定信息。绝对TTL到期/登出仅撤销对应认证/attach，不kill Terminal；应用密码变更撤销全部登录会话而不杀任务。
 生产同源、禁宽松 CORS。所有写请求（含登录）检查可信 public_origin；已登录写请求另带 `X-CSRF-Token` 绑定 session。WS 验 session 与严格 Origin scheme/host/port；缺失/null Origin 拒绝，开发 origin 显式白名单。WS URL 不放 token；session 过期/登出需撤销存量连接。只信任明确配置的 loopback Nginx proxy，不能根据任意 X-Forwarded-* 判断真实来源或 HTTPS。
 登录速率限制按来源 + 全局、包括失败/成功路径，避免仅按伪造 XFF；Argon2 并发有界。启动配置/DB权限至少 owner-only，日志遵循 [脱敏](logging-guidelines.md)。
 

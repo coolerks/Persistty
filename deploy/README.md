@@ -1,37 +1,106 @@
-# 部署示例
+# 局域网部署
 
-这里只提供基础Web服务示例，不运行安装命令，不配置WireGuard、不更改公网防火墙、不安装tmux/helper。示例必须由运维按实际路径、VPN地址和现有非root开发UID审查后再应用，不能直接作为已经安全部署的证据。
+首次安装时输入部署电脑的局域网 IP，之后通过 **http://你的局域网IP** 访问。地址只写入目标机配置，不写入开源代码。沿用电脑里已经安装并运行的 Nginx 和 Python，不安装系统软件。后端由 systemd 管理，监听 `127.0.0.1:8080`；Nginx 提供前端页面并代理 API 和终端 WebSocket。
 
-## 配置与构建
+## 1. GitHub 自动打包
 
-`config.example.yaml`中的`password_hash`必须使用`persistty password`交互生成的Argon2id PHC替换。命令从TTY隐藏输入，不支持把明文密码放参数。生产配置文件0600、父目录0700并归服务UID，数据库及WAL/SHM也保持owner-only权限。`public_origin`须与用户浏览器地址的scheme/host/port严格一致，不带路径；所有写请求检查Origin。
+将本次代码提交并推送到 `main`，GitHub Actions 会构建前后端并发布到 [Releases](https://github.com/coolerks/Persistty/releases)。等工作流成功、出现 Latest 版本后，再安装。服务器无需 Go 或 Node。
 
-```bash
-go build -o persistty ./cmd/persistty
-npm --prefix web ci
-npm --prefix web run build
-./persistty password
-./persistty serve --config /etc/persistty/config.yaml
+每次发布有两种架构的安装包、`persistty-deploy.py` 和 `SHA256SUMS`。脚本自动选择本机架构并校验下载包。工作流见仓库里的 `.github/workflows/release.yml`。
+
+## 2. 首次配置 Nginx
+
+打开你**现有 Nginx 的主配置文件**，在已有 `http { ... }` 内加入一行：
+
+```nginx
+http {
+    # 原有配置保留，只加这一行：
+    include /opt/persistty/nginx.conf;
+}
 ```
 
-生产使用`vpn_http`且Nginx只绑定实际WireGuard地址，后端仅loopback。`tls`由可信Nginx终结HTTPS，Cookie带Secure；`vpn_http`Cookie没有Secure，因此不能暴露到VPN隧道之外，不声称HTTP本身加密。可信代理只列同机真实代理，禁止任意`X-Forwarded-*`扩大信任。
+这里展示的是加入位置，不要用它覆盖整个文件，也不要另建第二个 `http` 块。编译安装的主配置通常位于 `/usr/local/nginx/conf/nginx.conf`，以你当前实际使用的配置为准。
 
-## Nginx页面分流
+此时先不 reload；安装脚本会生成被 include 的文件，再执行语法检查和 reload。脚本沿用原有 Nginx 的启动方式，不创建或操作 `nginx.service`。
 
-将前端`web/dist`发布至示例`/opt/persistty/web`，Nginx服务块见[配置](nginx/persistty.conf)。仅已定义客户端页面路由回退index.html，API永不回退HTML、缺失assets返回404。登录请求体限制在内存缓冲上限内，关闭请求体文件和代理缓存，不配置记录Cookie/请求体/查询参数的日志。该限制只用于W01小JSON；后续上传/WS包必须按实际有界协议更新，不能只提高全局大小。
+生成的站点关键配置如下，`LAN_IP` 会由安装器自动替换为你输入的地址，完整模板见 [Nginx 配置](nginx/persistty.conf)：
 
-运维应用前必须执行目标机`nginx -t`，分别验证页面书签直达、未知API JSON错误、缺失JS 404；验证IPv4/IPv6、VPN路由与公网不可达。只绑定VPN地址不代表防火墙/转发检查已经通过。当前Mac本地没有Nginx实机验证，不标通过。
+```nginx
+server {
+    listen LAN_IP:80;
+    server_name LAN_IP;
+    root /opt/persistty/current/web;
+    # 页面、API 与 WebSocket 配置由脚本完整写入。
+}
+```
 
-## systemd边界
+## 3. 下载脚本并首次安装
 
-[unit](systemd/persistty.service)使用现有非root账号，`developer`是必须替换的示例，不创建第二个账号。状态目录由该账号拥有；只允许写`/var/lib/persistty`是W01限制。后续文件工具需要审核root句柄与实际目录写访问，W07受限sudo/helper与NoNewPrivileges的兼容性必须独立实验，不能静默移除限制或声称提权已可用。
+在部署电脑上，以你日常开发使用的非 root 账号执行：
 
-Web unit无PartOf/BindsTo/tmux依赖、ExecStop不杀终端。W03 的[独立 tmux unit](systemd/persistty-tmux.service)以同一开发 UID 在 Web cgroup 外持有私有 socket，读取由 [tmux 模板](tmux.example.conf)审查后安装的配置。先启动 tmux unit，再启动 Web；Web 只以 `-N -S <socket>` 连接，缺 server 时终端接口返回不可用，不从 Web cgroup 隐式启动。`terminal.socket_path`须与 unit 的 `-S` 路径一致，且目录为该 UID 私有。此模板未应用到真实用户服务。
+```bash
+mkdir -p "$HOME/persistty-install"
+cd "$HOME/persistty-install"
+curl -fL -o persistty-deploy.py \
+  https://github.com/coolerks/Persistty/releases/latest/download/persistty-deploy.py
+read -r -p "这台电脑的局域网 IPv4 地址：" LAN_IP
+sudo "$(command -v python3)" persistty-deploy.py install --host "$LAN_IP"
+```
 
-升级只重启 Web，不停止/重启 tmux unit。**管理员停止或重启 tmux unit 会终止运行中的 pane/job**；`Restart=no` 不声称故障后恢复进程，主机重启也不恢复进程内存。tmux unit 不设置 `NoNewPrivileges=true` 或 `ProtectSystem=strict`，避免改变用户 shell 中 `sudo` 与正常文件操作语义；Web unit 的沙箱设置不继承到 tmux。DB迁移失败拒绝服务，回滚前核查schema兼容性；不复制在线.db忽略WAL，不靠Git回滚真实文件/进程。
+使用 `command -v python3` 找到你实际安装的 Python，避免 sudo 找到另一套 Python。脚本默认使用执行 sudo 前的账号，首次要求输入两次应用登录密码（至少 12 字节，输入时隐藏）。安装完成后，局域网里的浏览器打开 **http://你输入的局域网IP** 并登录。`--host` 只在首次安装时提供，支持私有 IPv4 地址。
 
-官方配置依据：[Nginx try_files](https://nginx.org/en/docs/http/ngx_http_core_module.html#try_files)、[Nginx请求缓存](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_request_buffering)。W02/W03 已在 Debian 隔离 user unit 验证 Web 与 tmux 生命周期分离，见[恢复实验](../tests/integration/debian/recovery/README.md)；不等于正式 system unit、Nginx 和 VPN 全矩阵已安装验收，后者属于 W08。
+脚本会查找已有 Nginx（包括 `/usr/local/nginx/sbin/nginx`）。如果你的程序或主配置在其他位置，只在首次安装时指定：
 
-## W07 独立授权服务
+```bash
+sudo "$(command -v python3)" persistty-deploy.py install --host "$LAN_IP" \
+  --nginx /你的安装目录/sbin/nginx \
+  --nginx-config /你的配置目录/nginx.conf
+```
 
-[安装审查稿](elevation/README.md)包含固定 helper、非 root broker、root-owned 精确允许列表、命令专用 sudoers、独立 socket/service 和回退范围。Web 保留 NoNewPrivileges=true；未安装/非 Linux/默认禁用时提权返回明确不可用。新增 Nginx W07 准备/执行路径有界内存 buffer，系统密码不进入应用日志或持久请求元数据。产物可审查不等于已安装或已通过真实 sudo/PAM 验收。
+如果当前直接登录的是 root，则加 `--user 你的开发账号`，Persistty 本身使用非 root 账号运行。需要在 home 之外编辑项目时，首次加 `--write-path /实际项目目录`，目录必须已存在且该开发账号有写权限。
+
+Nginx、Python、tmux、git、rg 应已可用；脚本只检查它们，不安装、不替换。首次安装失败后，修正提示的问题，再执行 `sudo "$(command -v python3)" persistty-deploy.py update` 重试。
+
+## 4. 以后更新：一条命令
+
+代码推送后等待 GitHub Actions 发布成功，然后在这台电脑上执行：
+
+```bash
+sudo /usr/local/sbin/persistty-deploy update
+```
+
+更新器已记住局域网 IP、实际 Python 与 Nginx 路径，无需再次输入地址。它下载最新包、备份数据库、同时切换前后端、重启 Web 并检查访问结果。原密码、后端配置、项目文件和终端任务保留；同版本且正常时不会重复重启。
+
+需要指定某个已发布版本时：
+
+```bash
+sudo /usr/local/sbin/persistty-deploy update --version 实际的Release版本名
+```
+
+## 5. 后端配置和常用检查
+
+后端配置生成在 `/etc/persistty/config.yaml`，完整字段见 [配置模板](config.example.yaml)。网络部分如下，`LAN_IP` 在实际配置中已替换为安装时输入的地址：
+
+```yaml
+server:
+  listen: 127.0.0.1:8080
+  public_origin: http://LAN_IP
+  mode: lan_http
+  trusted_proxies: [127.0.0.1]
+```
+
+密码 hash 由安装时输入生成，配置和数据库归实际开发账号私有。修改后端配置后执行 `sudo systemctl restart persistty.service`；浏览器使用上述地址，保持与 `public_origin` 一致。
+
+检查时将 `LAN_IP` 设为安装时输入的地址：
+
+```bash
+sudo systemctl status persistty.service persistty-tmux.service --no-pager
+sudo journalctl -u persistty.service -n 50 --no-pager
+curl -i "http://$LAN_IP/api/v1/auth/session"
+```
+
+未登录时最后一个命令返回 `401` 和 `unauthenticated` 是正常结果。访问失败时先确认电脑确实拥有安装时输入的 IP、Nginx 正在运行且 include 已放进实际使用的 `http` 块。8080 端口须留给后端。
+
+程序在 `/opt/persistty/current`，数据在 `/var/lib/persistty`，升级前的数据库备份在 `/var/backups/persistty`。升级失败会尝试恢复兼容的旧程序；数据库不会自动覆盖。更新只重启 Web，**不要重启 `persistty-tmux.service`，否则终端里的任务会结束**。
+
+本文提供文件和操作步骤，尚未在你的目标电脑实际安装或运行 GitHub 发布。

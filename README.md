@@ -4,6 +4,10 @@ Persistty 是面向 Debian 开发机的单用户、自托管浏览器终端与�
 
 W01/W02/W04 已完成归档，W03 已通过真实 Debian/systemd 和桌面/手机浏览器验收。当前提供认证、多文件夹项目、文件管理与传输、桌面 Monaco/手机基础文本编辑，以及真实持久终端、多端单控制权和可取消倒计时终止。W05 已实施版本保护自动保存、本地草稿、分组/布局恢复、有界图片预览与自托管字体，已有自动化及真实 Debian 专项证据；[W05 任务](.trellis/tasks/09-30-workbench-editor-recovery/prd.md)仍待最终验收。[W06 搜索替换与只读 Git](.trellis/tasks/10-01-search-readonly-git/prd.md)已接入多根搜索、版本保护替换预览、多仓库只读 Git 与 HEAD 行标记，契约见[搜索/Git](.trellis/spec/backend/search-git-contract.md)。用户于 2026-10-01 已恢复两包统一验收：本轮本机自动化及 Chromium/WebKit 专项通过，Debian 产物传输待明确目标授权，真实手机、触控板、shell 主题及 Firefox 环境待补齐，两个任务仍进行中。结果见[统一验收进展](.trellis/tasks/10-01-search-readonly-git/acceptance-report.md)。2026-10-02 用户将 W05/W06 剩余统一验收后移，优先实施 [W07 单文件提权编辑](.trellis/tasks/10-02-privileged-file-edit/prd.md)。W07 已接入一次请求、独立非 root broker/固定 helper 和同缓冲区确认保存，默认禁用；真实 Debian sudo/PAM/root/systemd/Nginx 仍待独立授权验收，契约见 [W07](.trellis/spec/backend/elevation-contract.md)。正式部署仍属 W08，不是完整 IDE 已完成。完整规划见[需求](.trellis/tasks/archive/2026-09/09-26-requirements-research/prd.md)及[实施计划](.trellis/tasks/archive/2026-09/09-26-requirements-research/implement.md)。Trellis入口为[AGENTS.md](AGENTS.md)和[工作流](.trellis/workflow.md)。
 
+## 局域网部署
+
+[部署文档](deploy/README.md)使用现有 Nginx 和 Python。首次通过 `--host` 指定部署电脑的局域网 IP，地址只保存在目标机配置中。首次在 Nginx 加一行 include 后运行安装脚本；以后执行 `sudo /usr/local/sbin/persistty-deploy update` 下载 GitHub Actions 最新包并更新，保留配置、项目和终端任务。
+
 ## 本地运行
 
 需要 Go 1.26 工具链和 Node.js 24，依赖版本锁定在 go.mod/go.sum 与 web/package-lock.json。前端使用 npm，不混用其他包管理器。

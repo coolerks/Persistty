@@ -1,7 +1,10 @@
+# 后端完整配置模板；安装器生成私有实际配置，详见 deploy/README.md。
+# 由服务 UID 拥有：父目录0700，配置0600；不提交真实hash/配置。
+# LAN_IP 由安装器替换为首次 --host 参数。
 server:
   listen: 127.0.0.1:8080
-  public_origin: http://10.66.66.1
-  mode: vpn_http
+  public_origin: http://LAN_IP
+  mode: lan_http
   trusted_proxies: [127.0.0.1]
 auth:
   password_hash: REPLACE_WITH_PERSISTTY_PASSWORD_OUTPUT

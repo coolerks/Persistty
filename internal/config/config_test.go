@@ -58,6 +58,14 @@ func TestModes(t *testing.T) {
 		valid                bool
 	}{
 		{"tls", "https://ide.example.test", "127.0.0.1:8080", true}, {"tls", "http://ide.example.test", "127.0.0.1:8080", false}, {"tls", "https://ide.example.test", "0.0.0.0:8080", false}, {"vpn_http", "http://10.7.0.1:8080", "127.0.0.1:8080", true}, {"vpn_http", "http://10.7.0.1:8080", "10.7.0.1:8080", false}, {"vpn_http", "http://10.7.0.1:8080", "0.0.0.0:8080", false}, {"development", "http://evil.test", "127.0.0.1:8080", false}, {"unknown", "https://ide.example.test", "127.0.0.1:8080", false},
+		{"lan_http", "http://10.23.45.67", "127.0.0.1:8080", true},
+		{"lan_http", "http://10.23.45.67:8090", "127.0.0.1:8080", true},
+		{"lan_http", "http://10.23.45.67", "0.0.0.0:8080", false},
+		{"lan_http", "http://10.23.45.67", "10.23.45.67:8080", false},
+		{"lan_http", "https://10.23.45.67", "127.0.0.1:8080", false},
+		{"lan_http", "http://8.8.8.8", "127.0.0.1:8080", false},
+		{"lan_http", "http://localhost", "127.0.0.1:8080", false},
+		{"lan_http", "http://10.23.45.67/", "127.0.0.1:8080", false},
 	} {
 		c.Server.Mode = tt.mode
 		c.Server.PublicOrigin = tt.origin
@@ -65,6 +73,10 @@ func TestModes(t *testing.T) {
 		if err := c.Validate(); (err == nil) != tt.valid {
 			t.Errorf("%+v: %v", tt, err)
 		}
+	}
+	c.Server.Mode = "lan_http"
+	if c.SecureCookie() || c.CookieName() != "persistty_session" {
+		t.Fatal("LAN HTTP cookie设置错误")
 	}
 	c.Server.Mode = "tls"
 	c.Server.PublicOrigin = "https://ide.example.test"

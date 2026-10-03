@@ -203,12 +203,17 @@ func (c Config) Validate() error {
 		if u.Scheme != "http" || !addr.IsLoopback() {
 			return errors.New("vpn_http必须显式HTTP与loopback反向代理监听")
 		}
+	case "lan_http":
+		originAddr, parseErr := netip.ParseAddr(u.Hostname())
+		if u.Scheme != "http" || !addr.IsLoopback() || parseErr != nil || !originAddr.IsPrivate() {
+			return errors.New("lan_http要求内网IP的HTTP源和loopback反向代理监听")
+		}
 	case "tls":
 		if u.Scheme != "https" || !addr.IsLoopback() {
 			return errors.New("tls要求HTTPS源和loopback反向代理监听")
 		}
 	default:
-		return errors.New("必须明确选择development、vpn_http或tls")
+		return errors.New("必须明确选择development、lan_http、vpn_http或tls")
 	}
 	if strings.ContainsAny(u.Host, "\r\n\\") || u.Hostname() == "" {
 		return errors.New("源地址无效")

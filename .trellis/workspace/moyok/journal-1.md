@@ -449,3 +449,101 @@ W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控�
 ### Next Steps
 
 - 用户复核并按需提交；物理触控板、手机软键盘、Firefox和Debian/systemd专项仍未执行，不自动部署或归档。
+
+
+## Session 15: W08 发布包与一键部署本机实施
+<!-- trellis-session: v=2 fp=1d80cda7a29c9c32 -->
+
+**Date**: 2026-10-03
+**Task**: W08 发布包与一键部署本机实施
+**Branch**: `main`
+
+### Summary
+
+main 自动打包/Release 工作流、标准库下载安装升级器、VPN/TLS Nginx/systemd/后端配置及完整中文运维文档完成；27项部署回归、前端门禁、两架构验包、vet/bridgego通过。Go无缓存全量有既有Mac shell清理竞态，真实Actions和Debian验收未执行，任务保持进行中。
+
+### Main Changes
+
+- 新增GitHub发布、amd64/arm64同提交包、SHA/许可/迁移清单
+- 部署器保留配置与tmux，SQLite一致备份，兼容代码恢复、不自动回滚数据
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 27部署回归；前端163测试及lint/typecheck/build；静态workflow/两架构包验证通过
+- [OK] root vet和bridgego29 pass通过；无缓存Go全量shell fixture清理失败已保留
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 审查既有shell fixture清理竞态并重跑Go全量；推送后的Actions与授权Debian正式安装验收
+
+
+## Session 16: W08 简化为固定局域网 HTTP 部署
+<!-- trellis-session: v=2 fp=0477b55e8c65de26 -->
+
+**Date**: 2026-10-03
+**Task**: W08 简化为固定局域网 HTTP 部署
+**Branch**: `main`
+
+### Summary
+
+按用户最新环境重写为LAN_IP，沿用已有Nginx/Python；无需apt、SSL、WireGuard。
+
+### Main Changes
+
+- 缩短部署文档，现有Nginx一行include，保存实际Nginx/Python路径，新增后端lan_http；以后单命令下载最新Release更新。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 30项部署回归、Go配置专项及普通全量test/vet、前端lint/typecheck/163单测/build、两架构实际打包验包通过；初轮无缓存Mac shell fixture失败保留。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 尚未提交、推送或执行目标机/GitHub实测；任务继续in_progress。
+
+
+## Session 17: W08 开源部署地址参数化
+<!-- trellis-session: v=2 fp=765ab4fafde4cefa -->
+
+**Date**: 2026-10-03
+**Task**: W08 开源部署地址参数化
+**Branch**: `main`
+
+### Summary
+
+去除源码、模板、测试、文档与开发记录中的个人实际IP，首次--host指定，后续读取目标机配置一键更新。
+
+### Main Changes
+
+- 模板使用LAN_IP；部署器校验私有IPv4，从同一origin生成Nginx及后端配置；受版本管理记录去敏且保留历史失败结论。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 32项部署回归、Go test/vet、语法/Actions、两架构打包验包及源码/包内个人IP扫描通过；前端未改，本轮build通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 未提交、推送、发布或目标机实测；任务保持in_progress，历史无缓存shell清理竞态未修复。

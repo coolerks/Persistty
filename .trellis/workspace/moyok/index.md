@@ -10,7 +10,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 14
+- **Total Sessions**: 17
 - **Last Active**: 2026-10-03
 <!-- @@@/auto:current-status -->
 
@@ -21,7 +21,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~451 | Active |
+| `journal-1.md` | ~549 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -31,6 +31,9 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 17 | 2026-10-03 | W08 开源部署地址参数化 | - | `main` |
+| 16 | 2026-10-03 | W08 简化为固定局域网 HTTP 部署 | - | `main` |
+| 15 | 2026-10-03 | W08 发布包与一键部署本机实施 | - | `main` |
 | 14 | 2026-10-03 | 截图追加反馈：连续拖动、双向全屏与终端绘制 | - | `main` |
 | 13 | 2026-10-03 | 截图修复：标签衔接、终端全屏与登录页 | - | `main` |
 | 12 | 2026-10-02 | W07 单文件提权实施与本机验证 | - | `main` |
