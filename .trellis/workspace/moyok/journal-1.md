@@ -681,3 +681,37 @@ main 自动打包/Release 工作流、标准库下载安装升级器、VPN/TLS N
 ### Next Steps
 
 - 用户在Debian按文档升级并复验；本轮浏览器API/WS为fixture，不宣称真实后端/Nginx或原CI故障已解决。
+
+
+## Session 22: 补齐下方终端取消分隔入口并交付新包
+<!-- trellis-session: v=2 fp=2f8b7df449568122 -->
+
+**Date**: 2026-10-03
+**Task**: 补齐下方终端取消分隔入口并交付新包
+**Branch**: `main`
+
+### Summary
+
+新增每组合并按钮，空分组可逐个取消，运行终端标签并到邻组且保留原实例连接；交付新版amd64包。
+
+### Main Changes
+
+- workspace-view新增mergeTerminalGroup，压缩组索引并保留活动项/顺序/上方/手机状态；TerminalWorkspace复用shadcn Button和lucide合并图标，X仍整体收起。
+- 更新任务/状态与终端规范/部署说明，交付manual-20261003-terminal-merge和SHA，保持HTTP UUID修复、实际配置与独立tmux。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 前端lint/typecheck/171测试/build、Go test/vet、实际SHA/amd64静态ELF/前端全文件/模板文档验包、链接/diff通过。
+- [OK] Chromium/WebKit各3项生产前端回归：空四组恢复与刷新/拆分/收起、运行中会话DOM和WS稳定零终止接管输入、HTTP UUID保持。首次收起子元素visible断言不适合裁剪面板，按真实父面板零高度契约修正后复验；未改产品绕过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 用户按部署说明第7节升级并强制刷新；本轮API/WS为fixture，不记Debian真实PTY/Nginx验收，不自动提交或归档。

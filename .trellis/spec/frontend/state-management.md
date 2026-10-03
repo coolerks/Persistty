@@ -18,6 +18,8 @@ W05 工作台、编辑缓冲区、本地视图和 IndexedDB 草稿的 owner 契�
 
 `useWorkspaceView` 提供 open/close/move/split/unsplit、openMobile/closeMobile、placeTerminal/selectTerminal/orderTerminal、expand/relocate/remove。`orderTerminal(projectId, id, before, visibleOrder?)` 补全首次恢复时服务端标签顺序，再插入指定位置。
 
+`mergeTerminalGroup(projectId: string, group: GroupIndex): void` 取消当前下方分隔，保留终端ID；与 `splitTerminal(projectId)` 配对，最少一组、最多四组。
+
 共享 `web/src/lib/random-uuid.ts` 的 `randomUUID(): string` 负责 EditorScope.viewId、FileBuffer.id 与搜索定位事件ID；返回标准 UUID v4，无新增协议或持久化字段。
 
 localStorage `persistty.workspace-view.v1` 使用 Zustand persist `version: 2`；只 partialize `projects`。`EditorScope(project, storage?, client?)` 提供 open/protect/refresh/configure/relocate/dispose。`IndexedDraftStorage` 数据库为 `persistty.editor-drafts`，版本 1，`drafts` 对象仓库以 `id` 为 key；提供 list(projectId)、put(draft)、remove(id, maximumGeneration)。无新增 SQL、环境变量或认证协议。
@@ -25,6 +27,8 @@ localStorage `persistty.workspace-view.v1` 使用 Zustand persist `version: 2`�
 ## 3. 契约
 
 每项目有四组 `groups/active`，focused、split，独立 mobileFiles/mobileActive/mobileView/mobileTerminal，terminals 的 top/bottom 与 group 0..3，terminalOrder、upperActive/lowerActive、lowerCount 和 expanded。面板尺寸用 react-resizable-panels 的 useDefaultLayout，经 panelStorage 校验独立存储；语言覆盖不持久化。桌面/手机视图不互相覆盖，同浏览器内同文件仍共用 buffer。
+
+下方分组多于一组时，工具栏“合并此终端分组”使用现有shadcn Button；首组并入右邻，其余并入左邻，源标签和后续组索引连续迁移。目标已有活动项优先，目标为空采用源活动项，尾部lowerActive清空，terminalOrder/上方位置和活动项/手机选中保持。lowerCount及迁移后的位置沿既有记录保存，无schema升级。操作只改视图，无终止/接管/创建请求；最右X仍整体收起，最后一组不删除。
 
 读取时验证 schema、ID、相对路径、字段范围与数量，旧 version 0/1 的双组迁移到四组。最多 100 个项目、每项目桌面/手机各 100 个标签、500 个终端 ID、1000 个展开目录；localStorage 单记录最多 2 MiB 字符。尺寸必须为 1..4 个 0..100 数值且总和为 100；无效记录用默认视图并提示。恢复认证后重新读取真实资源，不创建文件、终端或发送输入；不存在资源显示失败/已终止。
 
@@ -42,6 +46,8 @@ localStorage `persistty.workspace-view.v1` 使用 Zustand persist `version: 2`�
 | localStorage 不可写 | 内存 fallback 并提示下次可能不能恢复 |
 | IDB 配额/权限/schema 失败 | 显示草稿失败，保留内存，不伪造保护成功 |
 | 普通HTTP没有 crypto.randomUUID | 共享 getRandomValues 分支生成 UUID，工作台初始化及搜索定位不抛错 |
+| 合并空分组或有运行会话的分组 | 减少一个分隔，标签保留并合并到相邻组，runtime按原ID迁移宿主 |
+| 只剩一组或待合并索引超出lowerCount | 不减少分组；单组不显示合并按钮 |
 | 文件基线变化 | dirty 暂停并保留双方；clean 安全刷新 |
 | 切设备/移动标签 | 保留记录、buffer/model 和终端 runtime |
 | 关联或项目消失 | 受认证草稿导出；不复活文件或进程 |
@@ -52,17 +58,23 @@ localStorage `persistty.workspace-view.v1` 使用 Zustand persist `version: 2`�
 
 HTTP正常：非loopback私有HTTP源打开项目/文件、重复点击搜索匹配，视图与每次定位有独立ID。缺原生UUID是可用的正常环境，不能要求用户切换HTTPS或浏览器安全标志。
 
+分组正常：四个空组逐个取消到一组，刷新仍一组，可重新拆分；有会话时移入相邻组，点击其标签显示原实例和输出。
+
 ## 6. 所需测试
 
 workspace-view 单测验四组、数量/路径/schema、移动/合并/设备隔离；editor-session 验并发输入、草稿失败、身份合并、关联迁移及 stale response。editor-recovery 浏览器验真实 IndexedDB、409/只读 diff/明确保存、刷新零隐式 PUT、终端位置恢复零 mutation。终端进程持久性另见 [W03 owner](terminal-runtime-contract.md)；视口模拟不代替真机软键盘验收。
 
 UUID回归覆盖原生/缺原生、全0/全255随机数据的版本/变体与格式、多次独立身份；缺原生UUID时构造scope/buffer并保护草稿，保持viewId隔离。浏览器以虚构私有HTTP origin读取实际构建产物，断言 isSecureContext=false/randomUUID缺失/getRandomValues可用，工作台、Monaco与重复搜索定位无pageerror；静态/API拦截回归不记真实后端或目标Nginx验收。
 
+分组合并回归覆盖首/中/末组、空目标活动项、索引压缩、顺序/上方/手机不变、刷新和再次拆分。浏览器验四个空组的可见入口和实际恢复；运行会话合并保持DOM/WS连接数，除合法resize无输入、接管或终止命令，HTTP零mutation；拦截WS不替代真实PTY/systemd验收。
+
 ## 7. 错误与正确示例
 
 错误：保存响应返回便将 dirty=false，删除所有同 path 草稿。正确：更新本次提交的 base，保留新的 generation，只删除本 viewId 提交及之前的草稿。错误：`running=true` 本地恢复作为 tmux 事实；正确：保留标签 ID，重新查询 API 状态。
 
 UUID错误：在实例字段初始化时直接 `crypto.randomUUID()`，只用localhost测试。正确：`readonly viewId = randomUUID()` 引用共享生成器，并验真实非安全HTTP上下文。
+
+分组错误：点击合并时删除终端ID、调用close或重新创建会话。正确：仅迁移位置与活动项，固定runtime跨宿主重用；整体收起和取消分隔保持两个独立入口。
 
 ## 临时文件语言覆盖（2026-09-30）
 

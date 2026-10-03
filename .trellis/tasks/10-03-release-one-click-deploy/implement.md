@@ -25,3 +25,7 @@
 ## 已部署后的 HTTP UUID 修复
 
 统一 UUID 生成器替换 editor-session/SearchPanel 的三个直接调用；单测覆盖HTTP分支和草稿隔离。生产旧包在浏览器非安全HTTP源复现相同堆栈，新构建在Chromium/WebKit通过工作台/Monaco/重复搜索定位；交付新版 `manual-20261003-http-uuid`，详见 [HTTP UUID检查报告](http-uuid-report.md)。升级保留实际配置/数据/tmux，不修改Nginx或要求HTTPS。
+
+## 下方终端取消分隔
+
+新增workspace-view.mergeTerminalGroup和工具栏“合并此终端分组”，保留原X整体收起行为。空组可取消、有会话并入相邻组，维持原ID/runtime；单测及Chromium/WebKit生产产物回归已通过。交付 `manual-20261003-terminal-merge` 包及更新说明，结果见[终端分组合并检查报告](terminal-merge-report.md)。

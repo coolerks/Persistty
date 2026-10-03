@@ -36,3 +36,9 @@ run 37102646682（提交 b007202）与用户附件只剩 scripts/dev/TestLocalSt
 现有 editor-session 的 FileBuffer.id/EditorScope.viewId 与 SearchPanel 定位事件直接调用 crypto.randomUUID；浏览器将其限定安全上下文，loopback本机测试未覆盖真实私有HTTP源。UUID生成归 `web/src/lib/random-uuid.ts`，安全上下文复用原生方法，其余用 getRandomValues 的16随机字节设置v4版本/变体、保持原字符串格式；不使用Math.random、不修改全局crypto、不改认证/API/存储字段。三个调用点统一替换；上传既有getRandomValues和Monaco自带能力检测保持。
 
 回归：生成器单测验两端随机位、原生方法、独立身份；会话回归验无原生UUID时文件初始化与草稿归属。浏览器在拦截的虚构私有HTTP地址保持非安全上下文，静态资源转取实际打包产物、API/WS使用明确fixture；旧包复现失败、新包验工作台/Monaco/搜索定位，不能称目标机后端或真实Nginx复验。交付新路径而不覆盖旧包。
+
+## 终端分组合并边界
+
+取消分隔归 workspace-view 的 lowerCount/terminals/lowerActive 与 TerminalWorkspace 工具栏。新增 `mergeTerminalGroup(projectId, group)`：左侧首组并到右侧，其余并到左邻；源标签与后续索引一起迁移，目的组活动项优先、空目的组采用源活动项，顺序及上方/手机视图保留。运行时provider仍按稳定ID缓存，合并不调用关闭/接管/创建API；无需改ProjectWorkbench宿主、后端或持久化schema。
+
+按钮复用现有官方shadcn Button（已核对官方Base UI文档及本地源码），使用lucide PanelRightClose，中文label/title说明保留会话；多组时显示，与原拆分和X整体收起动作并列。浏览器回归覆盖空四组、选择性合并、刷新、再次拆分及两运行会话的DOM/WS稳定，交付新包保留之前UUID兼容修复。

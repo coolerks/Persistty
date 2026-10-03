@@ -29,6 +29,7 @@ scope 新动作：`takeover(terminal)`、`inputIntent(id)`、`close(terminals)`�
 - xterm 6.0.0 只给 `.xterm-scrollable-element` 设置主题背景，绝对定位的 `.xterm-viewport` 默认黑色；宿主 owner CSS 显式将 viewport 背景设为 `var(--background)`。整数网格未铺满剩余空间或留白/内边距时不能露黑边。正常 ANSI 下划线、横线正文保留，不能全局禁用 text-decoration 或过滤输出。
 - 失败后探测认证，1008/401/403 停止；其余最多 5 次指数退避（500..8000 ms 加 jitter），耗尽显示手动重试。控制被他端接管后不自动夺回。
 - running 的上方标签 X/会话 trash 请求终止；下方面板 X 仅收起。明确 terminated 的标签关闭仅调整本浏览器视图，详见下文；unavailable 不当作已结束。Dialog 使用应用 body portal，不受终端 DOM 隐藏影响；显示服务器截止，新端从 ready 接收同 request/deadline。取消/失败保留入口，执行后重新查真实状态。
+- 下方多组工具栏新增“合并此终端分组”：调用workspace-view.mergeTerminalGroup迁移标签与组位置，空组可取消、有会话的组并入相邻组；不调用scope.close/takeover或重建固定runtime。下方面板X整体收起契约保持，最后一组保留。位置与持久化详见[状态规范](state-management.md)。
 - 手机 Ctrl/Alt 使用官方 shadcn Toggle 的 pressed 状态，其他按键用 Button，发送真实控制字节。错误用 Alert，空/结束状态用 Empty，确认用 Dialog，选择用 Select；遵守官方查找记录，禁止手写适用基础组件替代品和直接引入 Radix。
 - 链接只接受 HTTP/HTTPS，桌面 Ctrl 点击/手机确认后原样新标签打开并 noopener；不改写 localhost、不提供预览代理。
 

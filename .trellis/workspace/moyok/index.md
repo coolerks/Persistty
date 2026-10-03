@@ -10,7 +10,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 21
+- **Total Sessions**: 22
 - **Last Active**: 2026-10-03
 <!-- @@@/auto:current-status -->
 
@@ -21,7 +21,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~683 | Active |
+| `journal-1.md` | ~717 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 22 | 2026-10-03 | 补齐下方终端取消分隔入口并交付新包 | - | `main` |
 | 21 | 2026-10-03 | 修复局域网 HTTP UUID 初始化故障并重新交付 | - | `main` |
 | 20 | 2026-10-03 | 交付 Linux amd64 手工部署包 | - | `main` |
 | 19 | 2026-10-03 | 修复 Actions rg 14 与 Git 2.55 工具兼容失败 | - | `main` |

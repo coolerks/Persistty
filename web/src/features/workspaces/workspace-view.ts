@@ -33,6 +33,7 @@ type WorkspaceView = {
   selectTerminal(projectId: string, id: string | null, position: TerminalPosition | "mobile"): void;
   orderTerminal(projectId: string, id: string, before: string, visibleOrder?: string[]): void;
   splitTerminal(projectId: string): void;
+  mergeTerminalGroup(projectId: string, group: GroupIndex): void;
   expand(projectId: string, file: OpenFile, expanded: boolean): void;
 };
 export const fileKey = (file: OpenFile) => `${file.folderId}\u0000${file.path}`;
@@ -138,5 +139,18 @@ export const useWorkspaceView = create<WorkspaceView>()(persist((set) => ({
   selectTerminal: (projectId, id, position) => set(state => mutate(state, projectId, view => { if (position === "mobile") view.mobileTerminal = id; else (position.region === "top" ? view.upperActive : view.lowerActive)[position.group] = id; })),
   orderTerminal: (projectId, id, before, visibleOrder = []) => set(state => mutate(state, projectId, view => { view.terminalOrder = [...new Set([...view.terminalOrder, ...visibleOrder])].filter(item => item !== id); const index = view.terminalOrder.indexOf(before); view.terminalOrder.splice(index < 0 ? view.terminalOrder.length : index, 0, id); })),
   splitTerminal: projectId => set(state => mutate(state, projectId, view => { view.lowerCount = Math.min(4, view.lowerCount + 1); })),
+  mergeTerminalGroup: (projectId, group) => set(state => mutate(state, projectId, view => {
+    if (view.lowerCount <= 1 || group >= view.lowerCount) return;
+    const target = group === 0 ? 1 : groupIndexes[group - 1] ?? 0;
+    const active = view.lowerActive;
+    for (const position of Object.values(view.terminals)) if (position.region === "bottom") {
+      if (position.group === group) position.group = target;
+      if (position.group > group) position.group = groupIndexes[position.group - 1] ?? 0;
+    }
+    view.lowerCount--;
+    view.lowerActive = four(i => i >= view.lowerCount ? null : active[i >= group ? i + 1 : i] ?? null);
+    const mergedGroup = target > group ? groupIndexes[target - 1] ?? 0 : target;
+    view.lowerActive[mergedGroup] ??= active[group];
+  })),
   expand: (projectId, file, expanded) => set(state => mutate(state, projectId, view => { if (expanded && Object.keys(view.expanded).length < 1000) view.expanded[fileKey(file)] = true; else delete view.expanded[fileKey(file)]; })),
 }), { name: "persistty.workspace-view.v1", version: 2, storage: createJSONStorage(() => viewStorage), partialize: state => ({ projects: state.projects }), migrate: (value, version) => { if (version !== 0 && version !== 1) throw new Error("工作台记录版本不支持；本地草稿未删除。"); return { projects: restoreViews(value) }; }, merge: (persisted, current) => { try { return persisted === undefined ? current : { ...current, projects: restoreViews(persisted) }; } catch (error) { return { ...current, recoveryError: error instanceof Error ? error.message : "工作台恢复失败。" }; } }, onRehydrateStorage: () => (_state, error) => { if (error) queueMicrotask(() => useWorkspaceView.setState({ recoveryError: "工作台记录无法恢复，已使用默认视图；本地草稿未删除。" })); } }));
