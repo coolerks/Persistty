@@ -579,3 +579,37 @@ main 自动打包/Release 工作流、标准库下载安装升级器、VPN/TLS N
 ### Next Steps
 
 - 提交推送新workflow后读取Ubuntu实际失败详情；未推送、重跑旧run或发布，不声称原Ubuntu根因已修复。
+
+
+## Session 19: 修复 Actions rg 14 与 Git 2.55 工具兼容失败
+<!-- trellis-session: v=2 fp=7156d8f497f00171 -->
+
+**Date**: 2026-10-03
+**Task**: 修复 Actions rg 14 与 Git 2.55 工具兼容失败
+**Branch**: `main`
+
+### Summary
+
+通过 GitHub 读取 run 37100462607，复现并修复替换能力探测和测试后台维护。隔离 Git 2.55/rg 14 下完整 Go 200 pass、桥接29、race/vet、前端163、部署34及Linux两架构编译通过。原本机环境失败保留；远端须提交推送后验证，未提交发布或安装。
+
+### Main Changes
+
+- 搜索创建前验证 JSON 替换能力，旧 rg 固定 native，增加完整原字节替换回归
+- Git fixture 关闭自动维护，原20次失败19次，修复后重复20次通过，保持产品快照保护
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 完整根Go200与桥接29、required无skip，search/gitview race和root/bridge vet通过
+- [OK] 前端lint/typecheck/163单测/build、部署34回归、Linux amd64/arm64编译与本地链接/diff检查通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 用户提交推送main后验证新提交触发的Actions；保持任务in_progress和目标部署未执行边界

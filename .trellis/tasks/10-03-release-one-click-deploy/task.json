@@ -35,8 +35,13 @@
     "README.md",
     "internal/config/config.go",
     "internal/config/config_test.go",
-    "AGENTS.md"
+    "AGENTS.md",
+    "internal/search/native_engine.go",
+    "internal/search/native_engine_test.go",
+    "internal/gitview/service_test.go",
+    ".trellis/spec/backend/search-git-contract.md",
+    ".trellis/spec/backend/quality-guidelines.md"
   ],
-  "notes": "已读取真实Actions #1失败日志：根Go非零但JSON被重定向，原run无artifact、具体用例未知。已修复失败详情/附件和退出状态；本机无缓存Go198pass/bridge29pass/vet、Linux测试交叉编译、34回归通过。新workflow未推送执行，原Ubuntu失败待确认，不自动提交或归档。",
+  "notes": "第二次真实 run 37100462607 显示 rg 14 JSON 替换能力缺失和 Git 2.55 fixture 后台维护导致快照冲突。已修复搜索前能力探测/固定 native 和测试建仓维护隔离；隔离同版本复现、负向回归、重复20次验证、race/vet，短GOTMPDIR完整Go200pass/桥接29pass，前端163和部署34回归、Linux两架构编译通过。原沙箱/长socket路径失败证据保留；远端新提交运行待用户推送，不自动提交或归档。",
   "meta": {}
 }

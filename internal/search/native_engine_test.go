@@ -62,6 +62,10 @@ func TestNativeEngineMatchesRGCommonPatterns(t *testing.T) {
 		t.Skip("rg comparison unavailable; missing-tool tests still run")
 	}
 	runner := toolrunner.New("git", rg, 0)
+	capabilityErr := rgReplacementCapability(context.Background(), runner, t.TempDir())
+	if capabilityErr != nil && !errors.Is(capabilityErr, toolrunner.ErrUnavailable) {
+		t.Fatal(capabilityErr)
+	}
 	content := "\ufeff中文😀a12 A34\r\ncat scatter cat\ra56\n中文 中文字符 _中文\n\n"
 	for _, q := range []Query{
 		{Pattern: "a", CaseSensitive: false}, {Pattern: "cat", WholeWord: true},
@@ -69,19 +73,80 @@ func TestNativeEngineMatchesRGCommonPatterns(t *testing.T) {
 		{Pattern: `^`, Regex: true}, {Pattern: `$`, Regex: true},
 	} {
 		t.Run(q.Pattern, func(t *testing.T) {
-			replacement := "<$1>$$"
-			actual, err := nativeEngine(context.Background(), q, content, &replacement)
+			actual, err := nativeEngine(context.Background(), q, content, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-			want, err := rgEngine(context.Background(), runner, t.TempDir(), q, content, &replacement)
+			want, err := rgEngine(context.Background(), runner, t.TempDir(), q, content, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if !reflect.DeepEqual(actual, want) {
 				t.Fatalf("native %#v\nrg %#v", actual, want)
 			}
+			replacement := "<$1>$$"
+			actual, err = nativeEngine(context.Background(), q, content, &replacement)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, match := range actual {
+				expected := replacement
+				if q.Regex {
+					expected = "<>$"
+					if q.Pattern == `a([0-9]+)` {
+						expected = "<" + content[match.Match.Start+1:match.Match.End] + ">$"
+					}
+				}
+				if match.Replacement != expected {
+					t.Fatalf("replacement %q, want %q", match.Replacement, expected)
+				}
+			}
+			if capabilityErr == nil {
+				want, err = rgEngine(context.Background(), runner, t.TempDir(), q, content, &replacement)
+				if err != nil || !reflect.DeepEqual(actual, want) {
+					t.Fatalf("replacement native %#v\nrg %#v: %v", actual, want, err)
+				}
+			}
 		})
+	}
+}
+
+func TestSearchWithLegacyRGReplacementCapability(t *testing.T) {
+	s, p, root := fixture(t)
+	// Retain real rg validation/matching but reproduce pre-15 replacement JSON.
+	quoted := "'" + strings.ReplaceAll(s.Runner.Rg, "'", "'\"'\"'") + "'"
+	script := filepath.Join(t.TempDir(), "legacy-rg")
+	legacy := `{"type":"match","data":{"lines":{"text":"a\n"},"line_number":1,"absolute_offset":0,"submatches":[{"match":{"text":"a"},"start":0,"end":1}]}}`
+	body := "#!/bin/sh\nfor arg do\nif [ \"$arg\" = --replace ]; then\ncat >/dev/null\nprintf '%s\\n' '" + legacy + "'\nexit 0\nfi\ndone\nexec " + quoted + " \"$@\"\n"
+	if err := os.WriteFile(script, []byte(body), 0700); err != nil {
+		t.Fatal(err)
+	}
+	s.Runner.Rg = script
+	original := "\ufeff中文😀a12\r\na34\ra56\n"
+	put(t, root, "text.txt", original)
+	result, err := s.Search(context.Background(), "owner", p.ID, Query{ProjectVersion: p.Version, Pattern: `a(?P<number>[0-9]+)`, Regex: true})
+	if err != nil || len(result.Files) != 1 || !result.Files[0].Native || len(result.Files[0].Matches) != 3 {
+		t.Fatalf("legacy capability: %#v %v", result, err)
+	}
+	f := result.Files[0]
+	// Installation/removal after search must not change the selected engine.
+	s.Runner.Rg = "/unused-after-legacy-probe"
+	preview, err := s.Preview(context.Background(), "owner", p.ID, PreviewInput{p.Version, result.ID, []string{f.Matches[0].ID, f.Matches[2].ID}, "<${number}>$$"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	comparison, err := s.Comparison("owner", p.ID, preview.ID, f.ID)
+	want := "\ufeff中文😀<12>$\r\na34\r<56>$\n"
+	if err != nil || comparison.Original != original || comparison.Modified != want {
+		t.Fatalf("legacy preview: %#v %v", comparison, err)
+	}
+	applied, err := s.Apply(context.Background(), "owner", p.ID, preview.ID, ApplyInput{p.Version, []string{f.ID}, nil})
+	if err != nil || applied.Results[0].State != "applied" {
+		t.Fatalf("legacy apply: %#v %v", applied, err)
+	}
+	actual, err := os.ReadFile(filepath.Join(root, f.Path))
+	if err != nil || string(actual) != want {
+		t.Fatalf("legacy bytes: %q %v", actual, err)
 	}
 }
 

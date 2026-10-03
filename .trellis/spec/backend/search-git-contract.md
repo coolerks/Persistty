@@ -138,6 +138,10 @@ HTTP 根据已注册 route pattern 为 search/Git 路由使用 `ToolTimeout()`�
 
 literal 直接验证 Go regexp 并固定 native；regex 的 selectEngine 先在私有 staging 验 rg 模式，缺失/JSON/参数能力失败后验证 Go regexp。正常 literal、大小写、全词、常见捕获表达式均无需 rg。每个文本匹配只对安全 SnapshotCopy 返回的有界 UTF-8 原正文运行；binary/NUL、链接、默认排除目录和根复验不变。Go 逐物理行计算原字节 offset、1-based UTF-16，BOM 首行不计列，CRLF/裸CR分行但不更改预览/发布正文。whole_word 用 Unicode 字母/标记/数字/连接符与 joiner 检查；Go regex 的 shorthand/word-boundary 按 RE2 语法（例如 \w、\b 是 ASCII），不声称支持 rg 全部 Unicode 类扩展。常见 regex 与 rg 的位置/捕获扩展通过对照验证。
 
+2026-10-03 兼容 rg 14：`selectEngine(ctx,runner,dir,q)` 在空正文验证用户模式后调用 `rgReplacementCapability(ctx,runner,dir) error`，固定以 `(a)`、`a\n`、`<$1>$$` 验证恰好一个 JSON 匹配及展开值 `<a>$`。rg 14 接受参数但不输出 replacement，不能把空输入成功视为替换可用；缺字段/错误展开/假空结果归 ErrUnavailable，在搜索创建前验证 Go 子集并固定 native。超时、取消、输出上限仍直接传播，不切换引擎绕过预算。rg 快照生成后的工具能力丢失仍失败并要求重新搜索。[rg 15 变更记录](https://github.com/BurntSushi/ripgrep/blob/15.0.0/CHANGELOG.md)说明该 JSON 替换能力的版本差异。
+
+`TestNativeEngineMatchesRGCommonPatterns` 在 rg 14/15 都执行真实 CLI 坐标对照与明确期望的 native 捕获展开；只有具备能力时附加 JSON 替换对照，不跳过整个用例。`TestSearchWithLegacyRGReplacementCapability` 复现旧 JSON，并断言搜索→选择替换→预览→Apply 的具名捕获、美元符号、BOM/混合换行和引擎固定。错误示例：仅把 CI 升级到 rg 15，或在 Preview 切换引擎；正确：创建搜索快照前验证实际所需能力，兼容现有 Debian 工具。
+
 compileCandidateFilter 每请求编译 include/exclude，再在已通过 ignore 裁决的叶回调中缩窄，不能重新纳入忽略文件；不为 glob 构建占位树/启动第二次发现。最多32个 include/exclude；无效 query glob 400。目录项/扫描文本/结果/文件/快照额度与现有合同一致；单行临时匹配至多5001项，whole-word过滤导致未扫描完时明确413而非假空。context 在目录/逐行/匹配间检查，取消/超限/身份/控制文件错误保留原映射。
 
 Native 字段不进入 HTTP/日志；搜索→选中→预览→Apply 保留 session、项目版本、文件版本和目标保护契约。native_engine_test 验缺 Git/rg 的忽略/glob/二进制/根外链接、中文/emoji/BOM/混合换行、命中限额、非法表达式、取消与原字节选择替换/应用；真实 rg 对照 literal、全词和常见 regex 的 Match/捕获扩展。

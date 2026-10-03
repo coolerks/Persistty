@@ -9,6 +9,12 @@ Go 源码 gofmt，`go test ./...`、`go vet ./...`；并发/bridge/watcher/sessi
 config、auth、session、path validation、symlink/TOCTOU、file conflict、atomic save、upload、rg parser、tmux parser、git parser、SQLite migration 都要在对应功能任务中有断言。真实 integration 使用独立 filesystem/Git/rg/SQLite/tmux/PTY，缺依赖明确 skip 原因；release CI 中 required suites skip 即验收失败。单元测试不能覆盖 Debian systemd 证明。
 安全 review task 必须逐项留修复或测试证据：auth bypass、WS Origin/认证撤销、CSRF、path/symlink、shell/flag injection、upload overwrite/quota、ZIP traversal、SVG XSS、binary、session fixation/brute force、敏感日志、权限/roots。
 
+### Git fixture 后台维护隔离（2026-10-03）
+
+`internal/gitview` 的测试建仓 helper 固定 `git -c gc.auto=0 -c maintenance.auto=false <args>`；命令结束即代表 fixture 写入完成，不能让自动后台维护与只读快照断言竞争。Git 2.55 的默认 geometric 策略会在小型历史 fixture 中启动 repack，导致读取期间对象消失或版本冲突。[官方变更记录](https://github.com/git/git/blob/v2.55.0/Documentation/RelNotes/2.55.0.adoc)提供策略变更背景；版本行为必须用同版本真实 Git 验证，不能凭本机旧版本通过推断 CI 已通过。
+
+`TestFixtureCommitsDoNotStartBackgroundMaintenance` 强制维护阈值并禁后台 detach，使遗漏命令级隔离时确定产生 pack；隔离正确时 pack 目录为空且四条历史可读取。历史分页用例仍验证固定 HEAD、分页无重复与完整计数。产品快照、源目录/对象强版本复验与真实冲突拒绝不变。错误：重试快照或放宽冲突校验来隐藏 fixture 写入；正确：关闭测试自己触发的后台维护，保持真实并发修改的拒绝边界。
+
 ### Debian 探针验收规则
 探针的每次心跳必须比上次采样增长，PID/start time/cgroup 则与固定初始身份比较；只比初始心跳大可能误判早已停止推进的任务。Python 使用 assert 做判定时入口必须拒绝 `-O`，不能只在 README 禁止。强杀或 timeout 可能跳过 defer/finally，内部 TMPDIR 必须归入已知且校验过的自有上传目录，并提供精确 unit/scope/目录清理命令。输出内存限额不等于磁盘配额；本轮临时文件命令捕获只有时间界限，不能复用为正式服务的通用执行沙箱。
 

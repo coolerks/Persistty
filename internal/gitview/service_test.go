@@ -16,6 +16,9 @@ import (
 
 func command(t *testing.T, dir string, args ...string) []byte {
 	t.Helper()
+	// Fixture commits must finish all source writes before snapshot assertions.
+	// Git 2.55 defaults to geometric maintenance, which can detach a repack.
+	args = append([]string{"-c", "gc.auto=0", "-c", "maintenance.auto=false"}, args...)
 	c := exec.Command("git", args...)
 	c.Dir = dir
 	c.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1", "GIT_AUTHOR_NAME=Fixture", "GIT_AUTHOR_EMAIL=fixture@example.invalid", "GIT_COMMITTER_NAME=Fixture", "GIT_COMMITTER_EMAIL=fixture@example.invalid")
@@ -333,6 +336,31 @@ func TestHistoryPaginationPinsHeadAcrossNewCommits(t *testing.T) {
 			t.Fatal("duplicate history item")
 		}
 		seen[commit.ID] = true
+	}
+}
+
+func TestFixtureCommitsDoNotStartBackgroundMaintenance(t *testing.T) {
+	s, p, root := fixture(t)
+	command(t, root, "config", "maintenance.strategy", "geometric")
+	command(t, root, "config", "maintenance.geometric-repack.auto", "-1")
+	command(t, root, "config", "maintenance.autoDetach", "false")
+	command(t, root, "config", "gc.auto", "1")
+	for i := 0; i < 3; i++ {
+		if err := os.WriteFile(filepath.Join(root, "file.txt"), []byte(fmt.Sprintf("revision %d\n", i)), 0600); err != nil {
+			t.Fatal(err)
+		}
+		command(t, root, "add", "--", "file.txt")
+		command(t, root, "commit", "--quiet", "-m", fmt.Sprintf("commit %d", i))
+	}
+	// Forced maintenance would create packs even for this small fixture. The
+	// helper disables its launch rather than racing it or retrying snapshots.
+	entries, err := os.ReadDir(filepath.Join(root, ".git/objects/pack"))
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("unexpected fixture maintenance: %v %v", entries, err)
+	}
+	log, err := s.Log(context.Background(), p.ID, p.Version, repoID(t, s, p), 0)
+	if err != nil || len(log.Items) != 4 {
+		t.Fatalf("stable fixture history: %#v %v", log, err)
 	}
 }
 func TestStagedRenameComparesOriginalPath(t *testing.T) {

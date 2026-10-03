@@ -13,3 +13,7 @@
 ## Actions 首次失败跟进
 
 读取真实run/job日志 → 修复Go退出码与诊断输出/失败附件 → 回归实际workflow命令 → 同参数无缓存Go、本机桥接与vet、Linux测试交叉编译 → 更新规范和失败报告。原Ubuntu失败用例因未保留stdout而未知，新工作流尚未推送执行；不以本机通过代替Ubuntu实跑。
+
+## 第二次 Actions 跟进
+
+用户推送后 run 37100462607 已提供具体错误。按设计边界修复 selectEngine 的 JSON 替换能力探测和 Git fixture 的自动维护隔离；用隔离 rg 14/Git 2.55 重现原错误、负向验证回归、运行修复后完整门禁，并同步 owning spec。最新证据与实际本机环境限制见 [工具兼容检查报告](ci-tool-compat-report.md)，不把本机交叉编译写成 Ubuntu 执行。

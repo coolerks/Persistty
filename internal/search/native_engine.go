@@ -19,6 +19,9 @@ func selectEngine(ctx context.Context, runner *toolrunner.Runner, dir string, q 
 	}
 	_, err := rgEngine(ctx, runner, dir, q, "", nil)
 	if err == nil {
+		err = rgReplacementCapability(ctx, runner, dir)
+	}
+	if err == nil {
 		return false, nil
 	}
 	if !errors.Is(err, toolrunner.ErrUnavailable) && !errors.Is(err, ErrPattern) {
@@ -26,6 +29,21 @@ func selectEngine(ctx context.Context, runner *toolrunner.Runner, dir string, q 
 	}
 	_, nativeErr := nativePattern(q)
 	return true, nativeErr
+}
+
+// rg before 15 accepts --replace with --json but omits the expanded captures.
+// Probe a known match before pinning the engine, including for searches whose
+// pattern does not match the probe. Preview must never switch engines later.
+func rgReplacementCapability(ctx context.Context, runner *toolrunner.Runner, dir string) error {
+	replacement := "<$1>$$"
+	matches, err := rgEngine(ctx, runner, dir, Query{Pattern: "(a)", Regex: true, CaseSensitive: true}, "a\n", &replacement)
+	if err != nil {
+		return err
+	}
+	if len(matches) != 1 || matches[0].Replacement != "<a>$" {
+		return toolrunner.ErrUnavailable
+	}
+	return nil
 }
 
 func engine(ctx context.Context, runner *toolrunner.Runner, dir string, q Query, content string, replacement *string, native bool) ([]expanded, error) {
