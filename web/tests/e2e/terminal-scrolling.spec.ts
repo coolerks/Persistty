@@ -31,10 +31,12 @@ for (const role of ["controller", "observer"] as const) test(`${role} 历史 LF 
   const history = page.getByLabel("终端历史", { exact: true });
   const rows = () => history.locator(".xterm-rows > div").evaluateAll(elements => elements.map(element => (element.textContent ?? "").replaceAll("\u00a0", " ").trimEnd()).filter(Boolean));
   await expect(page.locator(".terminal-runtime")).toHaveAttribute("data-connection", "connected");
+  const liveHeight = (await live.boundingBox())!.height;
   const original = await live.locator(".xterm").elementHandle(); if (!original) throw new Error("live xterm 未创建");
   await page.locator(".terminal-tab").click({ button: "right" });
   await page.getByRole("menuitem", { name: "查看终端历史", exact: true }).click();
   await expect.poll(rows).toContain("CRLF二");
+  await expect.poll(async () => (await live.boundingBox())!.height).toBe(liveHeight);
   const visible = await rows();
   expect(visible.filter(line => line.includes("中文输出")).every(line => /^行\d{3} 中文输出 \d+$/.test(line))).toBe(true);
   expect(visible).toContain("CRLF一"); expect(visible).toContain("CRLF二");
@@ -164,4 +166,64 @@ test("短历史重复上下切换仍有内容、保持单连接且零 shell 输�
     await expect(live).toBeVisible(); await expect(live.locator(".xterm-rows")).toContainText("current prompt>");
   }
   expect(connections).toBe(1); expect(inputs).toEqual([]);
+});
+
+
+test("历史绘制、刷新和返回实时始终保留非空画面与尺寸", async ({ page }, info) => {
+  let requests = 0, connections = 0; const inputs: string[] = [], errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.route("**/api/v1/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    let data: unknown;
+    if (path === "/api/v1/terminals") data = { items: [{ id: "paint", project_id: "interaction", display_name: "绘制验收", working_directory: "/fixture", state: "running" }] };
+    else if (path.endsWith("/entries")) data = { items: [], next_cursor: "", project_version: 1 };
+    else if (path.endsWith("/history")) {
+      requests++;
+      data = { content_base64: Buffer.from(Array.from({ length: 200 }, (_, index) => `snapshot ${requests} row ${index}`).join("\n")).toString("base64"), history_size: 200, returned_lines: 200, cols: 80, rows: 24, alternate_on: false, truncated: false };
+    } else throw new Error(`unexpected ${path}`);
+    await route.fulfill({ json: { data, request_id: "fixture" } });
+  });
+  await page.routeWebSocket(/\/api\/v1\/events/, () => {});
+  await page.routeWebSocket(/\/api\/v1\/terminals\/.*\/stream/, socket => {
+    connections++; socket.onMessage(message => { if (typeof message !== "string") inputs.push(Buffer.from(message).toString("base64")); });
+    socket.send(JSON.stringify({ type: "ready", protocol: 3, terminal_id: "paint", viewer_id: "fixture", role: "controller", generation: 1, cols: 80, rows: 24, pending_termination: null }));
+    socket.send(Buffer.from("retained live prompt> "));
+  });
+  await page.goto("/tests/fixtures/workbench-interactions.html");
+  const live = page.getByLabel("实时终端", { exact: true }), history = page.getByLabel("终端历史", { exact: true });
+  await expect(live.locator(".xterm-rows")).toContainText("retained live prompt>");
+  const original = await live.locator(".xterm").elementHandle(); if (!original) throw new Error("missing live");
+  await page.locator(".terminal-runtime").evaluate(runtime => {
+    const state = window as typeof window & { blankPaints: number; stopPaintSampling(): void };
+    state.blankPaints = 0; let active = true;
+    const sample = () => {
+      const surfaces = runtime.querySelectorAll<HTMLElement>(".terminal-live, .terminal-history-surface");
+      const visibleContent = Array.from(surfaces).some(surface => surface.getBoundingClientRect().height > 0 && getComputedStyle(surface).visibility !== "hidden" && (surface.querySelector(".xterm-rows")?.textContent ?? "").trim().length > 0);
+      if (!visibleContent) state.blankPaints++;
+      if (active) requestAnimationFrame(sample);
+    };
+    state.stopPaintSampling = () => { active = false; }; requestAnimationFrame(sample);
+  });
+  const retainedSizes: boolean[] = [];
+  for (let index = 0; index < 3; index++) {
+    const liveHeight = (await live.boundingBox())!.height;
+    await live.hover(); await page.mouse.wheel(0, -120);
+    await expect(history).toBeVisible(); await expect(history.locator(".xterm-rows")).toContainText(`snapshot ${index * 2 + 1}`);
+    retainedSizes.push((await live.boundingBox())?.height === liveHeight);
+    await page.locator(".terminal-tab").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "刷新终端历史", exact: true }).click();
+    await expect(history.locator(".xterm-rows")).toContainText(`snapshot ${index * 2 + 2}`); await expect(history).toBeVisible();
+    await page.setViewportSize({ width: 1440 - index * 160, height: 845 - index * 60 });
+    await expect(history.locator(".xterm-rows")).toContainText(`snapshot ${index * 2 + 2}`);
+    await page.locator(".terminal-tab").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "返回实时终端", exact: true }).click();
+    await expect(live).toBeVisible(); await expect(live.locator(".xterm-rows")).toContainText("retained live prompt>");
+    expect(await original.evaluate(element => element.isConnected)).toBe(true);
+  }
+  await page.screenshot({ path: info.outputPath("history-return-live.png") });
+  const blankPaints = await page.evaluate(() => {
+    const state = window as typeof window & { blankPaints: number; stopPaintSampling(): void };
+    state.stopPaintSampling(); return state.blankPaints;
+  });
+  expect(blankPaints).toBe(0); expect(retainedSizes).toEqual([true, true, true]); expect(requests).toBe(6); expect(connections).toBe(1); expect(inputs).toEqual([]); expect(errors).toEqual([]);
 });

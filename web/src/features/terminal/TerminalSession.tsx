@@ -50,6 +50,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
   const [error, setError] = useState<string | null>(null);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [historyBytes, setHistoryBytes] = useState<Uint8Array | null>(null);
+  const [renderedHistory, setRenderedHistory] = useState<Uint8Array | null>(null);
   const [historyLines, setHistoryLines] = useState(0);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -356,6 +357,7 @@ export function TerminalSessionView({ terminal, onStateChange }: {
           if (!active) return;
           terminal.options.smoothScrollDuration = 120;
           parsed = true;
+          setRenderedHistory(historyBytes);
           const pixels = historyWheelRef.current;
           historyWheelRef.current = 0;
           scroll(pixels);
@@ -395,8 +397,10 @@ export function TerminalSessionView({ terminal, onStateChange }: {
     {error && <Alert variant="destructive" className="shrink-0"><AlertDescription>{error}</AlertDescription><AlertAction><Button size="icon-xs" variant="ghost" aria-label="关闭错误" onClick={() => setError(null)}><X /></Button></AlertAction></Alert>}
     {historyEmpty && !historyVisible && <div className="terminal-history-heading terminal-history-loading terminal-history-empty" role="status"><History /><span>暂无历史输出</span></div>}
     {historyVisible && !historyBytes && <div className="terminal-history-heading terminal-history-loading" role="status"><History />普通历史快照{historyLoading && <span>读取中…</span>}{historyError && <span role="alert">{historyError}</span>}</div>}
-    <div className="terminal-live" ref={hostRef} style={{ display: historyVisible && historyBytes ? "none" : undefined }} aria-label="实时终端" />
-    {historyVisible && historyBytes && <div className="terminal-history"><div className="terminal-history-heading"><History />普通历史快照{historyLines === 0 && <span>暂无历史输出</span>}{historyLoading && <span>读取中…</span>}{historyError && <span role="alert">{historyError}</span>}</div><div className="terminal-history-surface" ref={historyHostRef} aria-label="终端历史" /></div>}
+    <div className="terminal-screen-stack">
+    <div className="terminal-live" ref={hostRef} style={{ visibility: historyVisible && historyBytes === renderedHistory && historyBytes ? "hidden" : undefined }} aria-label="实时终端" />
+    {historyVisible && historyBytes && <div className="terminal-history" style={{ visibility: historyBytes === renderedHistory ? undefined : "hidden" }}><div className="terminal-history-heading"><History />普通历史快照{historyLines === 0 && <span>暂无历史输出</span>}{historyLoading && <span>读取中…</span>}{historyError && <span role="alert">{historyError}</span>}</div><div className="terminal-history-surface" ref={historyHostRef} aria-label="终端历史" /></div>}
+    </div>
     <div className="terminal-shortcuts" aria-label="手机终端快捷键">
       <Toggle size="sm" variant="outline" pressed={ctrl} onPressedChange={toggleCtrl}>Ctrl</Toggle>
       <Toggle size="sm" variant="outline" pressed={alt} onPressedChange={toggleAlt}>Alt</Toggle>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Plus, RefreshCw, TerminalSquare, PanelRight, X } from "lucide-react";
+import { Check, Plus, RefreshCw, TerminalSquare, PanelRight, Maximize2, Minimize2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -18,8 +18,9 @@ import { groupIndexes, useWorkspaceView, type GroupIndex } from "@/features/work
 import { decodeTerminal } from "@/lib/api/decoder";
 import { terminalVisible, useTerminalView } from "./terminal-view";
 
-export function TerminalWorkspace({ project, initialId, onHide, onMoveToTop, onMoveToBottom, upperIds = [], focusRequest, group = 0, mobile = false }: {
+export function TerminalWorkspace({ project, initialId, onHide, onToggleMaximize, maximized = false, onMoveToTop, onMoveToBottom, upperIds = [], focusRequest, group = 0, mobile = false }: {
   group?: GroupIndex; mobile?: boolean; project?: Project; initialId?: string | undefined; onHide?(): void; onMoveToTop?(terminal: Terminal): void;
+  onToggleMaximize?(): void; maximized?: boolean;
   onMoveToBottom?(id: string): void; upperIds?: string[]; focusRequest?: { id: string } | null;
 }) {
   const auth = useAuth();
@@ -71,6 +72,7 @@ export function TerminalWorkspace({ project, initialId, onHide, onMoveToTop, onM
       {project && (project.folders.length > 1 ? <DropdownMenu><DropdownMenuTrigger render={add} /><DropdownMenuContent className="terminal-menu"><DropdownMenuGroup><DropdownMenuLabel>选择目录</DropdownMenuLabel>{project.folders.map(folder => <DropdownMenuItem key={folder.id} onClick={() => void create(folder.id)}><span className="truncate" title={folder.path}>{folder.path}</span>{folder.id === project.main_folder_id && <Check className="ml-auto shrink-0" aria-label="主目录" />}</DropdownMenuItem>)}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu> : <Button size="icon-sm" variant="ghost" aria-label="新建终端" title="新建终端" disabled={creating} onClick={() => void create(project.main_folder_id)}><Plus /></Button>)}
       {!mobile && project && <Button size="icon-sm" variant="ghost" aria-label="拆分终端面板" title="拆分终端面板" disabled={(view?.lowerCount ?? 1) >= 4} onClick={() => useWorkspaceView.getState().splitTerminal(project.id)}><PanelRight /></Button>}
       <span className="terminal-heading-spacer" /><Button size="icon-sm" variant="ghost" aria-label="刷新终端" title="刷新终端" onClick={refresh}><RefreshCw /></Button>
+      {onToggleMaximize && <Button size="icon-sm" variant="ghost" aria-label={maximized ? "恢复终端面板" : "全屏终端面板"} title={maximized ? "恢复终端面板" : "全屏终端面板"} aria-pressed={maximized} onClick={onToggleMaximize}>{maximized ? <Minimize2 /> : <Maximize2 />}</Button>}
       {onHide && <Button size="icon-sm" variant="ghost" aria-label="收起终端面板" title="收起终端面板" onClick={onHide}><X /></Button>}
       </div>
       {createError && <Alert variant="destructive" className="shrink-0"><AlertDescription>{createError}</AlertDescription></Alert>}

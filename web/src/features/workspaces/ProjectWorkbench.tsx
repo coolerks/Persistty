@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useOutletContext } from "react-router";
-import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
+import { Group, Panel, Separator, useDefaultLayout, usePanelRef, useGroupRef } from "react-resizable-panels";
 import { Files, FolderKanban, PanelBottom, PanelLeft, PanelRight, TerminalSquare, X, FileText, Search, GitBranch, ChevronDown, Settings } from "lucide-react";
 import { FileQuickOpen } from "./FileQuickOpen";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -64,12 +64,30 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
   const [bottomFocusRequest, setBottomFocusRequest] = useState<{ id: string } | null>(null);
   const sidebarRef = usePanelRef();
   const terminalRef = usePanelRef();
+  const editorPanelRef = usePanelRef();
+  const verticalGroupRef = useGroupRef();
+  const normalLayout = useRef({ editors: 62, terminal: 38 });
+  const [terminalMaximized, setTerminalMaximized] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [terminalOpen, setTerminalOpen] = useState(true);
   const sidebarLayout = useDefaultLayout({ id: `persistty-sidebar-v1-${project.id}`, storage: panelStorage });
   const verticalLayout = useDefaultLayout({ id: `persistty-vertical-v1-${project.id}`, storage: panelStorage });
   const splitLayout = useDefaultLayout({ id: `persistty-editor-split-v1-${project.id}`, storage: panelStorage });
   const bottomLayout = useDefaultLayout({ id: `persistty-terminal-split-v2-${project.id}`, storage: panelStorage });
+  function rememberNormalLayout() {
+    const layout = verticalGroupRef.current?.getLayout();
+    const editorSize = layout?.editors, terminalSize = layout?.terminal;
+    if (editorSize !== undefined && terminalSize !== undefined && editorSize > 0 && terminalSize > 0) normalLayout.current = { editors: editorSize, terminal: terminalSize };
+  }
+  function restoreTerminalLayout() { verticalGroupRef.current?.setLayout(normalLayout.current); }
+  function toggleMaximizeTerminal() {
+    if (terminalMaximized) restoreTerminalLayout();
+    else { rememberNormalLayout(); editorPanelRef.current?.collapse(); }
+  }
+  function toggleTerminalPanel() {
+    if (terminalRef.current?.isCollapsed()) terminalRef.current.expand();
+    else { if (terminalMaximized) restoreTerminalLayout(); terminalRef.current?.collapse(); }
+  }
   const focused = view?.focused ?? 0;
   const activeKey = mobile ? view?.mobileActive : view?.active[focused];
   const activeFile = (mobile ? view?.mobileFiles : view?.groups[focused])?.find(file => fileKey(file) === activeKey);
@@ -130,19 +148,23 @@ export function ProjectWorkbench({ project, onEdit }: { project: Project; onEdit
         <Button variant="ghost" size="icon" aria-label="搜索与替换" aria-pressed={sidebarOpen && sidebar === "search"} title="搜索与替换" onClick={() => toggleSidebar("search")}><Search /></Button>
         <Button variant="ghost" size="icon" aria-label="只读 Git" aria-pressed={sidebarOpen && sidebar === "git"} title="只读 Git" onClick={() => toggleSidebar("git")}><GitBranch /></Button>
         <Link className={buttonVariants({ variant: "ghost", size: "icon" })} to="/projects" aria-label="项目面板" title="项目面板"><FolderKanban /></Link>
-        <Button variant="ghost" size="icon" className="activity-terminal" aria-label="终端面板" aria-pressed={terminalOpen} title="终端面板" onClick={() => terminalRef.current?.isCollapsed() ? terminalRef.current?.expand() : terminalRef.current?.collapse()}><TerminalSquare /></Button>
+        <Button variant="ghost" size="icon" className="activity-terminal" aria-label="终端面板" aria-pressed={terminalOpen} title="终端面板" onClick={toggleTerminalPanel}><TerminalSquare /></Button>
       </nav>
       <Group orientation="horizontal" defaultLayout={sidebarLayout.defaultLayout} onLayoutChanged={sidebarLayout.onLayoutChanged}>
         <Panel id="sidebar" panelRef={sidebarRef} defaultSize="24%" minSize={200} maxSize="45%" collapsible collapsedSize={0} className="workbench-sidebar" onResize={(size, _id, previous) => { setSidebarOpen(size.inPixels > 0); if (size.inPixels > 0 && (!previous || previous.inPixels === 0)) revealCurrentFile(); }}><div className="panel-surface" hidden={sidebar !== "files"}>{explorer}</div><div className="panel-surface" hidden={sidebar !== "search"}>{searchPanel}</div><div className="panel-surface" hidden={sidebar !== "git"}>{gitPanel}</div></Panel>
         <Separator className="workbench-separator vertical" />
-        <Panel id="main" minSize="40%"><Group orientation="vertical" defaultLayout={verticalLayout.defaultLayout} onLayoutChanged={verticalLayout.onLayoutChanged}>
-          <Panel id="editors" defaultSize="62%" minSize={160}>{editors}</Panel>
-          <Separator className="workbench-separator horizontal" data-collapsed={!terminalOpen} disabled={!terminalOpen} />
-          <Panel id="terminal" onResize={size => setTerminalOpen(size.inPixels > 0)} panelRef={terminalRef} defaultSize="38%" minSize={110} collapsible collapsedSize={0}><Group orientation="horizontal" defaultLayout={bottomLayout.defaultLayout} onLayoutChanged={bottomLayout.onLayoutChanged}>{Array.from({ length: view?.lowerCount ?? 1 }, (_, index) => <Fragment key={index}>{index > 0 && <Separator className="workbench-separator vertical" />}<Panel id={`terminal-group-${index}`} minSize="15%"><TerminalWorkspace project={project} group={index as GroupIndex} upperIds={upperTerminals.map(item => item.id)} onMoveToTop={moveToTop} onMoveToBottom={id => moveToBottom(id, index as GroupIndex)} focusRequest={bottomFocusRequest} onHide={() => terminalRef.current?.collapse()} /></Panel></Fragment>)}</Group></Panel>
+        <Panel id="main" minSize="40%"><Group orientation="vertical" groupRef={verticalGroupRef} defaultLayout={verticalLayout.defaultLayout} onLayoutChanged={(layout, meta) => {
+          // A maximized view is transient; only persist the ordinary editor/terminal layout.
+          if ((layout.editors ?? 0) > 0) verticalLayout.onLayoutChanged(layout, meta);
+        }}>
+          {/* Drag continuously to the tab row, then collapse; keep the top edge draggable. */}
+          <Panel id="editors" panelRef={editorPanelRef} defaultSize="62%" minSize={38} collapsible collapsedSize={0} collapsedThreshold={1} onResize={size => setTerminalMaximized(size.inPixels === 0)}>{editors}</Panel>
+          <Separator className="workbench-separator horizontal" data-collapsed={!terminalOpen} data-maximized={terminalMaximized} disabled={!terminalOpen} onPointerDownCapture={rememberNormalLayout} onKeyDownCapture={rememberNormalLayout} />
+          <Panel id="terminal" onResize={size => setTerminalOpen(size.inPixels > 0)} panelRef={terminalRef} defaultSize="38%" minSize={110} collapsible collapsedSize={0}><Group orientation="horizontal" defaultLayout={bottomLayout.defaultLayout} onLayoutChanged={bottomLayout.onLayoutChanged}>{Array.from({ length: view?.lowerCount ?? 1 }, (_, index) => <Fragment key={index}>{index > 0 && <Separator className="workbench-separator vertical" />}<Panel id={`terminal-group-${index}`} minSize="15%"><TerminalWorkspace project={project} group={index as GroupIndex} upperIds={upperTerminals.map(item => item.id)} onMoveToTop={moveToTop} onMoveToBottom={id => moveToBottom(id, index as GroupIndex)} focusRequest={bottomFocusRequest} maximized={terminalMaximized} onToggleMaximize={toggleMaximizeTerminal} onHide={toggleTerminalPanel} /></Panel></Fragment>)}</Group></Panel>
         </Group></Panel>
       </Group>
     </div>}
-    <footer className="workbench-status"><span>{project.folders.find(folder => folder.id === project.main_folder_id)?.path ?? project.name}</span><span>{activeFile ? `${activeFile.path} · UTF-8` : `${project.folders.length} 个文件夹`}</span>{!mobile && <EditorLanguageStatus project={project} file={activeUpperId && !dismissed[activeUpperId] ? undefined : activeFile} />}<div className="status-controls"><Button size="icon" variant="ghost" aria-label="切换资源管理器" title="切换资源管理器" onClick={() => mobile ? showFiles() : sidebarRef.current?.isCollapsed() ? sidebarRef.current?.expand() : sidebarRef.current?.collapse()}><PanelLeft /></Button><Button size="icon" variant="ghost" aria-label="切换终端面板" title="切换终端面板" onClick={() => mobile ? setMobileView("terminal") : terminalRef.current?.isCollapsed() ? terminalRef.current?.expand() : terminalRef.current?.collapse()}><PanelBottom /></Button></div></footer>
+    <footer className="workbench-status"><span>{project.folders.find(folder => folder.id === project.main_folder_id)?.path ?? project.name}</span><span>{activeFile ? `${activeFile.path} · UTF-8` : `${project.folders.length} 个文件夹`}</span>{!mobile && <EditorLanguageStatus project={project} file={activeUpperId && !dismissed[activeUpperId] ? undefined : activeFile} />}<div className="status-controls"><Button size="icon" variant="ghost" aria-label="切换资源管理器" title="切换资源管理器" onClick={() => mobile ? showFiles() : sidebarRef.current?.isCollapsed() ? sidebarRef.current?.expand() : sidebarRef.current?.collapse()}><PanelLeft /></Button><Button size="icon" variant="ghost" aria-label="切换终端面板" title="切换终端面板" onClick={() => mobile ? setMobileView("terminal") : toggleTerminalPanel()}><PanelBottom /></Button></div></footer>
   </main></TerminalRuntimeProvider></EditorScopeProvider>;
 }
 

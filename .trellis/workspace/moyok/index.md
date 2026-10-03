@@ -10,8 +10,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 12
-- **Last Active**: 2026-10-02
+- **Total Sessions**: 14
+- **Last Active**: 2026-10-03
 <!-- @@@/auto:current-status -->
 
 ---
@@ -21,7 +21,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~383 | Active |
+| `journal-1.md` | ~451 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -31,6 +31,8 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 14 | 2026-10-03 | 截图追加反馈：连续拖动、双向全屏与终端绘制 | - | `main` |
+| 13 | 2026-10-03 | 截图修复：标签衔接、终端全屏与登录页 | - | `main` |
 | 12 | 2026-10-02 | W07 单文件提权实施与本机验证 | - | `main` |
 | 11 | 2026-10-02 | W06 提交与文件悬浮卡片 | - | `main` |
 | 10 | 2026-10-02 | Git 历史触底加载与右键父提交选择 | - | `main` |

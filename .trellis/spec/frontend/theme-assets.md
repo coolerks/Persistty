@@ -87,4 +87,10 @@ FileQuickOpen 的 Input 与 DialogClose 组合在 `.file-quick-input-row` 中，
 项目选择页用欢迎页结构：品牌标题、开始使用/已有项目两栏，760px 以下单栏；项目名称、路径、打开位置 Dialog、编辑与移除配置确认保持原语义。没有独立终端导航或 runtime；旧 `/terminals` 和 `/terminals/:id` 在鉴权后 Navigate 到 `/projects`，不发送终端创建/attach/终止请求，项目工作台终端不受影响。
 
 
-第四轮终端折叠时，ProjectWorkbench 的水平 Separator 保留原位置/ref/Panel布局身份，依据实际 onResize 可见性 disabled、height:0、关闭伪元素热区；再次 expand 后恢复4px与拖动/键盘。不能卸载 terminal runtime 或终止进程来消除间隙。状态栏固定25px、16px文字行高，直属文本块满高 align-content:center，语言入口/按钮同栏居中。浏览器断言侧栏与editor底边误差≤1px、文字Range中心误差≤2px，并等待 Separator 的实际展开属性后再验伪元素宽高。
+第四轮终端折叠时，ProjectWorkbench 的水平 Separator 保留原位置/ref/Panel布局身份，依据实际 onResize 可见性 disabled、height:0、关闭伪元素热区；再次 expand 后恢复4px与拖动/键盘。不能卸载 terminal runtime 或终止进程来消除间隙。状态栏固定25px、16px文字行高，直属文本块使用16px行高自然高度，由footer的align-items:center居中，不使用满高align-content盒子，语言入口/按钮同栏居中。浏览器断言侧栏与editor底边误差≤1px、文字Range中心误差≤2px，并等待 Separator 的实际展开属性后再验伪元素宽高。
+
+## 登录页与标签衔接（2026-10-03）
+
+LoginPage 的 login-main 使用 workbench-chrome，login-frame 使用正文背景、1px workbench-border 和8px面板半径，桌面说明/登录表单双列，宽度≤760px或粗指针无悬停时单列；触屏横屏沿用单列并允许页面纵向滚动。Field/Input/Button 继续复用，密码清空、错误、429冷却、提交去重及安全返回路径逻辑不变。login-modern-ui 浏览器专项验证深浅主题、390×844/844×390、焦点/Enter、错误/冷却和成功返回项目页；真实软键盘不从模拟推定。
+
+编辑器原生滚动轨道使用 --background，终端仍透明；选中背景与正文衔接，标签行、固定动作与标签内容固定38px，editor-tabs为42px并margin-bottom:-4px，原生4px轨道覆盖路径栏顶部，避免挤压内容或在固定工具栏下方留下缺口。标签明确20px行高、路径30px高度/18px行高；溢出前后文字中心不变。Firefox 的 scrollbar-color 同时提供轨道背景；WebKit 用 ::-webkit-scrollbar-track。不得仅改灰缝而隐藏滚动入口。workbench-modern-ui 与 workbench-interactions 覆盖溢出前后坐标、滚动到两端、hover/focus稳定、轨道与正文同色及固定动作。

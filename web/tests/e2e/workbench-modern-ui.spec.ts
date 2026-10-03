@@ -1,13 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
+import type { Terminal } from "../../src/lib/api/decoder";
 
-async function fixture(page: Page) {
+test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
+
+async function fixture(page: Page, terminals: Terminal[] = []) {
   const errors: string[] = []; const mutations: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.routeWebSocket(/\/api\/v1\/events/, () => {});
   await page.route("**/api/v1/**", async route => {
     const request = route.request(), url = new URL(request.url());
     if (request.method() !== "GET") mutations.push(url.pathname);
-    const data = url.pathname === "/api/v1/terminals" ? { items: [] } :
+    const data = url.pathname === "/api/v1/terminals" ? { items: terminals } :
       url.pathname.endsWith("/file-names") ? { project_version: 1, items: [{ folder_id: "root", path: "file-0.ts" }, { folder_id: "other", path: "file-1.ts" }], truncated: true } :
       url.pathname.endsWith("/repositories") ? { items: [{ id: "repo", folder_id: "root", path: "", name: "repo", state: "available", reason: "" }], truncated: false } :
       url.pathname.endsWith("/log") ? { head: "a".repeat(40), items: [], next_offset: -1 } :
@@ -31,7 +34,7 @@ test("微圆角面板保持几何边界、可调整分隔器、标签滚动及�
   const h = await fixture(page);
   await page.getByRole("treeitem", { name: "file-0.ts", exact: true }).click();
   await expect(page.locator(".monaco-editor")).toBeVisible();
-  await expect(page.locator(".editor-breadcrumb")).toContainText("HEAD");
+  await expect(page.locator(".editor-breadcrumb")).not.toContainText("HEAD");
   await expect(page.locator(".editor-breadcrumb")).not.toContainText("aaaaaaaa");
   await expect(page.getByRole("button", { name: "资源管理器", exact: true })).toHaveAttribute("aria-pressed", "true");
   for (const label of ["资源管理器", "搜索与替换", "只读 Git"]) {
@@ -99,6 +102,132 @@ test("微圆角面板保持几何边界、可调整分隔器、标签滚动及�
       expect(rect.x).toBeGreaterThanOrEqual(0); expect(rect.x + rect.width).toBeLessThanOrEqual(1440);
     }
     await page.screenshot({ path: info.outputPath(`desktop-${dark ? "dark" : "light"}.png`) });
+  }
+  expect(h.errors).toEqual([]); expect(h.mutations).toEqual([]);
+});
+
+test("终端按钮全屏与拖动顶部吸附保留实例、常规高度和布局记录", async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 845 });
+  let connections = 0; const inputs: string[] = [];
+  await page.routeWebSocket(/\/api\/v1\/terminals\/.*\/stream/, socket => {
+    connections++;
+    socket.onMessage(message => { if (typeof message !== "string") inputs.push(Buffer.from(message).toString("base64")); });
+    socket.send(JSON.stringify({ type: "ready", protocol: 3, terminal_id: "maximize", viewer_id: "fixture-viewer", role: "controller", generation: 1, cols: 80, rows: 24, pending_termination: null }));
+    socket.send(Buffer.from("fullscreen runtime survives\r\n"));
+  });
+  const h = await fixture(page, [{ id: "maximize", project_id: "interaction", display_name: "全屏验收", working_directory: "/fixture", state: "running" }]);
+  await page.getByRole("treeitem", { name: "file-0.ts", exact: true }).click();
+  await expect(page.locator(".monaco-editor")).toBeVisible();
+  const live = page.getByLabel("实时终端", { exact: true });
+  await expect(live.locator(".xterm-rows")).toContainText("fullscreen runtime survives");
+  await live.evaluate(element => element.setAttribute("data-instance", "same-runtime"));
+  await page.locator(".monaco-editor").evaluate(element => element.setAttribute("data-instance", "same-editor"));
+  const terminal = page.getByTestId("terminal"), editor = page.getByTestId("editors");
+  const separator = page.locator(".workbench-separator.horizontal").first();
+  await separator.focus(); await page.keyboard.press("ArrowUp");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("react-resizable-panels:persistty-vertical-v1-interaction"))).not.toBeNull();
+  let normalHeight = (await terminal.boundingBox())!.height;
+  let normalStorage = await page.evaluate(() => localStorage.getItem("react-resizable-panels:persistty-vertical-v1-interaction"));
+  expect(normalStorage).not.toBeNull();
+  expect(connections).toBe(1);
+  async function maximized() {
+    await expect(editor).toHaveCSS("height", "0px");
+    await expect(separator).toHaveCSS("height", "0px");
+    const bounds = (await terminal.boundingBox())!, sidebar = (await page.locator(".workbench-sidebar").boundingBox())!;
+    expect(Math.abs(bounds.y - sidebar.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bounds.height - sidebar.height)).toBeLessThanOrEqual(1);
+    await expect(live).toHaveAttribute("data-instance", "same-runtime");
+    expect(await page.evaluate(() => localStorage.getItem("react-resizable-panels:persistty-vertical-v1-interaction"))).toBe(normalStorage);
+    expect(connections).toBe(1); expect(inputs).toEqual([]); expect(h.mutations).toEqual([]);
+    await contained(page);
+  }
+  async function restored() {
+    await page.getByRole("button", { name: "恢复终端面板", exact: true }).first().click();
+    await expect.poll(async () => Math.abs((await terminal.boundingBox())!.height - normalHeight)).toBeLessThanOrEqual(1);
+    await expect(page.locator(".monaco-editor")).toHaveAttribute("data-instance", "same-editor");
+    await expect(page.locator(".editor-breadcrumb")).toContainText("/fixture/file-0.ts");
+  }
+  await page.getByRole("button", { name: "全屏终端面板", exact: true }).click(); await maximized();
+  await page.screenshot({ path: info.outputPath("terminal-fullscreen-light.png") }); await restored();
+  const handle = (await separator.boundingBox())!, top = (await editor.boundingBox())!.y;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2); await page.mouse.down();
+  // Cross the old 160px stop point continuously, then reach the 38px tab row.
+  for (const height of [140, 90, 48, 38]) {
+    await page.mouse.move(handle.x + handle.width / 2, top + height + handle.height / 2, { steps: 10 });
+    await expect.poll(async () => Math.abs((await editor.boundingBox())!.height - height)).toBeLessThanOrEqual(1);
+  }
+  await expect(page.getByRole("button", { name: "全屏终端面板", exact: true })).toBeVisible();
+  await page.mouse.move(handle.x + handle.width / 2, top + 24, { steps: 10 }); await page.mouse.up();
+  await maximized();
+  // The zero-height separator retains its top-edge pointer hit area.
+  const topHandle = (await separator.boundingBox())!;
+  await page.mouse.move(topHandle.x + topHandle.width / 2, topHandle.y + 2); await page.mouse.down();
+  await page.mouse.move(topHandle.x + topHandle.width / 2, topHandle.y + 220, { steps: 25 }); await page.mouse.up();
+  await expect.poll(async () => (await editor.boundingBox())!.height).toBeGreaterThan(160);
+  await expect(page.getByRole("button", { name: "全屏终端面板", exact: true })).toBeVisible();
+  await expect(live).toHaveAttribute("data-instance", "same-runtime");
+  expect(connections).toBe(1); expect(inputs).toEqual([]);
+  // Return to the original normal dimensions before the remaining button cases.
+  const dragged = (await separator.boundingBox())!;
+  const bottom = (await terminal.boundingBox())!;
+  await page.mouse.move(dragged.x + dragged.width / 2, dragged.y + dragged.height / 2); await page.mouse.down();
+  await page.mouse.move(dragged.x + dragged.width / 2, bottom.y + bottom.height - normalHeight - dragged.height / 2, { steps: 15 }); await page.mouse.up();
+  await expect.poll(async () => Math.abs((await terminal.boundingBox())!.height - normalHeight)).toBeLessThanOrEqual(1);
+  normalHeight = (await terminal.boundingBox())!.height;
+  normalStorage = await page.evaluate(() => localStorage.getItem("react-resizable-panels:persistty-vertical-v1-interaction"));
+  await page.getByRole("button", { name: "拆分终端面板", exact: true }).click();
+  await expect(page.getByRole("button", { name: "全屏终端面板", exact: true })).toHaveCount(2);
+  await page.getByRole("button", { name: "全屏终端面板", exact: true }).nth(1).click(); await maximized();
+  await page.evaluate(() => document.documentElement.classList.add("dark"));
+  await page.screenshot({ path: info.outputPath("terminal-fullscreen-dark.png") });
+  await page.getByRole("button", { name: "收起终端面板", exact: true }).first().click();
+  await expect(terminal).toHaveCSS("height", "0px"); await expect(editor).not.toHaveCSS("height", "0px");
+  await page.getByRole("button", { name: "终端面板", exact: true }).click();
+  await expect.poll(async () => Math.abs((await terminal.boundingBox())!.height - normalHeight)).toBeLessThanOrEqual(1);
+  await page.getByRole("button", { name: "全屏终端面板", exact: true }).first().click(); await page.reload();
+  await expect(page.getByRole("button", { name: "全屏终端面板", exact: true }).first()).toBeVisible();
+  await expect.poll(async () => Math.abs((await terminal.boundingBox())!.height - normalHeight)).toBeLessThanOrEqual(1);
+  expect(h.errors).toEqual([]); expect(h.mutations).toEqual([]);
+});
+
+test("原生滚动轨道与正文同色，选中标签衔接且溢出前后文字不跳动", async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 845 });
+  const h = await fixture(page);
+  await page.getByRole("treeitem", { name: "file-0.ts", exact: true }).click();
+  const first = page.getByRole("tab", { name: "file-0.ts", exact: true });
+  const initial = (await first.boundingBox())!;
+  for (let i = 1; i < 12; i++) await page.getByRole("treeitem", { name: `file-${i}.ts`, exact: true }).click();
+  await first.click();
+  const after = (await first.boundingBox())!;
+  expect(after.y).toBe(initial.y); expect(after.height).toBe(initial.height);
+  const tabs = page.locator(".editor-tabs"), actions = page.locator(".editor-tab-actions");
+  const fixed = (await actions.boundingBox())!;
+  expect(await tabs.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+  for (const dark of [false, true]) {
+    await page.evaluate(dark => document.documentElement.classList.toggle("dark", dark), dark);
+    for (const scroll of [0, 10000]) {
+      await tabs.evaluate((element, scroll) => { element.scrollLeft = scroll; }, scroll);
+      await page.getByRole("tab", { name: scroll ? "file-11.ts" : "file-0.ts", exact: true }).click();
+      await tabs.hover();
+      expect(await tabs.evaluate(element => getComputedStyle(element, "::-webkit-scrollbar-track").backgroundColor)).toBe(await page.locator(".editor-group").evaluate(element => getComputedStyle(element).backgroundColor));
+      const tabBottom = (await page.locator(".editor-tab-row").boundingBox())!;
+      const breadcrumb = (await page.locator(".editor-breadcrumb").boundingBox())!;
+      expect(Math.abs(tabBottom.y + tabBottom.height - breadcrumb.y)).toBeLessThanOrEqual(1);
+      expect((await actions.boundingBox())!.x).toBe(fixed.x);
+      const active = page.locator(".editor-tab.active");
+      const activeBox = (await active.boundingBox())!;
+      expect(Math.abs(activeBox.y + activeBox.height - breadcrumb.y)).toBeLessThanOrEqual(1);
+      expect((await actions.boundingBox())!.height).toBe(tabBottom.height);
+      for (const [label, container] of [[".editor-tab.active .editor-tab-label > span", ".editor-tab-row"], [".editor-breadcrumb > span:first-child", ".editor-breadcrumb"], [".workbench-status > span:first-child", ".workbench-status"]]) {
+        const offset = await page.locator(label).evaluate((element, container) => {
+          const range = document.createRange(); range.selectNodeContents(element);
+          const text = range.getBoundingClientRect(), box = element.closest(container)!.getBoundingClientRect();
+          return Math.abs(text.y + text.height / 2 - box.y - box.height / 2);
+        }, container);
+        expect(offset, label).toBeLessThanOrEqual(2);
+      }
+      await page.screenshot({ path: info.outputPath(`tabs-${dark ? "dark" : "light"}-${scroll ? "end" : "start"}.png`) });
+    }
   }
   expect(h.errors).toEqual([]); expect(h.mutations).toEqual([]);
 });

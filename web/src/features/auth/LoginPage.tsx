@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Navigate, useSearchParams } from "react-router";
-import { ArrowRight, LockKeyhole } from "lucide-react";
+import { ArrowRight, Files, LockKeyhole, TerminalSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
@@ -43,15 +43,23 @@ export function LoginPage() {
       if (!controller.signal.aborted) setPending(false);
     }
   }
-  return <main className="login-main">
+  return <main className="login-main"><div className="login-frame">
+    <div className="login-intro">
+      <span className="login-eyebrow">你的开发工作台</span>
+      <h2>回到你的开发现场</h2>
+      <p>打开项目，接着上次的进度继续。</p>
+      <div className="login-capabilities">
+        <div><TerminalSquare aria-hidden="true" /><span>持久终端<small>离开页面，任务仍在运行</small></span></div>
+        <div><Files aria-hidden="true" /><span>文件与代码<small>浏览、编辑与搜索，一处完成</small></span></div>
+      </div>
+    </div>
     <section className="login-form" aria-labelledby="login-title">
-      <LockKeyhole className="size-7 text-primary" aria-hidden="true" />
-      <h1 id="login-title">登录 Persistty</h1>
+      <div className="login-form-heading"><span className="login-lock"><LockKeyhole aria-hidden="true" /></span><h1 id="login-title">登录工作台</h1><p>使用访问密码进入 Persistty。</p></div>
       <form onSubmit={event => { void submit(event); }}>
         <FieldGroup>
-          <Field data-invalid={Boolean(error)} data-disabled={pending}>
+          <Field data-invalid={Boolean(error)} data-disabled={pending || blockedUntil > 0}>
             <FieldLabel htmlFor="password">访问密码</FieldLabel>
-            <Input id="password" type="password" autoComplete="current-password" autoFocus required maxLength={1024}
+            <Input id="password" type="password" autoComplete="current-password" placeholder="输入访问密码" autoFocus required maxLength={1024}
               value={password} onChange={event => setPassword(event.target.value)} disabled={pending || blockedUntil > 0}
               aria-invalid={Boolean(error)} aria-describedby={error ? "login-error" : undefined} />
             {error && <FieldError id="login-error">{error}</FieldError>}
@@ -61,6 +69,6 @@ export function LoginPage() {
           </Button>
         </FieldGroup>
       </form>
-    </section>
+    </section></div>
   </main>;
 }

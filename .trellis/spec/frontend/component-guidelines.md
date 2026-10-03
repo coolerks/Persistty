@@ -75,7 +75,7 @@ Terminal “隐藏/分离”只调整 UI。`Close Terminal` 始终 Dialog：`关
 
 树收到 reveal 后展开目标祖先，沿当前目录分页找到目标子项，待实际节点挂载后 `scrollIntoView({ block: "nearest", inline: "nearest" })`；不存在、分页结束或请求失败即停止，错误保持可重试。不能将路径相同的其他项目根当目标。条目只保留现有 shadcn ContextMenu 右键操作，删除重复的末尾三点 DropdownMenu；删除/重命名确认与共享 action owner 保持原契约。
 
-编辑器/终端原生横向滚动容器统一细轨道：Chromium/WebKit 固定 4px、Firefox 始终 thin，透明轨道。thumb 默认透明，容器 hover 或子项 focus-visible 时使用主题语义色显示；点击遗留 focus 不应持续显示。只切换颜色，不切换厚度/overflow/display，避免 tab 内容上下抖动或滑块 hover 变粗。保留 overflow-x:auto 与焦点/触摸/拖动滚动，不用 overflow:hidden 或全站规则掩盖溢出。
+编辑器/终端原生横向滚动容器统一细轨道：Chromium/WebKit 固定 4px、Firefox 始终 thin。终端轨道透明；编辑器轨道使用正文 `--background`，让选中标签与正文衔接，不露出 tab-row 灰色底缝。editor-tab及固定动作行固定38px高度，editor-tabs延伸4px轨道到路径栏顶部（42px、margin-bottom:-4px），溢出前后文字中心一致；原生轨道占位不缩短标签内容。thumb 默认透明，容器 hover 或子项 focus-visible 时使用主题语义色显示；点击遗留 focus 不应持续显示。只切换颜色，不切换厚度/overflow/display，避免 tab 内容上下抖动或滑块 hover 变粗。保留 overflow-x:auto 与焦点/触摸/拖动滚动，不用 overflow:hidden 或全站规则掩盖溢出。
 
 标准 scrollbar-color 规则必须限定在 `@supports not selector(::-webkit-scrollbar)`，WebKit 分支保持 scrollbar-width:auto/scrollbar-color:auto，防止高优先级 hover 标准属性让 Chromium 退回原生轨道。WebKit thumb 用容器的 `--tab-scrollbar-thumb` 变量同步 hover/focus-visible 颜色；浏览器回归同时验默认隐藏、悬停可见、移开再隐藏，三状态与滑块 hover 的轨道高度及 label 坐标均稳定。
 

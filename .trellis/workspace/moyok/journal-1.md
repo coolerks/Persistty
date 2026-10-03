@@ -381,3 +381,71 @@ W03 T01..T07 完成：独立 tmux/PTY/WS、稳定 xterm runtime、多端单控�
 ### Next Steps
 
 - 取得 Debian 地址、现有 UID/GID、隔离文件及安装差异授权，补 sudo/PAM、原生文件/账本/故障、systemd NNP/cgroup、Nginx 零正文落盘；不能提前完成或归档。
+
+
+## Session 13: 截图修复：标签衔接、终端全屏与登录页
+<!-- trellis-session: v=2 fp=c42fe14c99f0f675 -->
+
+**Date**: 2026-10-03
+**Task**: 截图修复：标签衔接、终端全屏与登录页
+**Branch**: `main`
+
+### Summary
+
+已建立10-03-workbench-screenshot-fixes任务并完成四项实现及本机验收，保持in_progress供复核；未提交或部署。
+
+### Main Changes
+
+- 修复标签原生轨道底缝和文字跳动，删除tracked HEAD，添加终端全屏/拖动吸附及常规比例恢复，统一登录页深浅主题与触屏布局。
+- 同步前端owner规范、PRD/design/implement与check-report；保持终端与编辑器实例及既有认证边界。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 前端lint/typecheck/test/build通过；31文件163单测；Go test ./...与go vet ./...通过。
+- [OK] Chromium18+WebKit18适用回归，真实后端Git每浏览器1项，共38项最终通过；初轮失败与复验保留报告。
+- [OK] 8个本地Markdown链接、JSON、忽略与diff检查通过；5203/5204/8103自有服务和临时Git/SQLite/tmux已清理。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 用户复核后提交本轮修改；Firefox、Debian/真机软键盘不记通过，原W05/W06/W07/UI任务状态保留。
+
+
+## Session 14: 截图追加反馈：连续拖动、双向全屏与终端绘制
+<!-- trellis-session: v=2 fp=aae047e8ce2985fe -->
+
+**Date**: 2026-10-03
+**Task**: 截图追加反馈：连续拖动、双向全屏与终端绘制
+**Branch**: `main`
+
+### Summary
+
+取消160px停点，连续拖至38px标签行再吸附；全屏顶部可下拖；修正文字及滚动工具栏衔接；历史已绘制后切换，实时保持尺寸。
+
+### Main Changes
+
+- 更新当前截图修复任务及owner规范，保持单代理、同runtime/model及单WS，无API/依赖/权限变化。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] Chromium/WebKit各27项最终通过；旧源码逐帧空白10次，修复后两浏览器均0；前端163单测、lint/typecheck/build与Go test/vet通过。
+- [OK] 最新拖动回归真实鼠标按住连续经过140/90/48/38px再拖24px收起；顶部下拖、布局恢复和刷新通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 用户复核并按需提交；物理触控板、手机软键盘、Firefox和Debian/systemd专项仍未执行，不自动部署或归档。
