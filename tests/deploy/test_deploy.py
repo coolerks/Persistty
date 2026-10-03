@@ -490,6 +490,57 @@ class TemplateTests(unittest.TestCase):
         self.assertNotIn('ExecStop=', web)
 
 class GoGateTests(unittest.TestCase):
+    def test_workflow_keeps_go_exit_status_and_runs_diagnostics_after_failure(self):
+        import subprocess
+        import textwrap
+        workflow = (REPO / '.github/workflows/release.yml').read_text()
+        cases = [([{'Action': 'pass', 'Package': 'p', 'Test': 'TestOK'}], 0, 0),
+                 ([{'Action': 'pass', 'Package': 'p', 'Test': 'TestOK'}], 7, 7),
+                 ([{'Action': 'output', 'Package': 'p', 'Test': 'TestBroken', 'Output': 'visible failure detail\n'},
+                   {'Action': 'fail', 'Package': 'p', 'Test': 'TestBroken'}], 1, 1),
+                 ([{'Action': 'skip', 'Package': 'p', 'Test': 'TestMissingTool'}], 0, 1)]
+        for step in ('Go 测试', 'Go 桥接测试'):
+            block = workflow.split('- name: ' + step + '\n', 1)[1].split('      - ', 1)[0]
+            script = textwrap.dedent(block.split('run: |\n', 1)[1])
+            for events, go_exit, expected in cases:
+                with self.subTest(step=step, go_exit=go_exit, expected=expected), tempfile.TemporaryDirectory() as work:
+                    root = Path(work)
+                    (root / 'scripts').mkdir()
+                    (root / 'scripts/check-go-test-log.py').write_bytes((REPO / 'scripts/check-go-test-log.py').read_bytes())
+                    (root / 'bin').mkdir()
+                    go = root / 'bin/go'
+                    go.write_text('#!/bin/sh\nprintf "%s\\n" "$GO_EVENTS"\nexit "$GO_EXIT"\n')
+                    go.chmod(0o755)
+                    (root / '.cache').mkdir()
+                    env = dict(os.environ, PATH=str(root / 'bin') + os.pathsep + os.environ['PATH'],
+                               GO_EVENTS='\n'.join(json.dumps(event) for event in events), GO_EXIT=str(go_exit))
+                    result = subprocess.run(['bash', '-e', '-c', script], cwd=root, env=env,
+                                            capture_output=True, text=True, check=False)
+                    self.assertEqual(result.returncode, expected, result.stderr)
+                    self.assertEqual(len(list((root / '.cache').glob('release-*-tests.jsonl'))), 1)
+                    if go_exit == 1:
+                        self.assertIn('visible failure detail', result.stderr)
+
+    def test_failed_test_and_build_show_diagnostics_and_remain_failed(self):
+        import subprocess
+        cases = [
+            ([{'Action': 'output', 'Package': 'p', 'Test': 'TestBroken', 'Output': 'fixture.go:42: deadline exceeded\n'},
+              {'Action': 'fail', 'Package': 'p', 'Test': 'TestBroken'}], 'fixture.go:42: deadline exceeded'),
+            ([{'Action': 'build-output', 'ImportPath': 'p', 'Output': 'fixture.go:3: undefined: Missing\n'},
+              {'Action': 'build-fail', 'ImportPath': 'p'}], 'fixture.go:3: undefined: Missing'),
+            ([{'Action': 'output', 'Package': 'p', 'Test': 'TestMissing', 'Output': 'required tmux unavailable\n'},
+              {'Action': 'skip', 'Package': 'p', 'Test': 'TestMissing'}], 'required tmux unavailable')]
+        for events, diagnostic in cases:
+            with self.subTest(diagnostic=diagnostic), tempfile.TemporaryDirectory() as work:
+                log = Path(work) / 'events.jsonl'
+                # 其他测试通过不能掩盖前面的失败/required skip。
+                events = events + [{'Action': 'pass', 'Package': 'q', 'Test': 'TestOK'}]
+                log.write_text(''.join(json.dumps(event) + '\n' for event in events))
+                result = subprocess.run([os.sys.executable, str(REPO / 'scripts/check-go-test-log.py'), str(log)],
+                                        capture_output=True, text=True, check=False)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn(diagnostic, result.stderr)
+
     def test_required_skip_and_empty_log_fail_optional_probe_allowed(self):
         import subprocess
         cases = [([{'Action': 'pass', 'Package': 'p', 'Test': 'TestA'}], 0),

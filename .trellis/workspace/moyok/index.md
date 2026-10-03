@@ -10,7 +10,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 17
+- **Total Sessions**: 18
 - **Last Active**: 2026-10-03
 <!-- @@@/auto:current-status -->
 
@@ -21,7 +21,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~549 | Active |
+| `journal-1.md` | ~581 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 18 | 2026-10-03 | W08 Actions 首次失败诊断与日志修复 | - | `main` |
 | 17 | 2026-10-03 | W08 开源部署地址参数化 | - | `main` |
 | 16 | 2026-10-03 | W08 简化为固定局域网 HTTP 部署 | - | `main` |
 | 15 | 2026-10-03 | W08 发布包与一键部署本机实施 | - | `main` |

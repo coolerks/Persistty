@@ -8,6 +8,8 @@
 
 每次发布有两种架构的安装包、`persistty-deploy.py` 和 `SHA256SUMS`。脚本自动选择本机架构并校验下载包。工作流见仓库里的 `.github/workflows/release.yml`。
 
+工作流失败时，展开失败步骤查看具体错误；Go 测试的完整 JSON 日志会保存在该次运行的 `go-test-logs` 附件。修改工作流后提交并推送新代码再验证，旧运行的 Re-run 仍使用旧版本工作流。
+
 ## 2. 首次配置 Nginx
 
 打开你**现有 Nginx 的主配置文件**，在已有 `http { ... }` 内加入一行：

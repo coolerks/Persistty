@@ -37,6 +37,6 @@
     "internal/config/config_test.go",
     "AGENTS.md"
   ],
-  "notes": "开源内容中的实际IP已移除；首次--host指定且仅在目标机保存，后续单命令更新。32项部署回归、Go test/vet及两架构验包/个人IP扫描通过；目标机/GitHub未实测，原无缓存Mac shell fixture失败保留，不自动提交或归档。",
+  "notes": "已读取真实Actions #1失败日志：根Go非零但JSON被重定向，原run无artifact、具体用例未知。已修复失败详情/附件和退出状态；本机无缓存Go198pass/bridge29pass/vet、Linux测试交叉编译、34回归通过。新workflow未推送执行，原Ubuntu失败待确认，不自动提交或归档。",
   "meta": {}
 }

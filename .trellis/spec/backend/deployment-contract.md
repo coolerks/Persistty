@@ -22,6 +22,7 @@ sudo /usr/local/sbin/persistty-deploy update [--version latest|TAG]
 - Nginx查找PATH/常见安装路径（包括/usr/local/nginx/sbin/nginx），也可首次--nginx指定。tmux/rg/git从实际安装程序查找，保存绝对路径至配置/独立tmux unit，不固定/usr/bin。
 - 第一次用实际Python运行；成功安装的`persistty-deploy` shebang使用sys.executable的实际绝对路径，避免sudo PATH切换解释器。只用Python标准库，不安装软件。
 - main push/手工main自动发布同提交Linux amd64/arm64包；固定Action SHA、锁定工具链/npm；Go/root+bridgego、前端、部署回归/构建门禁，draft完整上传后Latest。required Go skip/失败/空发现拒绝发布；两个显式本地性能探针例外，不记性能验收。
+- 根/桥接Go分别无缓存-count=1运行，保存命令退出码；即使Go失败也执行 `python3 scripts/check-go-test-log.py LOG_JSONL`，检查器显示失败测试或build-fail的最近20个输出事件（每个最多4KiB）、required skip原因。检查器失败或原Go退出非零都阻止发布。Actions failure()上传 `.cache/release-*-tests.jsonl` 为go-test-logs，显式包含隐藏路径；不上传真实后端配置或token。
 - 资产名称不变，含bin/web/deploy、version.json实际commit/平台/迁移SHA与许可证、SHA256SUMS。删除本任务TLS模板，不强求归档存在TLS文件。单次Release响应锁定资产ID；GitHub HTTPS、跨域剥离Authorization、SHA/ELF、安全tar校验在停Web前；512MiB下载/1GiB解压/10000成员，拒绝链接/穿越/特殊成员/重复。
 - /opt/persistty/releases不可变版本/current原子切换；/etc/persistty私有长期配置、/var/lib/persistty私有DB/tmux/staging。独立root0700部署设置state与备份、root锁。首次拒绝未知同名配置/数据/unit。普通更新不重写密码/配置，不chown项目，不部署W07。
 - Nginx-t/reload在停Web前；Web stop→SQLite backup API（含WAL、quick_check、90秒期限）→切换前后端→Web start→active/匿名session401+unauthenticated/代理登录页检查。仅更新Web，tmux不停止/重启；初装启用独立tmux，同版健康无Web重启。
@@ -32,6 +33,7 @@ sudo /usr/local/sbin/persistty-deploy update [--version latest|TAG]
 | 条件 | 行为 |
 | --- | --- |
 | 缺 --host 或非法地址/配置注入 | 参数拒绝，不生成站点或后端配置 |
+| Go测试/编译失败或required skip | 显示失败上下文，上传日志附件，阻止构建/发布 |
 | 缺现有程序/无有效非root账号 | 明确失败，不安装依赖 |
 | 未include或错误站点响应 | HTTP检查失败，不声称部署成功；修正后重试update |
 | 原Nginx-t/reload失败 | 停Web前失败，不操作nginx.service |
@@ -55,6 +57,8 @@ sudo /usr/local/sbin/persistty-deploy update [--version latest|TAG]
 Go模式矩阵：虚构私有LAN源合法，公网IP/非HTTP/非loopback后端/路径拒绝；Cookie flags正确，旧模式兼容。
 
 Python部署回归：三种私有IPv4网段、非法/公网/配置注入拒绝、state持久化后Nginx与后端地址一致、占位全部替换，实际LAN模板、自定义工具和systemd路径、原Nginx程序/主配置-t/-s reload、无nginx.service/apt、实际Python shebang、保留长期配置；原下载/安全tar/SHA/架构/锁/WAL备份/失败恢复/同版幂等保留。实际两架构包验包、工程门禁、文档链接/diff；目标机Nginx/systemd/HTTP/WS运行另验，未执行不记通过。
+
+CI回归直接执行workflow根/桥接run块，替换为隔离Go fixture：正常、Go非零但JSON有pass、失败测试、required skip；验证退出码保留和详情输出。检查器另外覆盖build-output/build-fail。Linux交叉编译不作为Linux运行证据；旧run日志被重定向且未保存时，如实保留根因未知，待新workflow实跑，不猜测或跳过疑似测试。
 
 ## 7. 错误与正确示例
 

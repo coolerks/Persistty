@@ -33,21 +33,40 @@ jobs:
           sudo apt-get install -y tmux ripgrep
           npm install -g "$(node -p "require('./web/package.json').packageManager")"
           npm --prefix web ci
-      - name: 工程门禁
+      - name: Go 测试
         env:
           PERSISTTY_DEV_INTEGRATION: "1"
         run: |
           mkdir -p .cache
-          go test -p 1 -json ./... > .cache/release-go-tests.jsonl
+          go_status=0
+          go test -p 1 -count=1 -json ./... > .cache/release-go-tests.jsonl || go_status=$?
           python3 scripts/check-go-test-log.py .cache/release-go-tests.jsonl
-          go -C tests/integration/debian/bridgego test -p 1 -json ./... > .cache/release-bridge-tests.jsonl
+          exit "$go_status"
+      - name: Go 桥接测试
+        run: |
+          go_status=0
+          go -C tests/integration/debian/bridgego test -p 1 -count=1 -json ./... > .cache/release-bridge-tests.jsonl || go_status=$?
           python3 scripts/check-go-test-log.py .cache/release-bridge-tests.jsonl
+          exit "$go_status"
+      - name: Go 静态检查
+        run: |
           go -C tests/integration/debian/bridgego vet ./...
           go vet ./...
+      - name: 前端及部署测试
+        run: |
           npm --prefix web run lint
           npm --prefix web run typecheck
           npm --prefix web test
           python3 -W error::ResourceWarning -m unittest discover -s tests/deploy -v
+      - name: 保留失败的 Go 测试日志
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: go-test-logs
+          path: .cache/release-*-tests.jsonl
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
       - name: 版本标识
         id: version
         run: echo "version=build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:12}" >> "$GITHUB_OUTPUT"

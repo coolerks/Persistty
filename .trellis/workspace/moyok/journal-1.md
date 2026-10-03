@@ -547,3 +547,35 @@ main 自动打包/Release 工作流、标准库下载安装升级器、VPN/TLS N
 ### Next Steps
 
 - 未提交、推送、发布或目标机实测；任务保持in_progress，历史无缓存shell清理竞态未修复。
+
+
+## Session 18: W08 Actions 首次失败诊断与日志修复
+<!-- trellis-session: v=2 fp=8af415b8544c94f7 -->
+
+**Date**: 2026-10-03
+**Task**: W08 Actions 首次失败诊断与日志修复
+**Branch**: `main`
+
+### Summary
+
+真实run根Go失败但stdout未显示且无artifact，原失败用例无法恢复；修复fail-fast后仍检查JSON与失败日志附件。
+
+### Main Changes
+
+- 拆分CI阶段，保留Go非零退出，打印测试/编译/required skip上下文，failure时上传隐藏目录的指定日志。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 本机无缓存根Go198pass、bridge29pass及vet，Linux测试仅交叉编译通过；34项回归与actionlint通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 提交推送新workflow后读取Ubuntu实际失败详情；未推送、重跑旧run或发布，不声称原Ubuntu根因已修复。

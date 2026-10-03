@@ -12,6 +12,7 @@
 4. 沿用现有 Nginx/Python 和开发账号，仅首次 Nginx http 块添加 include；不操作 nginx.service，不覆盖原主配置。
 5. 保持 lan_http 配置/密码/鉴权/Origin/CSRF边界、包校验/备份和独立 tmux 生命周期。
 6. 完成部署回归与实际打包验包；目标机/GitHub未执行项如实记录。
+7. 用户报告首次 Actions 发布失败后，定位工程门禁的失败阶段。Go命令非零退出也须显示测试/编译/required skip详情并保留日志附件，不放宽发布门禁；未取到原测试日志时不得猜测失败用例或宣称Ubuntu已修复。
 
 ## 边界
 
