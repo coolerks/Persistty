@@ -1,8 +1,8 @@
 {
   "id": "release-one-click-deploy",
   "name": "release-one-click-deploy",
-  "title": "W08 GitHub 打包与局域网一键部署",
-  "description": "开源通用局域网HTTP部署，首次--host保存地址，沿用已有Nginx/Python，从GitHub一键更新",
+  "title": "W08 局域网部署与手工 amd64 包交付",
+  "description": "最新指令停止 Actions 跟进，交付本机 Linux amd64 前后端包、systemd/Nginx/后端模板及手工部署说明",
   "status": "in_progress",
   "dev_type": "backend",
   "scope": null,
@@ -40,8 +40,18 @@
     "internal/search/native_engine_test.go",
     "internal/gitview/service_test.go",
     ".trellis/spec/backend/search-git-contract.md",
-    ".trellis/spec/backend/quality-guidelines.md"
+    ".trellis/spec/backend/quality-guidelines.md",
+    "deploy/MANUAL.md",
+    ".trellis/tasks/10-03-release-one-click-deploy/manual-package-report.md",
+    "web/src/lib/random-uuid.ts",
+    "web/src/lib/random-uuid.test.ts",
+    "web/src/features/workspaces/editor-session.ts",
+    "web/src/features/workspaces/editor-session.test.ts",
+    "web/src/features/search/SearchPanel.tsx",
+    "web/tests/e2e/lan-http.spec.ts",
+    ".trellis/spec/frontend/state-management.md",
+    ".trellis/spec/frontend/quality-guidelines.md"
   ],
-  "notes": "第二次真实 run 37100462607 显示 rg 14 JSON 替换能力缺失和 Git 2.55 fixture 后台维护导致快照冲突。已修复搜索前能力探测/固定 native 和测试建仓维护隔离；隔离同版本复现、负向回归、重复20次验证、race/vet，短GOTMPDIR完整Go200pass/桥接29pass，前端163和部署34回归、Linux两架构编译通过。原沙箱/长socket路径失败证据保留；远端新提交运行待用户推送，不自动提交或归档。",
+  "notes": "最新指令取消第三次 CI 失败跟进，run 37102646682 的 dev 第二次重启故障仍未修复。已交叉编译 manual-20261003-b007202 Linux amd64 前后端包，根README和旁置手工部署说明包含路径/权限/现有Nginx/保留tmux升级；真实SHA/ELF静态链接/资源/模板验包、Go test/vet、前端163和部署34回归通过。源码基线 b007202，文档/打包改动未提交；目标机运行仍待用户验证，不自动提交或归档。 用户部署后发现普通HTTP crypto.randomUUID初始化失败；三个业务调用统一HTTP兼容生成器，168前端测试与生产产物Chromium/WebKit普通HTTP回归通过，旧包复现相同堆栈。已交付manual-20261003-http-uuid新amd64包及升级文档；修复后目标机仍待用户验证。",
   "meta": {}
 }

@@ -1,12 +1,15 @@
-# GitHub 发布与局域网部署契约
+# 打包与局域网部署契约
 
 ## 1. 范围与触发条件
 
 部署为局域网 HTTP，沿用已有手动 Nginx 与其他方式安装的 Python。开源源码、模板、受版本管理文档和记录不保存用户真实 IP；首次 --host 指定地址，仅写入目标机配置。此指令覆盖旧VPN/TLS部署方案；deploy主流程不再配置这些环境或运行apt。后端仍使用非root账号、loopback反向代理和原有鉴权。正式目标机操作与GitHub发布未在本轮执行。
 
+2026-10-03最新指令停止 Actions 故障跟进，当前交付为本机交叉编译 Linux amd64 前后端包与手工部署文档。原自动下载部署器保留；手工方式无需运行它或使用 Python。CI 第三次启动测试失败仍未解决，不修改门禁或记为通过。
+
 ## 2. 签名
 
 ```bash
+scripts/package-release.sh VERSION [OUTPUT_DIR] [all|amd64|arm64]
 sudo "$(command -v python3)" persistty-deploy.py install --host LAN_IPV4 \
   [--user USER] [--nginx ABSOLUTE_BINARY] [--nginx-config ABSOLUTE_MAIN_CONFIG] \
   [--write-path ABSOLUTE_DIR ...] [--repo OWNER/REPO]
@@ -14,6 +17,8 @@ sudo /usr/local/sbin/persistty-deploy update [--version latest|TAG]
 ```
 
 安装和更新另保留可选root私有`--token-file`认证入口，主文档不引入私有仓库分支。首次user默认SUDO_USER，不能使用root。--host 必填，仅首次安装支持 RFC1918 IPv4 地址（10/8、172.16/12、192.168/16），拒绝公网、loopback、DNS、端口、路径和配置指令。没有SSL/origin/listen参数。后端CLI仍为serve/password，password仅TTY隐藏输入。
+
+打包第三参数默认 `all`，保持 Actions 原两架构行为；显式 `amd64` 或 `arm64` 只构建对应平台。使用已有锁定依赖构建前端，后端 `CGO_ENABLED=0 GOOS=linux GOARCH=...`；无效架构在构建前失败。此脚本仅构建，不代替测试门禁。
 
 ## 3. 契约
 
@@ -24,6 +29,7 @@ sudo /usr/local/sbin/persistty-deploy update [--version latest|TAG]
 - main push/手工main自动发布同提交Linux amd64/arm64包；固定Action SHA、锁定工具链/npm；Go/root+bridgego、前端、部署回归/构建门禁，draft完整上传后Latest。required Go skip/失败/空发现拒绝发布；两个显式本地性能探针例外，不记性能验收。
 - 根/桥接Go分别无缓存-count=1运行，保存命令退出码；即使Go失败也执行 `python3 scripts/check-go-test-log.py LOG_JSONL`，检查器显示失败测试或build-fail的最近20个输出事件（每个最多4KiB）、required skip原因。检查器失败或原Go退出非零都阻止发布。Actions failure()上传 `.cache/release-*-tests.jsonl` 为go-test-logs，显式包含隐藏路径；不上传真实后端配置或token。
 - 资产名称不变，含bin/web/deploy、version.json实际commit/平台/迁移SHA与许可证、SHA256SUMS。删除本任务TLS模板，不强求归档存在TLS文件。单次Release响应锁定资产ID；GitHub HTTPS、跨域剥离Authorization、SHA/ELF、安全tar校验在停Web前；512MiB下载/1GiB解压/10000成员，拒绝链接/穿越/特殊成员/重复。
+- 包根 `README.md` 为 `deploy/MANUAL.md` 的完整副本，明确 bin/web/config/tmux/两份 systemd/Nginx 的目标路径与权限。`SHA256SUMS` 只列本次选择架构的 tar 和独立下载器，不引用未构建的架构。手工首次安装与升级分开，IP仅由用户在目标配置替换 LAN_IP；升级仅停 Web，连同 WAL/SHM 备份数据并排除 tmux socket，保留长期配置及终端服务。
 - /opt/persistty/releases不可变版本/current原子切换；/etc/persistty私有长期配置、/var/lib/persistty私有DB/tmux/staging。独立root0700部署设置state与备份、root锁。首次拒绝未知同名配置/数据/unit。普通更新不重写密码/配置，不chown项目，不部署W07。
 - Nginx-t/reload在停Web前；Web stop→SQLite backup API（含WAL、quick_check、90秒期限）→切换前后端→Web start→active/匿名session401+unauthenticated/代理登录页检查。仅更新Web，tmux不停止/重启；初装启用独立tmux，同版健康无Web重启。
 - 失败恢复兼容旧代码，DB migration/checksum不兼容保持Web停止；不自动覆盖DB、不恢复项目或真实进程。SIGKILL/断电不保证Python恢复分支执行。旧通用安装记录不自动接管；当前记录须含合法局域网HTTP origin和nginx路径；已保存合法origin的上一轮局域网安装记录可继续更新，不要求重复传入地址。
@@ -33,6 +39,8 @@ sudo /usr/local/sbin/persistty-deploy update [--version latest|TAG]
 | 条件 | 行为 |
 | --- | --- |
 | 缺 --host 或非法地址/配置注入 | 参数拒绝，不生成站点或后端配置 |
+| 打包指定无效架构 | 构建前失败，不输出该架构资产 |
+| 手工包架构/校验值不符或配置仍为占位 | 不启动部署，按手工文档核对后处理 |
 | Go测试/编译失败或required skip | 显示失败上下文，上传日志附件，阻止构建/发布 |
 | 缺现有程序/无有效非root账号 | 明确失败，不安装依赖 |
 | 未include或错误站点响应 | HTTP检查失败，不声称部署成功；修正后重试update |
@@ -50,6 +58,8 @@ sudo /usr/local/sbin/persistty-deploy update [--version latest|TAG]
 
 基础：自定义/opt/python与/usr/local/nginx，无需系统包布局；缺省SUDO_USER选择现有开发账号。
 
+手工：本机运行 `scripts/package-release.sh manual-VERSION dist/manual amd64`，上传 tar 与 SHA256SUMS，按包内 README 安装；目标机无需 Go/Node/Python，实际 tmux/git/rg 与 Nginx 路径由用户填写。Linux 交叉编译不等于目标服务启动验收。
+
 错误：把站点写进服务UID可替换的私有配置目录、用nginx.service重启手动Nginx、依赖/usr/bin/python3、忽略已提交WAL或启动失败时自动覆盖DB。
 
 ## 6. 所需测试
@@ -60,8 +70,12 @@ Python部署回归：三种私有IPv4网段、非法/公网/配置注入拒绝�
 
 CI回归直接执行workflow根/桥接run块，替换为隔离Go fixture：正常、Go非零但JSON有pass、失败测试、required skip；验证退出码保留和详情输出。检查器另外覆盖build-output/build-fail。Linux交叉编译不作为Linux运行证据；旧run日志被重定向且未保存时，如实保留根因未知，待新workflow实跑，不猜测或跳过疑似测试。
 
+手工包实际校验：amd64 ELF64、无动态解释器与共享库依赖、前端入口引用及静态资源、两份 unit/完整模板/许可证/清单、根 README 与文档一致、SHA256SUMS 匹配且不引用 arm64。Bash语法与无效架构拒绝；真实 Debian systemd/Nginx/HTTP/WS另验，不能用macOS检查代替。
+
 ## 7. 错误与正确示例
 
 错误：把用户真实IP硬编码进源码/模板/开发记录，或`apt install nginx python3`替换用户现有环境，或`systemctl restart nginx`假定发行版service。
 
 正确：用户主配置http块include `/opt/persistty/nginx.conf`，保存实际nginx路径与可选主配置，执行它的-t/-s reload；`sudo /usr/local/sbin/persistty-deploy update`使用首次实际Python，不改账号/密码或结束tmux。操作步骤归[部署文档](../../../deploy/README.md)。
+
+手工正确：按[手工部署文档](../../../deploy/MANUAL.md)保留数据库/配置，仅切换 `/opt/persistty/current` 的前后端并重启 Web；错误：复制模板覆盖既有密码配置，或升级时重启独立 tmux 服务。

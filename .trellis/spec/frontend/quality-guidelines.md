@@ -11,6 +11,8 @@ Critical E2E 由 [后端测试](../backend/quality-guidelines.md) 定义运行�
 无障碍：键盘 palette/menu/dialog/tabs、焦点返回、resize 最小尺寸、loading/error、dark/light 对比；UI 文案简体中文。auth 安全后端执行，前端测试隐藏按钮不构成安全 review。
 W01已有package.json与npm锁文件，lint/typecheck/test/build四门禁必须实际执行。当前只覆盖登录/路由/主题/布局命令模型，真实PTY与完整E2E由后续包交付，不创建空测试满足指标。浏览器viewport模拟不是iOS/Android真机验收；每功能同任务加必要测试，最后full E2E只是整体验收。
 
+局域网HTTP发布必须覆盖非安全上下文：localhost/127.0.0.1通常仍被浏览器视为安全上下文，不能证明私有IP HTTP兼容。`lan-http.spec.ts` 用虚构私有HTTP源，静态产物转取显式本机实例、API/WS用隔离fixture；断言isSecureContext=false且原生randomUUID缺失后检查工作台/文件/搜索定位。执行时记录是否验证生产产物，不能把拦截请求回归记为真实后端、HTTP鉴权或Debian服务通过。
+
 浏览器矩阵与构建串行运行，每轮 `--output` 使用独立的忽略目录；多个Playwright进程共用输出目录会互删trace/network，不能把ENOENT记为产品缺陷或通过。真实后端fixture不能跨并行浏览器共享可写目标。图片区与搜索区共用fixture时明确搜索include范围，保留ignore断言而不放宽结果数量。
 
 

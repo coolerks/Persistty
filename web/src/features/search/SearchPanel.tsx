@@ -14,6 +14,7 @@ import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/u
 import { Loading } from "@/components/Feedback";
 import { useAuth } from "@/features/auth/auth-context";
 import { api, errorMessage } from "@/lib/api/client";
+import { randomUUID } from "@/lib/random-uuid";
 import { searchGitAPI } from "@/lib/api/search-git-client";
 import type { Project } from "@/lib/api/decoder";
 import type { ReplacePreview, SearchFile, SearchResult } from "@/lib/api/search-git-decoder";
@@ -81,7 +82,7 @@ export function SearchPanel({ project, mobile, intent, visible, onOpen }: { proj
       if (signal.aborted) return;
       if (!sameVersion(metadata.version, file.version) || (buffer && (buffer.dirty || buffer.state.generation !== generation || !buffer.state.base || !sameVersion(buffer.state.base.version, file.version)))) throw new Error("文件或本地输入已变化，请重新搜索；当前输入已保留。");
       const target = { folderId: file.folder_id, path: file.path };
-      useEditorLocation.setState({ location: { projectId: project.id, file: target, version: file.version, line: match.line, column: match.column, endColumn: match.end_column, id: crypto.randomUUID() } }); onOpen(target);
+      useEditorLocation.setState({ location: { projectId: project.id, file: target, version: file.version, line: match.line, column: match.column, endColumn: match.end_column, id: randomUUID() } }); onOpen(target);
     });
   }
   async function makePreview() {

@@ -18,6 +18,8 @@ W05 工作台、编辑缓冲区、本地视图和 IndexedDB 草稿的 owner 契�
 
 `useWorkspaceView` 提供 open/close/move/split/unsplit、openMobile/closeMobile、placeTerminal/selectTerminal/orderTerminal、expand/relocate/remove。`orderTerminal(projectId, id, before, visibleOrder?)` 补全首次恢复时服务端标签顺序，再插入指定位置。
 
+共享 `web/src/lib/random-uuid.ts` 的 `randomUUID(): string` 负责 EditorScope.viewId、FileBuffer.id 与搜索定位事件ID；返回标准 UUID v4，无新增协议或持久化字段。
+
 localStorage `persistty.workspace-view.v1` 使用 Zustand persist `version: 2`；只 partialize `projects`。`EditorScope(project, storage?, client?)` 提供 open/protect/refresh/configure/relocate/dispose。`IndexedDraftStorage` 数据库为 `persistty.editor-drafts`，版本 1，`drafts` 对象仓库以 `id` 为 key；提供 list(projectId)、put(draft)、remove(id, maximumGeneration)。无新增 SQL、环境变量或认证协议。
 
 ## 3. 契约
@@ -28,6 +30,8 @@ localStorage `persistty.workspace-view.v1` 使用 Zustand persist `version: 2`�
 
 草稿 `schema:1` 保存 id/projectId/file{folderId,path}/sourceRoot/viewId/generation/base{kind,content,version}/content/updatedAt。base.version 采用完整 identity/mtime/size/etag；每 scope 生成独立 viewId，同文件不同视图不会互删。草稿单正文最多 8 MiB，总 base+content 最多 64 MiB、100 条；不自动淘汰。put 串行且 IDB 事务核对配额；保存成功只移除本视图提交 generation 及之前的记录，后续输入重新保护。
 
+局域网HTTP属于正常部署环境，不能直接依赖仅安全上下文暴露的 crypto.randomUUID。共享生成器有原生方法时复用，否则通过HTTP仍提供的 crypto.getRandomValues 生成16随机字节，设置第6字节v4版本及第8字节RFC变体，输出8-4-4-4-12小写十六进制字符串；不使用Math.random、时间戳或修改全局Crypto进行兼容。上述ID只标识前端视图/事件，不能当认证或授权凭据。
+
 认证先于服务器读取，服务器读取先于草稿比较。源路径和身份均保留，配置移除需对剩余覆盖根复验完整版本才能重绑；失败保留输入供导出。密码、Cookie、CSRF、token 不进入持久 store 或日志。最后标签关闭、显式离开链接、登出与文件操作前 protect；失败保留页面/输入。beforeunload 提醒脏输入；强制关闭浏览器无法保证未落盘的输入恢复。
 
 ## 4. 验证与错误矩阵
@@ -37,6 +41,7 @@ localStorage `persistty.workspace-view.v1` 使用 Zustand persist `version: 2`�
 | 视图 schema/尺寸/路径无效 | 默认视图并可见提示；草稿独立保留 |
 | localStorage 不可写 | 内存 fallback 并提示下次可能不能恢复 |
 | IDB 配额/权限/schema 失败 | 显示草稿失败，保留内存，不伪造保护成功 |
+| 普通HTTP没有 crypto.randomUUID | 共享 getRandomValues 分支生成 UUID，工作台初始化及搜索定位不抛错 |
 | 文件基线变化 | dirty 暂停并保留双方；clean 安全刷新 |
 | 切设备/移动标签 | 保留记录、buffer/model 和终端 runtime |
 | 关联或项目消失 | 受认证草稿导出；不复活文件或进程 |
@@ -45,13 +50,19 @@ localStorage `persistty.workspace-view.v1` 使用 Zustand persist `version: 2`�
 
 正常：桌面三组刷新恢复，手机独立打开另一个文件，回桌面仍三组。基础：从旧双组记录迁移，无终端时显示空区域。错误：localStorage 有终端 ID 就自动创建会话，或恢复草稿立即 PUT。
 
+HTTP正常：非loopback私有HTTP源打开项目/文件、重复点击搜索匹配，视图与每次定位有独立ID。缺原生UUID是可用的正常环境，不能要求用户切换HTTPS或浏览器安全标志。
+
 ## 6. 所需测试
 
 workspace-view 单测验四组、数量/路径/schema、移动/合并/设备隔离；editor-session 验并发输入、草稿失败、身份合并、关联迁移及 stale response。editor-recovery 浏览器验真实 IndexedDB、409/只读 diff/明确保存、刷新零隐式 PUT、终端位置恢复零 mutation。终端进程持久性另见 [W03 owner](terminal-runtime-contract.md)；视口模拟不代替真机软键盘验收。
 
+UUID回归覆盖原生/缺原生、全0/全255随机数据的版本/变体与格式、多次独立身份；缺原生UUID时构造scope/buffer并保护草稿，保持viewId隔离。浏览器以虚构私有HTTP origin读取实际构建产物，断言 isSecureContext=false/randomUUID缺失/getRandomValues可用，工作台、Monaco与重复搜索定位无pageerror；静态/API拦截回归不记真实后端或目标Nginx验收。
+
 ## 7. 错误与正确示例
 
 错误：保存响应返回便将 dirty=false，删除所有同 path 草稿。正确：更新本次提交的 base，保留新的 generation，只删除本 viewId 提交及之前的草稿。错误：`running=true` 本地恢复作为 tmux 事实；正确：保留标签 ID，重新查询 API 状态。
+
+UUID错误：在实例字段初始化时直接 `crypto.randomUUID()`，只用localhost测试。正确：`readonly viewId = randomUUID()` 引用共享生成器，并验真实非安全HTTP上下文。
 
 ## 临时文件语言覆盖（2026-09-30）
 

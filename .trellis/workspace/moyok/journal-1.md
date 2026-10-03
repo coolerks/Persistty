@@ -613,3 +613,71 @@ main 自动打包/Release 工作流、标准库下载安装升级器、VPN/TLS N
 ### Next Steps
 
 - 用户提交推送main后验证新提交触发的Actions；保持任务in_progress和目标部署未执行边界
+
+
+## Session 20: 交付 Linux amd64 手工部署包
+<!-- trellis-session: v=2 fp=74f078861d9ce95c -->
+
+**Date**: 2026-10-03
+**Task**: 交付 Linux amd64 手工部署包
+**Branch**: `main`
+
+### Summary
+
+用户停止 CI 跟进，完成 amd64 前后端交叉编译、配置打包与逐文件部署说明；目标机尚未操作。
+
+### Main Changes
+
+- 打包脚本新增可选单架构，默认两架构保持；deploy/MANUAL.md 同步包根 README 和旁置部署说明，沿用现有 Nginx、局域网HTTP，不保存实际IP。
+- 原第三次 CI dev 重启失败仍未修复，临时测试诊断已恢复；W08保持进行中，不发布或提交。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 实际 amd64 静态 ELF、SHA、安全解压/清单、前端入口/字体/worker、配置文档逐字节检查通过。
+- [OK] Go test/vet、前端 lint/typecheck/163测试/build、Python部署34回归、Bash/文档链接/diff通过；普通Go未开启取消跟进的dev启动集成，不作为CI验收。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 用户按手工文档在Debian启动systemd与已有Nginx，验证HTTP登录/编辑/终端；目标机未执行项不记通过。
+
+
+## Session 21: 修复局域网 HTTP UUID 初始化故障并重新交付
+<!-- trellis-session: v=2 fp=f3597ddb67190a96 -->
+
+**Date**: 2026-10-03
+**Task**: 修复局域网 HTTP UUID 初始化故障并重新交付
+**Branch**: `main`
+
+### Summary
+
+三个前端UUID调用统一安全随机回退；旧产物复现相同堆栈，新amd64包通过普通HTTP浏览器回归。
+
+### Main Changes
+
+- 新增共享random-uuid与测试，替换编辑器scope/buffer及搜索定位调用；保持草稿身份、认证、HTTP/Nginx配置不变。
+- 交付dist/debian-amd64-http-uuid-20261003，根README和旁置文档说明按第7节保留配置/数据/tmux升级并强制刷新；旧包保留。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 前端lint/typecheck/168测试/build通过，Go test/vet通过；安全解压/manifest、amd64静态ELF、SHA、全部前端产物与文档配置一致性通过。
+- [OK] 旧包在虚构私有HTTP浏览器源复现crypto.randomUUID错误；新生产产物Chromium/WebKit各1项工作台/Monaco/重复搜索定位通过。首次harness根目录/Node问题已纠正，未记产品失败。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 用户在Debian按文档升级并复验；本轮浏览器API/WS为fixture，不宣称真实后端/Nginx或原CI故障已解决。

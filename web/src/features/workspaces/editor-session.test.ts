@@ -16,7 +16,22 @@ function harness() {
   const scope = new EditorScope(project, storage, client); scope.csrf = "csrf";
   return { scope, client, storage, rows };
 }
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+it("局域网 HTTP 缺少 randomUUID 时初始化视图和文件，草稿保持独立身份", async () => {
+  vi.stubGlobal("crypto", { getRandomValues: crypto.getRandomValues.bind(crypto) });
+  const first = harness(), second = harness();
+  try {
+    const a = first.scope.open(file), b = second.scope.open(file);
+    await vi.waitFor(() => expect(a.state.status).toBe("ready"));
+    await vi.waitFor(() => expect(b.state.status).toBe("ready"));
+    expect(first.scope.viewId).not.toBe(second.scope.viewId);
+    expect(a.id).not.toBe(b.id);
+    a.change("HTTP draft");
+    expect(await first.scope.protect(file)).toBe(true);
+    expect([...first.rows.values()]).toEqual([expect.objectContaining({ viewId: first.scope.viewId, content: "HTTP draft" })]);
+    expect(second.rows.size).toBe(0);
+  } finally { first.scope.dispose(); second.scope.dispose(); }
+});
 it("视图编辑保留 BOM、未改混合换行和末尾换行状态", () => {
   expect(editorText("\uFEFFa\r\nb\nc")).toBe("a\nb\nc");
   expect(applyEditorText("\uFEFFa\r\nb\nc", "a\nB\nc")).toBe("\uFEFFa\r\nB\nc");

@@ -1,4 +1,5 @@
 import { api, ApiError, errorMessage } from "@/lib/api/client";
+import { randomUUID } from "@/lib/random-uuid";
 import type { FileContent, FileVersion, Project } from "@/lib/api/decoder";
 import { editorURI } from "./editor-model-lifecycle";
 import { draftStorage, type DraftStorage, type FileDraft } from "./editor-drafts";
@@ -14,7 +15,7 @@ export type BufferState = { status: "loading" | "ready" | "error"; content: stri
 export type EditorAPI = Pick<typeof api, "content" | "saveContent" | "metadata">;
 export const sameVersion = (a: FileVersion, b: FileVersion) => a.etag === b.etag && a.identity === b.identity && a.mtime === b.mtime && a.size === b.size;
 export class FileBuffer {
-  readonly id = crypto.randomUUID();
+  readonly id = randomUUID();
   readonly uri: string;
   readonly aliases = new Map<string, OpenFile>();
   state: BufferState = { status: "loading", content: "", base: null, generation: 0, saveState: "saved", error: null, draftError: null, drafts: [], comparison: null };
@@ -195,7 +196,7 @@ export class FileBuffer {
 }
 export class EditorScope {
   elevation: ElevationAttempt | null = null;
-  readonly viewId = crypto.randomUUID();
+  readonly viewId = randomUUID();
   readonly buffers = new Map<string, FileBuffer>();
   private listeners = new Set<() => void>();
   revision = 0;

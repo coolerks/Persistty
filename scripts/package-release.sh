@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 # 构建同一提交的 Linux 前后端包；先 npm ci，输出目录只存发布产物。
 set -euo pipefail
-release_version=${1:?用法: scripts/package-release.sh VERSION [OUTPUT_DIR]}
+release_version=${1:?用法: scripts/package-release.sh VERSION [OUTPUT_DIR] [all|amd64|arm64]}
 [[ "$release_version" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$ ]] || { echo '版本名无效' >&2; exit 1; }
+case ${3:-all} in
+  all) release_arches=(amd64 arm64) ;;
+  amd64|arm64) release_arches=("$3") ;;
+  *) echo '架构必须为 all、amd64 或 arm64' >&2; exit 1 ;;
+esac
 repo_root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$repo_root"
 output_dir=${2:-dist/release}
@@ -11,7 +16,7 @@ output_dir=$(cd "$output_dir" && pwd)
 npm --prefix web run build
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
-for release_arch in amd64 arm64; do
+for release_arch in "${release_arches[@]}"; do
   mkdir -p "$stage/persistty/bin"
   CGO_ENABLED=0 GOOS=linux GOARCH="$release_arch" go build -trimpath -buildvcs=false -o "$stage/persistty/bin/persistty" ./cmd/persistty
   cp -R web/dist "$stage/persistty/web"
@@ -20,6 +25,7 @@ import shutil,sys
 shutil.copytree('deploy',sys.argv[1],ignore=shutil.ignore_patterns('__pycache__','*.pyc','.DS_Store'))
 PY_COPY
   cp LICENSE "$stage/persistty/LICENSE"
+  cp deploy/MANUAL.md "$stage/persistty/README.md"
   python3 scripts/release-manifest.py "$stage/persistty" "$release_version" "$release_arch"
   python3 - "$stage" "$output_dir/persistty-linux-$release_arch.tar.gz" <<'PY_TAR'
 import gzip,subprocess,sys,tarfile
@@ -38,10 +44,10 @@ PY_TAR
   rm -rf "$stage/persistty"
 done
 cp deploy/persistty-deploy.py "$output_dir/persistty-deploy.py"
-python3 - "$output_dir" <<'PY'
+python3 - "$output_dir" "${release_arches[@]}" <<'PY'
 import hashlib,sys
 from pathlib import Path
-root=Path(sys.argv[1]); names=['persistty-linux-amd64.tar.gz','persistty-linux-arm64.tar.gz','persistty-deploy.py']
+root=Path(sys.argv[1]); names=[f'persistty-linux-{arch}.tar.gz' for arch in sys.argv[2:]]+['persistty-deploy.py']
 (root/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256((root/name).read_bytes()).hexdigest()}  {name}\n' for name in names))
 PY
 printf '发布包已生成：%s\n' "$output_dir"

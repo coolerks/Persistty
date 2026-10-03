@@ -17,3 +17,11 @@
 ## 第二次 Actions 跟进
 
 用户推送后 run 37100462607 已提供具体错误。按设计边界修复 selectEngine 的 JSON 替换能力探测和 Git fixture 的自动维护隔离；用隔离 rg 14/Git 2.55 重现原错误、负向验证回归、运行修复后完整门禁，并同步 owning spec。最新证据与实际本机环境限制见 [工具兼容检查报告](ci-tool-compat-report.md)，不把本机交叉编译写成 Ubuntu 执行。
+
+## 最新交付：手工 Linux amd64 包
+
+用户停止 Actions 跟进，改为本机交叉编译并自行在 Debian 安装。已恢复临时 dev 测试诊断，保留原 CI 失败状态；打包脚本增加单架构选择，默认两架构不变。新增 `deploy/MANUAL.md`，同时置于包根 README 和产物目录，列明文件目标位置、账号/配置替换、现有 Nginx 接入及保留 tmux 的手工升级。已生成实际 amd64 包并验证；结果与限制见 [手工包检查报告](manual-package-report.md)。未提交、发布、安装目标机或归档。
+
+## 已部署后的 HTTP UUID 修复
+
+统一 UUID 生成器替换 editor-session/SearchPanel 的三个直接调用；单测覆盖HTTP分支和草稿隔离。生产旧包在浏览器非安全HTTP源复现相同堆栈，新构建在Chromium/WebKit通过工作台/Monaco/重复搜索定位；交付新版 `manual-20261003-http-uuid`，详见 [HTTP UUID检查报告](http-uuid-report.md)。升级保留实际配置/数据/tmux，不修改Nginx或要求HTTPS。
